@@ -1,7 +1,7 @@
 import json
 import logging
 import math
-from configuration import Configuration, SCORES
+from oncodrivefm2.configuration import Configuration, SCORES
 import os
 import numpy as np
 import csv
@@ -9,7 +9,7 @@ import gzip
 
 from multiprocessing import Pool
 from collections import Counter
-from signaturesampling import SignatureSampling, silent_mkdir
+from oncodrivefm2.signaturesampling import SignatureSampling, silent_mkdir
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

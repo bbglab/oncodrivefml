@@ -1,12 +1,6 @@
-results_*.tsv.gz
-mutations.tsv.gz
-indels.txt
-cache
 logs
-input
-gitcorrupted
 .ipynb_checkpoints
-test*
+testing
 
 # Intellij IDEA files
 .idea
@@ -25,4 +19,4 @@ test*
 
 # Python bytecode
 *.pyc
-intogen.egg-info/
+oncodrivefm2.egg-info/

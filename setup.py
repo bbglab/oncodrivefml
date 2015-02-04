@@ -1,6 +1,7 @@
 from distutils.core import setup
 from setuptools import find_packages
 from oncodrivefm2 import VERSION
+from oncodrivefm2.signaturesampling import COMMAND
 
 setup(
     name='oncodrivefm2',
@@ -25,7 +26,8 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'oncodrive-fm2 = oncodrivefm2.oncodrivefm2:cmdline'
+            'oncodrivefm2 = oncodrivefm2.oncodrivefm2:cmdline',
+            COMMAND + ' = oncodrivefm2.signaturesampling:cmdline'
         ]
     }
 )

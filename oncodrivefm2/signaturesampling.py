@@ -1,3 +1,4 @@
+import argparse
 import csv
 import logging
 import stat
@@ -8,10 +9,39 @@ from bgcore.multiprocess.qmap import QMapExecutor
 import pandas as pd
 import numpy as np
 import shutil
-from configuration import SAMPLING_INPUT_FOLDER, TABIX, SCORES, DEFAULT_SAMPLING_SIZE, HG19_DIR, SIGNATURES, COMMAND, Configuration
+from oncodrivefm2.configuration import SAMPLING_INPUT_FOLDER, TABIX, SCORES, DEFAULT_SAMPLING_SIZE, HG19_DIR, SIGNATURES, Configuration
 
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
 logger = logging.getLogger(__name__)
+COMMAND = "oncodrivefm2-sampling"
+
+
+def cmdline():
+    # Configure the logging
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+
+    # Parse the arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("score")
+    parser.add_argument("signature")
+    parser.add_argument("feature")
+    parser.add_argument("element")
+    parser.add_argument("num_samples", type=float)
+    parser.add_argument("cache_dir")
+    parser.add_argument("input_dir")
+    parser.add_argument("sampling_size", nargs='?', type=int, default=DEFAULT_SAMPLING_SIZE)
+    args = parser.parse_args()
+
+    # Execute the sampling
+    sampling = SignatureSampling(
+     Configuration(score=args.score, signature=args.signature, feature=args.feature, cache_dir=args.cache_dir, input_dir_or_file=args.input_dir)
+    )
+    result = sampling.run(element=args.element, num_samples=args.num_samples, sampling_size=args.sampling_size)
+
+
+if __name__ == "__main__":
+     cmdline()
+
 
 def silent_mkdir(folder):
     if not os.path.exists(folder):
@@ -56,7 +86,8 @@ class SignatureSampling(object):
                                   dtype={'chr': object, 'start': np.int, 'stop': np.int, 'feature': object},
                                   sep='\t')
 
-    def _get_ref_triplet(self, chromosome, start):
+    @staticmethod
+    def _get_ref_triplet(chromosome, start):
 
         # Normalize chromosome
         chromosome = chromosome.replace('chr', '')
@@ -227,7 +258,7 @@ class SignatureSampling(object):
         silent_mkdir(out_folder)
         return out_folder
 
-    def run(self, signature, element, num_samples, sampling_size=DEFAULT_SAMPLING_SIZE, verbose=True):
+    def run(self, element, num_samples, sampling_size=DEFAULT_SAMPLING_SIZE, verbose=True):
 
         score = self._conf.score
         feature = self._conf.feature
@@ -239,7 +270,7 @@ class SignatureSampling(object):
         logger.setLevel(logging.INFO if verbose else logging.ERROR)
 
         # Use 'none' if we don't want signature
-        signature = 'none' if signature is None else signature
+        signature = 'none' if self._conf.signature is None else self._conf.signature
 
         out_folder = self.get_cache_dir(element)
 
@@ -375,7 +406,7 @@ class SignatureSampling(object):
 
         def arguments():
             for a in values:
-                yield "{0} {1} {2} {3} {4} {5}".format(score, signature, feature, a[0], a[1], sampling_size)
+                yield "{0} {1} {2} {3} {4} {5}".format(score, signature, feature, a[0], a[1], cache_dir, self._conf.input, sampling_size)
 
         retry = 1
         jobs_done = 0
@@ -418,25 +449,4 @@ class SignatureSampling(object):
         if self._region_elements == None:
             self._region_elements = self._all_regions.feature.tolist()
         return element in self._region_elements
-
-#
-# if __name__ == "__main__":
-#
-#     # Configure the logging
-#     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
-#
-#     # Parse the arguments
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("score")
-#     parser.add_argument("signature")
-#     parser.add_argument("feature")
-#     parser.add_argument("element")
-#     parser.add_argument("num_samples", type=float)
-#     parser.add_argument("sampling_size", nargs='?', type=int, default=DEFAULT_SAMPLING_SIZE)
-#     parser.add_argument("cache_folder")
-#     parser.add_argument("input_folder")
-#     args = parser.parse_args()
-#
-#     # Execute the sampling
-#     run(args.score, args.signature, args.feature, args.element, args.num_samples, args.input_folder,  args.cache_folder, sampling_size=args.sampling_size)
 

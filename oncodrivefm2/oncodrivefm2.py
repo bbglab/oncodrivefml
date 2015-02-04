@@ -1,10 +1,10 @@
 import argparse
 import logging
 import os
-from configuration import Configuration
-from oncodrivefm2_step1 import OncodriveFM2Scoring
-from oncodrivefm2_step2 import OncodriveFM2Test
-from signaturesampling import SignatureSampling
+from oncodrivefm2.configuration import Configuration
+from oncodrivefm2.oncodrivefm2_step1 import OncodriveFM2Scoring
+from oncodrivefm2.oncodrivefm2_step2 import OncodriveFM2Test
+from oncodrivefm2.signaturesampling import SignatureSampling
 
 
 logger = logging.getLogger(__name__)
@@ -91,26 +91,37 @@ def cmdline():
     test_steps = [step0, step1, step2]
 
     # Parse the arguments
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog='oncodrivefm2')
+    always_args = parser.add_argument_group('Always required')
+    step1_args = parser.add_argument_group('Step 1')
+    step2_args = parser.add_argument_group('Step 2')
+    optional_args = parser.add_argument_group('Optional')
 
-    parser.add_argument("--cores", type=int, help="Number of CPUs to be used")
-    parser.add_argument("--project", type=str, help="Project identifier/name")
-    parser.add_argument("--tissue", type=str, help="Cancer type code")
-    parser.add_argument("--feature", type=str, help="Feature: CDS, UTR, etc.")
-    parser.add_argument("--signature", default="", type=str, help="Signature of mutation probabilities (by default 'project_tissue'), "
-                                                      "'none' if not desired.")
-    parser.add_argument('--indel-strategy', type=str, choices=Configuration.INDEL_STRATEGIES,
+
+    always_args.add_argument('--step', type=str, choices=test_steps, action='append',
+                        help="Three steps in the following order have to be performed: " + ", ".join(test_steps)
+                             + ". You may choose to run a command for each  step or specify "
+                               "--step multiple times in order to run all steps in one command.", required=True)
+    always_args.add_argument("--project", type=str, help="Project identifier/name", required=True)
+    always_args.add_argument("--tissue", type=str, help="Cancer type code", required=True)
+    always_args.add_argument("--feature", type=str, help="Feature: CDS, UTR, etc.", required=True)
+    always_args.add_argument("--score", type=str, help="Define desired score. E.g. 'cadd_12'", required=True)
+    always_args.add_argument("--input", dest="input_dir_or_file", type=str, help="Input file or directory, depending on which step is called.", required=True)
+    always_args.add_argument("--output-dir", type=str, help="Folder of intermediate and final results.", required=True)
+    always_args.add_argument("--cache-dir", type=str, help="Folder where variant-score mapping are cached.", required=True)
+
+
+    step1_args.add_argument('--indel-strategy', type=str, choices=Configuration.INDEL_STRATEGIES,
                         help="Choose a strategy for calculating indel score")
-    parser.add_argument('--step', type=str, choices=test_steps, action='append', help="Three steps in the following order"
-                                                                                      "have to be performed: " + ", ".join(test_steps))
-    parser.add_argument("--score", type=str, help="Define desired score(s)")
-    parser.add_argument("--input", dest="input_dir_or_file", type=str, help="Input file or directory, depending on which step is called.")
-    parser.add_argument("--output-dir", type=str, help="Folder of intermediate and final results.")
-    parser.add_argument("--cache-dir", type=str, help="Folder where variant-score mapping are cached.")
-    parser.add_argument("--ensembl-file", type=str, help="Needed in step 1 (score-calc).", required=False)
-    parser.add_argument("--indel-file", type=str, help="Needed in step 1 for user-input indel strategy.", required=False)
-    parser.add_argument("--expression-file", type=str, help="Needed in step 2 (test).", required=False)
-    parser.add_argument("--testing", help="Run a test : input files will be cut.", action="store_true", required=False)
+    step1_args.add_argument("--ensembl-file", type=str, help="Needed in step 1 (score-calc).", required=False)
+    step1_args.add_argument("--indel-file", type=str, help="Needed in step 1 for user-input indel strategy.", required=False)
+    step2_args.add_argument("--expression-file", type=str, help="Needed in step 2 (test).", required=False)
+
+    optional_args.add_argument("--signature", default="", type=str, help="Signature of mutation probabilities (by default 'project_tissue'), "
+                                                      "'none' if not desired.")
+    optional_args.add_argument("--cores", type=int, help="Number of CPUs to be used")
+    optional_args.add_argument("--testing", help="Run a test : input files will be cut.", action="store_true", required=False)
+
 
     args = parser.parse_args()
     print(args)

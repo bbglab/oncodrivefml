@@ -3,7 +3,7 @@ import glob
 import json
 import logging
 import oncodrivefm2
-import signaturesampling as sampling
+import oncodrivefm2.signaturesampling as sampling
 import os
 import pandas as pd
 import numpy as np

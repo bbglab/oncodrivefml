@@ -14,9 +14,6 @@ SIGNATURES = {
 }
 
 HG19_DIR = "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19"
-# Todo: run correct signatures_sampling
-COMMAND = "python /projects_bg/bg/shared/projects/fmdrivers/scripts/signaturesampling.py"
-
 
 SAMPLING_INPUT_FOLDER = "/projects_bg/bg/shared/projects/fmdrivers/input"
 
@@ -130,7 +127,7 @@ class Configuration():
     INDEL_STRATEGY_PERCENTILES = 'percentiles'
     INDEL_STRATEGY_MAX = 'max'
     INDEL_STRATEGY_USER_INPUT = 'user-input'
-    INDEL_STRATEGIES = [INDEL_STRATEGY_PERCENTILES, INDEL_STRATEGY_USER_INPUT]
+    INDEL_STRATEGIES = [INDEL_STRATEGY_PERCENTILES, INDEL_STRATEGY_USER_INPUT, INDEL_STRATEGY_MAX]
 
 
     def __init__(self, project, tissue, score, feature, output_dir, cache_dir, input_dir_or_file, indel_strategy=None,

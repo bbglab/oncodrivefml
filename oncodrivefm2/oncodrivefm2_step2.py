@@ -1,14 +1,14 @@
 import json
 import logging
 import datetime
-from configuration import Configuration, SCORES
+from oncodrivefm2.configuration import Configuration, SCORES
 import os
 import pandas as pd
 import numpy as np
 import gzip
 
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
-from signaturesampling import SignatureSampling, silent_mkdir
+from oncodrivefm2.signaturesampling import SignatureSampling, silent_mkdir
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
