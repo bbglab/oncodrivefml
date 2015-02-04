@@ -1,0 +1,28 @@
+results_*.tsv.gz
+mutations.tsv.gz
+indels.txt
+cache
+logs
+input
+gitcorrupted
+.ipynb_checkpoints
+test*
+
+# Intellij IDEA files
+.idea
+*.iml
+*.ipr
+*.iws
+
+# Eclipse files
+.classpath
+.project
+.settings/
+.ropeproject
+
+# gEdit temporal files
+*~
+
+# Python bytecode
+*.pyc
+intogen.egg-info/
