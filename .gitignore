@@ -1,6 +1,7 @@
 logs
 .ipynb_checkpoints
 testing
+example/output
 
 # Intellij IDEA files
 .idea

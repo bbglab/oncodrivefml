@@ -467,7 +467,7 @@ def sampling(score, signature, feature, element, num_samples, sampling_size=DEFA
     return values[:sampling_size]
 
 
-def sampling_prepare(values, feature='cds', signature='none', score='cadd', sampling_size=DEFAULT_SAMPLING_SIZE, verbose=False, max_jobs=450):
+def sampling_prepare(values, feature='cds', signature='none', score='cadd', sampling_size=DEFAULT_SAMPLING_SIZE, verbose=False, max_jobs=200):
 
     if score not in SCORES:
         raise RuntimeError("Unknown score '{}'".format(score))
