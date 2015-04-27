@@ -3,10 +3,12 @@ import gzip
 import json
 import logging
 import numpy as np
+import pandas as pd
 import os
 
 from multiprocessing.pool import Pool
-from oncodrivefm2.utils import _load_variants, _file_name, _load_regions, _silent_mkdir, _intersect_mutations, _compute_score_means, _multiple_test_correction
+from oncodrivefm2.utils import _load_variants, _file_name, _load_regions, _silent_mkdir, _intersect_mutations, _compute_score_means, _multiple_test_correction, \
+    _create_background_signature, _sampling
 
 
 class OncodriveFM2(object):
@@ -54,7 +56,7 @@ class OncodriveFM2(object):
             regions = _load_regions(self.regions_file)
 
             # Aggregate mutations
-            logging.info("Aggregating mutations by feature element")
+            logging.info("Grouping mutations by element")
             mutations = {}
             elements_all = [(e, segments) for e, segments in regions]
             elements_chunks = np.array_split(elements_all, self.cores)
@@ -114,107 +116,65 @@ class OncodriveFM2(object):
         return scores_dict
 
     def _run_sampling(self, scores_dict):
-        return
 
-        # # Skip if done
-        # if os.path.exists(self.results_file):
-        #     logging.info("Already calculated at '{}'".format(self.results_file))
-        #     return
-        #
-        # # Calculate empirical p-values
-        # logging.info("Calculate empirical p-values")
-        # if len(scores_dict) == 0:
-        #     logging.error("The scores file is empty")
-        #     return
-        #
-        # num_randomizations = 10000
-        # to_run = [(element, means) for element, means in scores_dict.items()]
-        # while len(to_run) > 0:
-        #
-        #     # Preprocess samplings
-        #     next_to_run = []
-        #     next_num_randomizations = num_randomizations * 2
-        #     to_prepare = []
-        #     logging.info("Round {} permutations with {} elements [start]".format(num_randomizations, len(to_run)))
-        #     for element, m in to_run:
-        #
-        #         for m_tissue in m['muts_by_tissue']['subs'].keys():
-        #
-        #             m_signature = _signature(project, m_tissue)
-        #             m_scores = m['muts_by_tissue']['subs'][m_tissue]
-        #             m_count = len(m_scores)
-        #
-        #             if num_randomizations == 10000:
-        #                 sampling_folder = os.path.join(sampling.SAMPLING_CACHE_FOLDER, score, feature, element[len(element) - 2:], element.upper())
-        #                 sampling_file = os.path.join(sampling_folder, 'sampling-{}-{}.bin'.format(m_signature, m_count))
-        #                 if os.path.exists(sampling_file):
-        #                     # If file exists skip sampling
-        #                     continue
-        #                 else:
-        #                     background_file = os.path.join(sampling_folder, 'background.tsv')
-        #                     if os.path.exists(background_file) and os.stat(background_file).st_size == 0:
-        #                         # If the background file is empty skip sampling
-        #                         continue
-        #
-        #             to_prepare.append((element, m_count, m_signature))
-        #
-        #     if len(to_prepare) > 0:
-        #         logging.info("Send {} samplings to prepare".format(len(to_prepare)))
-        #         sampling.sampling_prepare(to_prepare, feature=feature, score=score, verbose=True, max_jobs=450, sampling_size=num_randomizations)
-        #
-        #     logging.info("Start sampling")
-        #     for i, (e, m) in enumerate(to_run):
-        #
-        #         if i % 100 == 0:
-        #             logging.info("[{} of {}]".format(i, len(to_run)))
-        #
-        #         values_mean = None
-        #         values_mean_count = 0
-        #         all_scores = []
-        #         for m_tissue in m['muts_by_tissue']['subs'].keys():
-        #
-        #             m_signature = _signature(project, m_tissue)
-        #             m_scores = m['muts_by_tissue']['subs'][m_tissue]
-        #             m_count = len(m_scores)
-        #
-        #             values = sampling.sampling(score=score,
-        #                    signature=m_signature,
-        #                    feature=feature,
-        #                    element=e,
-        #                    num_samples=m_count,
-        #                    sampling_size=num_randomizations)
-        #
-        #             if values is None:
-        #                 logging.warning("There are no scores at {}-{}-{}-{}-{}-{}".format(score, m_signature, feature, e, m_count, num_randomizations))
-        #                 continue
-        #
-        #             values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0) if values_mean is not None else values
-        #             values_mean_count += m_count
-        #
-        #             all_scores += m_scores
-        #
-        #         obs = len(values_mean[values_mean >= np.mean(all_scores)]) if len(all_scores) > 0 else float(num_randomizations)
-        #
-        #         # Check if we need more resolution at this element
-        #         if obs <= 3 and next_num_randomizations <= 180000:
-        #             next_to_run.append((e, m))
-        #             logging.warning("We need more permutations at {}-{} (obs: {})".format(e, num_randomizations, obs))
-        #
-        #         m['pvalue'] = max(1, obs) / float(num_randomizations)
-        #
-        #     # Next iteration with the elements that need more permutations
-        #     to_run = next_to_run
-        #     num_randomizations = next_num_randomizations
-        #
-        # # Run multiple test correction
-        # logging.info("Multiple test correction")
-        # results_concat = _multiple_test_correction(scores_dict, num_significant_samples=2)
-        #
-        # # Sort and store results
-        # results_concat.sort('pvalue', 0, inplace=True)
-        # fields = ['symbol', 'muts', 'muts_recurrence', 'samples_mut', 'samples_max_recurrence', 'subs', 'subs_score', 'indels', 'indels_score', 'pvalue', 'qvalue', 'all_mean', 'max_mean', 'scores', 'positions']
-        # with gzip.open(self.results_file, 'wt') as fd:
-        #     results_concat[fields].to_csv(fd, sep="\t", header=True, index=True)
+        # Skip if done
+        if os.path.exists(self.results_file):
+            logging.info("Already calculated at '{}'".format(self.results_file))
+            return
+
+        # Prepare signature
+        logging.info("Prepare signature files")
+        signature_probabilities = pd.read_csv(self.signature_file, sep='\t')
+        signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
+        signature_dict = signature_probabilities.to_dict()['Probability_' + _file_name(self.variants_file)]
+        elements_all = [e for e, _ in scores_dict.items()]
+        elements_chunks = np.array_split(elements_all, self.cores)
+        arguments = [(chunk, self.output_folder, signature_dict, num) for num, chunk in enumerate(elements_chunks, start=1)]
+
+        pool = Pool(self.cores)
+        for c, _ in enumerate(pool.starmap(_create_background_signature, arguments), start=1):
+            logging.info("Chunk {} of {} [done]".format(c, self.cores))
+
+        # Calculate empirical p-values
+        logging.info("Calculate empirical p-values")
+        if len(scores_dict) == 0:
+            logging.error("The scores file is empty")
+            return
+
+        num_randomizations = 10000
+        to_run = [(element, means) for element, means in scores_dict.items()]
+        while len(to_run) > 0:
+
+            # Preprocess samplings
+            next_to_run = []
+            next_num_randomizations = min(1000000, num_randomizations * 2) if num_randomizations < 1000000 else 20000000
+
+            logging.info("Start sampling ({})".format(num_randomizations))
+            torun_chunks = np.array_split(to_run, self.cores)
+            arguments = [(chunk, num_randomizations, self.output_folder, num) for num, chunk in enumerate(torun_chunks, start=1)]
+            for result in pool.starmap(_sampling, arguments):
+                for (e, m) in result:
+                    # Check if we need more resolution at this element
+                    if m['obs'] <= 5 and next_num_randomizations <= 1000000:
+                        next_to_run.append((e, m))
+                        logging.warning("We need more permutations at {}-{} (obs: {})".format(e, num_randomizations, m['obs']))
+                    else:
+                        scores_dict[e]['pvalue'] = m['pvalue']
+
+            # Next iteration with the elements that need more permutations
+            to_run = np.array(next_to_run)
+            num_randomizations = next_num_randomizations
+
+        # Run multiple test correction
+        logging.info("Multiple test correction")
+        results_concat = _multiple_test_correction(scores_dict, num_significant_samples=2)
+
+        # Sort and store results
+        results_concat.sort('pvalue', 0, inplace=True)
+        fields = ['muts', 'muts_recurrence', 'samples_mut', 'samples_max_recurrence', 'subs', 'subs_score', 'pvalue', 'qvalue', 'all_mean', 'scores', 'positions']
+        with open(self.results_file, 'wt') as fd:
+            results_concat[fields].to_csv(fd, sep="\t", header=True, index=True)
+        logging.info("Result save at: {}".format(self.results_file))
 
 
 def cmdline():

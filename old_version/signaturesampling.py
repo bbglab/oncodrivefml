@@ -133,6 +133,7 @@ SIGNATURES = {
     'cll': '/projects_bg/bg/shared/projects/fmdrivers/input/signature_probabilities/signature_probabilities_cll.tsv',
     'pwcag': '/projects_bg/bg/shared/projects/fmdrivers/input/signature_probabilities/signature_probabilities_pwcag.tsv',
     'simulation': '/projects_bg/bg/shared/projects/fmdrivers/input/signature_probabilities/signature_probabilities_simulation.tsv',
+    'tumorportal': '/projects_bg/bg/shared/projects/fmdrivers/input/signature_probabilities/signature_probabilities_tumorportal.tsv',
     'pilot_simulation_1kb': '/projects_bg/bg/shared/projects/fmdrivers/input/signature_probabilities/signature_probabilities_pilotproject.tsv',
     'pilot_simulation_10kb': '/projects_bg/bg/shared/projects/fmdrivers/input/signature_probabilities/signature_probabilities_pilotproject.tsv',
     'pilot_simulation_50kb': '/projects_bg/bg/shared/projects/fmdrivers/input/signature_probabilities/signature_probabilities_pilotproject.tsv',

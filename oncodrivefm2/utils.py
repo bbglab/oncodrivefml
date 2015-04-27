@@ -2,6 +2,7 @@ import csv
 import logging
 import os
 import stat
+import mmap
 import pandas as pd
 import numpy as np
 from collections import Counter, defaultdict
@@ -10,6 +11,15 @@ import subprocess
 
 TABIX = "/home/jdeu/programs/tabix-0.2.6/tabix"
 SCORE_CONF = {'chr': 0, 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
+HG19_DIR = "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19"
+HG19_MMAP_FILES = {}
+
+def _compress_format(file):
+    if file.endswith("gz"):
+        return "gzip"
+    if file.endswith("bz"):
+        return "bz2"
+    return None
 
 
 def _load_variants(variants_file, signature=None):
@@ -17,7 +27,7 @@ def _load_variants(variants_file, signature=None):
     if not os.path.exists(variants_file):
         raise RuntimeError("Input dataset not found '{}'".format(variants_file))
 
-    muts = pd.read_csv(variants_file, sep='\t',
+    muts = pd.read_csv(variants_file, sep='\t', compression=_compress_format(variants_file),
                        dtype={'CHROMOSOME': object, 'POSITION': np.int, 'REF': object, 'ALT': object, 'SAMPLE': object, 'TYPE': object})
 
     if signature is not None:
@@ -33,7 +43,7 @@ def _load_variants(variants_file, signature=None):
 def _load_regions(regions_file):
     if not os.path.exists(regions_file):
         raise RuntimeError("Regions file '{}' not found".format(regions_file))
-    regions = pd.read_csv(regions_file, names=['chr', 'start', 'stop', 'feature'],
+    regions = pd.read_csv(regions_file, compression=_compress_format(regions_file), names=['chr', 'start', 'stop', 'feature'],
                           dtype={'chr': object, 'start': np.int, 'stop': np.int, 'feature': object}, sep='\t')
     regions = regions.groupby(['feature'])
     return regions
@@ -76,7 +86,7 @@ def _intersect_mutations(elements, muts, chunk):
 
 def _create_background_tsv(background_tsv_file, element, regions_file, scores_file):
     if os.path.exists(background_tsv_file):
-        logging.info("%s - background.tsv [skip]", element)
+        logging.debug("%s - background.tsv [skip]", element)
     else:
         if not os.path.exists(regions_file):
             logging.error("%s - background.tsv [error]", element)
@@ -104,7 +114,186 @@ def _create_background_tsv(background_tsv_file, element, regions_file, scores_fi
             raise RuntimeError("Running {}".format(command))
 
         _group_writable(background_tsv_file)
-        logging.info("%s - background.tsv [done]", element)
+        logging.debug("%s - background.tsv [done]", element)
+
+
+def _get_hg19_mmap(chromosome):
+    if chromosome not in HG19_MMAP_FILES:
+        fd = open(os.path.join(HG19_DIR, "chr{0}.txt".format(chromosome)), 'r+b')
+        HG19_MMAP_FILES[chromosome] = mmap.mmap(fd.fileno(), 0)
+    return HG19_MMAP_FILES[chromosome]
+
+
+def _get_ref_triplet(chromosome, start):
+    mm_file = _get_hg19_mmap(chromosome)
+    mm_file.seek(start-1)
+    return mm_file.read(3).decode().upper()
+
+
+def _random_scores(num_samples, sampling_size, scores_file, signature_file, sampling_file):
+
+    values = None
+    if os.path.exists(sampling_file):
+        values = np.fromfile(sampling_file, dtype='float32').astype('float64')
+
+    result = None
+    if num_samples > 0:
+        background = np.fromfile(scores_file, dtype='float32').astype('float64')
+
+        if len(background) == 0:
+            return None
+
+        if signature_file is None:
+
+            # Subs sampling without signature
+            p_normalized = None
+
+        else:
+            # Subs sampling with signature
+            probabilities = np.fromfile(signature_file, dtype='float32').astype('float64')
+            p_normalized = probabilities / sum(probabilities)
+
+        to_pick = sampling_size - len(values) if values is not None else sampling_size
+        if to_pick > 0:
+            if num_samples == 1:
+                result = np.array(
+                    np.random.choice(background, size=to_pick, p=p_normalized, replace=True),
+                    dtype='float32'
+                )
+            else:
+                result = np.array(
+                    [np.mean(np.random.choice(background, size=num_samples, p=p_normalized, replace=False)) for a in range(to_pick)],
+                    dtype='float32'
+                )
+
+        # Concat results with previous sampling
+        if values is not None:
+            if result is not None:
+                result = np.concatenate((values, result), axis=0)
+            else:
+                result = values
+
+        # Store the sampling
+        result.tofile(sampling_file, format='float32')
+        _group_writable(sampling_file)
+
+    return result
+
+
+def _sampling(chunks, num_randomizations, output_folder, process):
+
+    result = []
+    total = len(chunks)
+    for i, (e, m) in enumerate(chunks):
+
+        if i % 50 == 0:
+            print("[process-{}] {} of {}".format(process, i, total))
+        i += 1
+
+        cache_folder = os.path.join(output_folder, "cache", e[len(e) - 2:], e.upper())
+        scores_file = os.path.join(cache_folder, 'background.bin')
+        signature_file = os.path.join(cache_folder, 'signature.bin')
+        sampling_file = os.path.join(cache_folder, 'sampling.bin')
+
+        values_mean = None
+        values_mean_count = 0
+        all_scores = []
+        for m_tissue in m['muts_by_tissue']['subs'].keys():
+
+            m_scores = m['muts_by_tissue']['subs'][m_tissue]
+            m_count = len(m_scores)
+
+            # TODO Use per tissue signature
+            values = _random_scores(m_count, num_randomizations, scores_file, signature_file, sampling_file)
+
+            if values is None:
+                logging.warning("There are no scores at {}-{}-{}".format(e, m_count, num_randomizations))
+                continue
+
+            values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count],
+                                     axis=0) if values_mean is not None else values
+            values_mean_count += m_count
+
+            all_scores += m_scores
+
+        m['obs'] = len(values_mean[values_mean >= np.mean(all_scores)]) if len(all_scores) > 0 else float(num_randomizations)
+        m['pvalue'] = max(1, m['obs']) / float(num_randomizations)
+        result.append((e, m))
+
+        logging.debug(" %s - sampling.bin [done]", e)
+
+    return result
+
+
+def _create_background_signature(elements, output_folder, signature_dict, chunk):
+
+    i = 0
+    total = len(elements)
+    for e in elements:
+
+        if i % 50 == 0:
+            print("[process-{}] {} of {}".format(chunk, i, total))
+        i += 1
+
+        cache_folder = os.path.join(output_folder, "cache", e[len(e) - 2:], e.upper())
+        element_scores_tsv_file = os.path.join(cache_folder, 'background.tsv')
+        element_scores_bin_file = os.path.join(cache_folder, 'background.bin')
+        element_signature_bin_file = os.path.join(cache_folder, 'signature.bin')
+
+        if os.path.exists(element_scores_bin_file) and os.path.exists(element_signature_bin_file):
+            logging.debug("%s - background.bin signature.bin [skip]", e)
+        else:
+
+            probabilities = []
+            scores = []
+
+            with open(element_scores_tsv_file, 'r') as fd:
+                reader = csv.reader(fd, delimiter='\t')
+                for row in reader:
+                    # Read score
+                    value = float(row[SCORE_CONF['score']])
+                    alt = row[SCORE_CONF['alt']]
+
+                    # Expand refseq2 dots
+                    if alt == '.':
+                        scores.append(value)
+                        scores.append(value)
+                        scores.append(value)
+                    else:
+                        scores.append(value)
+
+                    # Compute signature
+                    ref_triplet = _get_ref_triplet(row[SCORE_CONF['chr']], int(row[SCORE_CONF['pos']]) - 1)
+                    ref = row[SCORE_CONF['ref']]
+                    alt = row[SCORE_CONF['alt']]
+
+                    if ref_triplet[1] != ref:
+                        logging.warning("Background mismatch at position %d at '%s'", int(row[SCORE_CONF['pos']]), element_scores_tsv_file)
+
+                    # Expand funseq2 dots
+                    alts = alt if alt != '.' else 'ACGT'.replace(ref, '')
+
+                    for a in alts:
+                        alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+                        try:
+                            signature = signature_dict[(ref_triplet, alt_triplet)]
+                            probabilities.append(signature)
+                        except KeyError:
+                            logging.warning("Triplet without probability ref: '%s' alt: '%s'", ref_triplet, alt_triplet)
+                            probabilities.append(0.0)
+
+            # Save background.bin
+            np.array(scores, dtype='float32').tofile(element_scores_bin_file, format='float32')
+            _group_writable(element_scores_bin_file)
+
+            # Save signature.bin
+            c_array = np.array([p for p in probabilities], dtype='float32')
+            c_array.tofile(element_signature_bin_file, format='float32')
+            _group_writable(element_signature_bin_file)
+
+            logging.debug("%s - signature.bin [done]", e)
+
+    return True
 
 
 def _scores_by_position(e, regions_file, scores_file, output_folder):
@@ -139,7 +328,7 @@ def _compute_score_means(elements, regions_file, scores_file, output_folder, chu
 
     for element, element_muts in elements:
 
-        if i % 100 == 0:
+        if i % 50 == 0:
             print("[process-{}] {} of {}".format(chunk, i, total))
         i += 1
 

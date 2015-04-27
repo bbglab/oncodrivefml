@@ -276,7 +276,7 @@ class OncodriveFM2Scoring(object):
                 return pool.apply(self._sampling.sampling_prepare, (to_background,), prepare_arguments)
             else:
                 compute_arguments = ((signature, e, n) for e, n in to_background)
-                return pool.starmap(self._sampling.sampling, compute_arguments)
+                return pool.starmap(self._sampling._sampling, compute_arguments)
         else:
             return None
 

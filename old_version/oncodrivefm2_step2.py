@@ -233,7 +233,7 @@ def _run(project, tissue, score, feature):
                 m_scores = m['muts_by_tissue']['subs'][m_tissue]
                 m_count = len(m_scores)
 
-                values = sampling.sampling(score=score,
+                values = sampling._sampling(score=score,
                        signature=m_signature,
                        feature=feature,
                        element=e,

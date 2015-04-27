@@ -117,7 +117,7 @@ class OncodriveFM2Test(object):
                 if i % 100 == 0:
                     logger.info("[{} of {}]".format(i, len(to_run)))
 
-                values = self._sampling.sampling(
+                values = self._sampling._sampling(
                        signature=signature,
                        element=e,
                        num_samples=v['muts'],
