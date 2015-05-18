@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from collections import Counter, defaultdict
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
+from intervaltree import Interval, IntervalTree
 import subprocess
 
 TABIX = "/home/jdeu/programs/tabix-0.2.6/tabix"
@@ -22,67 +23,52 @@ def _compress_format(file):
     return None
 
 
-def _load_variants(variants_file, signature=None):
-
-    if not os.path.exists(variants_file):
-        raise RuntimeError("Input dataset not found '{}'".format(variants_file))
-
-    muts = pd.read_csv(variants_file, sep='\t', compression=_compress_format(variants_file),
-                       dtype={'CHROMOSOME': object, 'POSITION': np.int, 'REF': object, 'ALT': object, 'SAMPLE': object, 'TYPE': object})
-
-    if signature is not None:
-        muts['SIGNATURE'] = signature
-
-    muts = muts[muts.TYPE.isin(['subs', 'indel'])]
-    muts.set_index(['CHROMOSOME', 'POSITION'], inplace=True)
-    muts.sortlevel(level=0, axis=0, inplace=True)
-
-    return muts
-
-
 def _load_regions(regions_file):
     if not os.path.exists(regions_file):
-        raise RuntimeError("Regions file '{}' not found".format(regions_file))
-    regions = pd.read_csv(regions_file, compression=_compress_format(regions_file), names=['chr', 'start', 'stop', 'feature'],
-                          dtype={'chr': object, 'start': np.int, 'stop': np.int, 'feature': object}, sep='\t')
-    regions = regions.groupby(['feature'])
+        raise RuntimeError("Feature file '{}' not found".format(regions_file))
+
+    regions = {}
+    with open(regions_file, 'rt') as fd:
+        reader = csv.reader(fd, delimiter='\t')
+        for r in reader:
+            chrom, start, stop, feature = r[0], r[1], r[2], r[3]
+            if chrom not in regions:
+                regions[chrom] = IntervalTree()
+            regions[chrom][int(start):int(stop)] = feature
     return regions
 
 
-def _intersect_mutations(elements, muts, chunk):
+def _load_variants_dict(variants_file, regions_file, signature_name='none'):
 
-    result = []
+    # Load regions
+    logging.info("Loading regions")
+    regions = _load_regions(regions_file)
 
-    i = 1
-    total = len(elements)
-    valid_chromosomes = set(muts.index.levels[0])
-
-    for element, segments in elements:
-
-        if i % 100 == 0:
-            print("[process-{}] {} of {}".format(chunk, i, total))
-        i += 1
-
-        # Lookup the mutations at this feature
-        element_muts = []
-        for r in segments.iterrows():
-            chrom = r[1].chr
-            if chrom not in valid_chromosomes:
+    # Load mutations
+    variants_dict = defaultdict(list)
+    logging.info("Loading mutations")
+    with open(variants_file) as fd:
+        reader = csv.DictReader(fd, delimiter='\t')
+        for r in reader:
+            if r['TYPE'] not in ['subs', 'indel']:
                 continue
-            start = r[1].start
-            stop = r[1].stop
-            muts_region = muts.loc(axis=0)[chrom, start:stop]
-            if len(muts_region) > 0:
-                element_muts += muts_region.reset_index().to_dict(orient='record')
 
-        # Skip features without mutations
-        if len(element_muts) == 0:
-            continue
+            if r['CHROMOSOME'] not in regions:
+                continue
 
-        result.append((element, element_muts))
+            position = int(r['POSITION'])
+            for interval in regions[r['CHROMOSOME']][position]:
+                variants_dict[interval.data].append({
+                    'CHROMOSOME': r['CHROMOSOME'],
+                    'POSITION': position,
+                    'SAMPLE': r['SAMPLE'],
+                    'TYPE': r['TYPE'],
+                    'REF': r['REF'],
+                    'ALT': r['ALT'],
+                    'SIGNATURE': signature_name
+                })
 
-    return result
-
+    return variants_dict
 
 def _create_background_tsv(background_tsv_file, element, regions_file, scores_file):
     if os.path.exists(background_tsv_file):
@@ -180,7 +166,94 @@ def _random_scores(num_samples, sampling_size, scores_file, signature_file, samp
     return result
 
 
-def _sampling(chunks, num_randomizations, output_folder, process):
+def _run(elements, sampling_size, regions_file, scores_file, signature_dict, output_folder, process):
+
+    result = []
+
+    i = 1
+    total = len(elements)
+
+    for element, element_muts in elements:
+
+        if i % 50 == 0:
+            print("[process-{}] {} of {}".format(process, i, total))
+        i += 1
+
+        # Skip features without mutations
+        if len(element_muts) == 0:
+            continue
+
+        # Read element scores
+        scores = _scores_by_position(element, regions_file, scores_file, output_folder)
+
+        # Add scores to the element mutations
+        muts_by_tissue = {'subs': defaultdict(list)}
+        scores_by_sample = {}
+        scores_list = []
+        scores_subs_list = []
+        scores_indels_list = []
+        total_subs = 0
+        total_subs_score = 0
+        positions = []
+        mutations = []
+        for m in element_muts:
+
+            if m['TYPE'] == "subs":
+                total_subs += 1
+                values = scores.get(str(m['POSITION']), [])
+                for v in values:
+                    if v['ref'] == m['REF'] and (v['alt'] == m['ALT'] or v['alt'] == '.'):
+                        m['SCORE'] = v['value']
+                        total_subs_score += 1
+                        break
+
+            # Update scores
+            if 'SCORE' in m:
+
+                sample = m['SAMPLE']
+                if sample not in scores_by_sample:
+                    scores_by_sample[sample] = []
+
+                scores_by_sample[sample].append(m['SCORE'])
+                scores_list.append(m['SCORE'])
+
+                if m['TYPE'] == "subs":
+                    scores_subs_list.append(m['SCORE'])
+                    muts_by_tissue['subs'][m['SIGNATURE']].append(m['SCORE'])
+
+                positions.append(m['POSITION'])
+                mutations.append(m)
+
+        if len(scores_list) == 0:
+            continue
+
+        # Aggregate scores
+        num_samples = len(scores_by_sample)
+
+        item = {
+            'samples_mut': num_samples,
+            'all_mean': np.mean(scores_list),
+            'muts': len(scores_list),
+            'muts_recurrence': len(set(positions)),
+            'samples_max_recurrence': max(Counter(positions).values()),
+            'subs': total_subs,
+            'subs_score': total_subs_score,
+            'scores': scores_list,
+            'scores_subs': scores_subs_list,
+            'scores_indels': scores_indels_list,
+            'positions': positions,
+            'muts_by_tissue': muts_by_tissue,
+            'mutations': mutations
+        }
+
+        result.append((element, item))
+
+    return result
+
+    pass
+
+
+def _sampling(chunks, sampling_size, output_folder, process):
 
     result = []
     total = len(chunks)
@@ -204,10 +277,10 @@ def _sampling(chunks, num_randomizations, output_folder, process):
             m_count = len(m_scores)
 
             # TODO Use per tissue signature
-            values = _random_scores(m_count, num_randomizations, scores_file, signature_file, sampling_file)
+            values = _random_scores(m_count, sampling_size, scores_file, signature_file, sampling_file)
 
             if values is None:
-                logging.warning("There are no scores at {}-{}-{}".format(e, m_count, num_randomizations))
+                logging.warning("There are no scores at {}-{}-{}".format(e, m_count, sampling_size))
                 continue
 
             values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count],
@@ -216,8 +289,8 @@ def _sampling(chunks, num_randomizations, output_folder, process):
 
             all_scores += m_scores
 
-        m['obs'] = len(values_mean[values_mean >= np.mean(all_scores)]) if len(all_scores) > 0 else float(num_randomizations)
-        m['pvalue'] = max(1, m['obs']) / float(num_randomizations)
+        m['obs'] = len(values_mean[values_mean >= np.mean(all_scores)]) if len(all_scores) > 0 else float(sampling_size)
+        m['pvalue'] = max(1, m['obs']) / float(sampling_size)
         result.append((e, m))
 
         logging.debug(" %s - sampling.bin [done]", e)
@@ -319,22 +392,24 @@ def _scores_by_position(e, regions_file, scores_file, output_folder):
     return scores
 
 
-def _compute_score_means(elements, regions_file, scores_file, output_folder, chunk):
+def _compute_score_means(elements, regions_file, scores_file, output_folder, process):
 
     result = []
 
     i = 1
     total = len(elements)
 
-    for element, element_muts in elements:
+    for element, muts in elements:
 
         if i % 50 == 0:
-            print("[process-{}] {} of {}".format(chunk, i, total))
+            print("[process-{}] {} of {}".format(process, i, total))
         i += 1
 
         # Skip features without mutations
-        if len(element_muts) == 0:
+        if len(muts) == 0:
             continue
+
+        ## SCORES PHASE
 
         # Read element scores
         scores = _scores_by_position(element, regions_file, scores_file, output_folder)
@@ -349,7 +424,7 @@ def _compute_score_means(elements, regions_file, scores_file, output_folder, chu
         total_subs_score = 0
         positions = []
         mutations = []
-        for m in element_muts:
+        for m in muts:
 
             if m['TYPE'] == "subs":
                 total_subs += 1

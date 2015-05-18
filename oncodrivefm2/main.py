@@ -2,13 +2,17 @@ import argparse
 import gzip
 import json
 import logging
+import functools
+import itertools
 import numpy as np
 import pandas as pd
+import csv
 import os
 
 from multiprocessing.pool import Pool
-from oncodrivefm2.utils import _load_variants, _file_name, _load_regions, _silent_mkdir, _intersect_mutations, _compute_score_means, _multiple_test_correction, \
-    _create_background_signature, _sampling
+from collections import defaultdict
+from oncodrivefm2.utils import _file_name, _load_regions, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
+    _create_background_signature, _sampling, _load_variants_dict
 
 
 class OncodriveFM2(object):
@@ -30,69 +34,33 @@ class OncodriveFM2(object):
         self.scores_dict_file = os.path.join(output_folder, 'scores.json.gz')
         self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefm2.tsv')
 
+        self.store_scores = False
+
         # Some initializations
         _silent_mkdir(output_folder)
 
     def run(self):
 
-        variants_dict = self._load_variants_dict()
-        scores_dict = self._load_scores_dict(variants_dict)
-        self._run_sampling(scores_dict)
-
-    def _load_variants_dict(self):
-
-        # Create variants dictionary
+        # Create or load variants dictionary
         if not os.path.exists(self.variants_dict_file):
-
-            # Initialize pool
-            pool = Pool(self.cores)
-
-            # Loading mutations
-            logging.info("Loading mutations")
-            muts = _load_variants(self.variants_file, signature=self.signature_name)
-
-            # Load features
-            logging.info("Loading regions")
-            regions = _load_regions(self.regions_file)
-
-            # Aggregate mutations
-            logging.info("Grouping mutations by element")
-            mutations = {}
-            elements_all = [(e, segments) for e, segments in regions]
-            elements_chunks = np.array_split(elements_all, self.cores)
-            compute_arguments = ((chunk, muts, num) for num, chunk in enumerate(elements_chunks, start=1))
-            c = 0
-            for done in pool.starmap(_intersect_mutations, compute_arguments):
-                c += 1
-                logging.info("Chunk {} of {} [done]".format(c, self.cores))
-                for element, variants in done:
-                    mutations[element] = variants
-
-            # Store results
+            variants_dict = _load_variants_dict(self.variants_file, self.regions_file, signature_name=self.signature_name)
             logging.info("Storing variants dictionary")
             with gzip.open(self.variants_dict_file, 'wt') as fd:
-                json.dump(mutations, fd)
+                json.dump(variants_dict, fd)
 
-        # Load variants dict
         with gzip.open(self.variants_dict_file, 'rt') as fd:
             variants_dict = json.load(fd)
 
-        return variants_dict
-
-    def _load_scores_dict(self, variants_dict):
-
-        # Skip if done
         if not os.path.exists(self.scores_dict_file):
-
             # Initialize
             pool = Pool(self.cores)
-
+            #pool = itertools
             if not os.path.exists(self.score_file):
                 raise RuntimeError("Score file not found '{}'".format(self.score_file))
 
             # Compute elements statistics
-            logging.info("Computing score statistics by element")
-            results = {}
+            logging.info("Sampling by element")
+            scores_dict = {}
             elements_all = list(variants_dict.items())
             elements_chunks = np.array_split(elements_all, self.cores)
             compute_arguments = ((chunk, self.regions_file, self.score_file, self.output_folder, num) for num, chunk in enumerate(elements_chunks, start=1))
@@ -101,21 +69,15 @@ class OncodriveFM2(object):
                 c += 1
                 logging.info("Chunk {} of {} [done]".format(c, self.cores))
                 for element, means in done:
-                    results[element] = means
+                    scores_dict[element] = means
 
             # Store results
             logging.info("Store scores dictionary")
-
             with gzip.open(self.scores_dict_file, 'wt') as fd:
-                json.dump(results, fd)
+                    json.dump(scores_dict, fd)
 
-        # Load scores dict
         with gzip.open(self.scores_dict_file, 'rt') as fd:
             scores_dict = json.load(fd)
-
-        return scores_dict
-
-    def _run_sampling(self, scores_dict):
 
         # Skip if done
         if os.path.exists(self.results_file):
@@ -176,6 +138,11 @@ class OncodriveFM2(object):
             results_concat[fields].to_csv(fd, sep="\t", header=True, index=True)
         logging.info("Result save at: {}".format(self.results_file))
 
+        # Store extra details
+        if self.store_scores:
+            with gzip.open(self.scores_dict_file, 'wt') as fd:
+                json.dump(scores_dict, fd)
+
 
 def cmdline():
 
@@ -188,7 +155,7 @@ def cmdline():
     # Mandatory
     parser.add_argument('-i', '--input', dest='input_file', help='Variants file (maf, vcf or tab formated)')
     parser.add_argument('-r', '--regions', dest='regions_file', help='Genomic regions to analyse')
-    parser.add_argument('-t', '--signature', dest='signature_file', help='Trinucleatide signature file')
+    parser.add_argument('-t', '--signature', dest='signature_file', help='Trinucleotide signature file')
     parser.add_argument('-s', '--score', dest='score_file', help='Tabix score file')
 
     # Optional
