@@ -2,15 +2,11 @@ import argparse
 import gzip
 import json
 import logging
-import functools
-import itertools
 import numpy as np
 import pandas as pd
-import csv
 import os
 
 from multiprocessing.pool import Pool
-from collections import defaultdict
 from oncodrivefm2.utils import _file_name, _load_regions, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
     _create_background_signature, _sampling, _load_variants_dict
 
