@@ -81,17 +81,29 @@ class OncodriveFM2(object):
             return
 
         # Prepare signature
-        logging.info("Prepare signature files")
-        signature_probabilities = pd.read_csv(self.signature_file, sep='\t')
-        signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
-        signature_dict = signature_probabilities.to_dict()['Probability_' + _file_name(self.variants_file)]
-        elements_all = [e for e, _ in scores_dict.items()]
-        elements_chunks = np.array_split(elements_all, self.cores)
-        arguments = [(chunk, self.output_folder, signature_dict, num) for num, chunk in enumerate(elements_chunks, start=1)]
+        if self.signature_file == "none":
+            # We don't use signature
+            logging.warning("We are not using any signature")
+        elif self.score_file == "compute":
+            #TODO compute the signature
+            logging.warning("TODO: compute signature. Running without signature.")
+        else:
+            signature_conf = self.signature_file.split(":")
+            if not os.path.exists(signature_conf[1]):
+                logging.error("Signature file {} not found. Running without signature.".format(signature_conf[1]))
+            else:
+                logging.info("Prepare signature files")
+                signature_probabilities = pd.read_csv(signature_conf[1], sep='\t')
+                signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
+                signature_dict = signature_probabilities.to_dict()[signature_conf[0]]
 
-        pool = Pool(self.cores)
-        for c, _ in enumerate(pool.starmap(_create_background_signature, arguments), start=1):
-            logging.info("Chunk {} of {} [done]".format(c, self.cores))
+                elements_all = [e for e, _ in scores_dict.items()]
+                elements_chunks = np.array_split(elements_all, self.cores)
+                arguments = [(chunk, self.output_folder, signature_dict, num) for num, chunk in enumerate(elements_chunks, start=1)]
+
+                pool = Pool(self.cores)
+                for c, _ in enumerate(pool.starmap(_create_background_signature, arguments), start=1):
+                    logging.info("Chunk {} of {} [done]".format(c, self.cores))
 
         # Calculate empirical p-values
         logging.info("Calculate empirical p-values")
@@ -151,7 +163,7 @@ def cmdline():
     # Mandatory
     parser.add_argument('-i', '--input', dest='input_file', help='Variants file (maf, vcf or tab formated)')
     parser.add_argument('-r', '--regions', dest='regions_file', help='Genomic regions to analyse')
-    parser.add_argument('-t', '--signature', dest='signature_file', help='Trinucleotide signature file')
+    parser.add_argument('-t', '--signature', dest='signature_file', default="none", help='Trinucleotide signature file')
     parser.add_argument('-s', '--score', dest='score_file', help='Tabix score file')
 
     # Optional

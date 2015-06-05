@@ -266,6 +266,8 @@ def _sampling(chunks, sampling_size, output_folder, process):
         cache_folder = os.path.join(output_folder, "cache", e[len(e) - 2:], e.upper())
         scores_file = os.path.join(cache_folder, 'background.bin')
         signature_file = os.path.join(cache_folder, 'signature.bin')
+        if not os.path.exists(signature_file):
+            signature_file = None
         sampling_file = os.path.join(cache_folder, 'sampling.bin')
 
         values_mean = None
@@ -498,6 +500,8 @@ def _multiple_test_correction(results, num_significant_samples=2):
 
 
 def _file_name(file):
+    if file is None:
+        return None
     return os.path.splitext(os.path.basename(file))[0]
 
 
