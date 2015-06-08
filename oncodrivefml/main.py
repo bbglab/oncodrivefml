@@ -169,7 +169,7 @@ def cmdline():
     # Optional
     parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
     parser.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
-    parser.add_argument('--cores', dest='cores', default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
+    parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
 
     args = parser.parse_args()
     logging.debug(args)
