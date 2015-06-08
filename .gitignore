@@ -20,4 +20,4 @@ example/output
 
 # Python bytecode
 *.pyc
-oncodrivefm2.egg-info/
+*.egg-info/

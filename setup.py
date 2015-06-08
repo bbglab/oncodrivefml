@@ -1,10 +1,10 @@
 from distutils.core import setup
 from setuptools import find_packages
-from oncodrivefm2 import VERSION
+from oncodrivefml import __version__
 
 setup(
-    name='oncodrivefm2',
-    version=VERSION,
+    name='oncodrivefml',
+    version=__version__,
     packages=find_packages(),
     url='http://bg.upf.edu',
     license='UPF Free Source Code',
@@ -25,7 +25,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'oncodrivefm2 = oncodrivefm2.main:cmdline'
+            'oncodrivefml = oncodrivefml.main:cmdline'
         ]
     }
 )
