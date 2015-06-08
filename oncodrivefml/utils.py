@@ -166,94 +166,7 @@ def _random_scores(num_samples, sampling_size, scores_file, signature_file, samp
     return result
 
 
-def _run(elements, sampling_size, regions_file, scores_file, signature_dict, output_folder, process):
-
-    result = []
-
-    i = 1
-    total = len(elements)
-
-    for element, element_muts in elements:
-
-        if i % 50 == 0:
-            print("[process-{}] {} of {}".format(process, i, total))
-        i += 1
-
-        # Skip features without mutations
-        if len(element_muts) == 0:
-            continue
-
-        # Read element scores
-        scores = _scores_by_position(element, regions_file, scores_file, output_folder)
-
-        # Add scores to the element mutations
-        muts_by_tissue = {'subs': defaultdict(list)}
-        scores_by_sample = {}
-        scores_list = []
-        scores_subs_list = []
-        scores_indels_list = []
-        total_subs = 0
-        total_subs_score = 0
-        positions = []
-        mutations = []
-        for m in element_muts:
-
-            if m['TYPE'] == "subs":
-                total_subs += 1
-                values = scores.get(str(m['POSITION']), [])
-                for v in values:
-                    if v['ref'] == m['REF'] and (v['alt'] == m['ALT'] or v['alt'] == '.'):
-                        m['SCORE'] = v['value']
-                        total_subs_score += 1
-                        break
-
-            # Update scores
-            if 'SCORE' in m:
-
-                sample = m['SAMPLE']
-                if sample not in scores_by_sample:
-                    scores_by_sample[sample] = []
-
-                scores_by_sample[sample].append(m['SCORE'])
-                scores_list.append(m['SCORE'])
-
-                if m['TYPE'] == "subs":
-                    scores_subs_list.append(m['SCORE'])
-                    muts_by_tissue['subs'][m['SIGNATURE']].append(m['SCORE'])
-
-                positions.append(m['POSITION'])
-                mutations.append(m)
-
-        if len(scores_list) == 0:
-            continue
-
-        # Aggregate scores
-        num_samples = len(scores_by_sample)
-
-        item = {
-            'samples_mut': num_samples,
-            'all_mean': np.mean(scores_list),
-            'muts': len(scores_list),
-            'muts_recurrence': len(set(positions)),
-            'samples_max_recurrence': max(Counter(positions).values()),
-            'subs': total_subs,
-            'subs_score': total_subs_score,
-            'scores': scores_list,
-            'scores_subs': scores_subs_list,
-            'scores_indels': scores_indels_list,
-            'positions': positions,
-            'muts_by_tissue': muts_by_tissue,
-            'mutations': mutations
-        }
-
-        result.append((element, item))
-
-    return result
-
-    pass
-
-
-def _sampling(chunks, sampling_size, output_folder, process):
+def _sampling(chunks, sampling_size, cache_folder, process):
 
     result = []
     total = len(chunks)
@@ -263,12 +176,12 @@ def _sampling(chunks, sampling_size, output_folder, process):
             print("[process-{}] {} of {}".format(process, i, total))
         i += 1
 
-        cache_folder = os.path.join(output_folder, "cache", e[len(e) - 2:], e.upper())
-        scores_file = os.path.join(cache_folder, 'background.bin')
-        signature_file = os.path.join(cache_folder, 'signature.bin')
+        cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
+        scores_file = os.path.join(cache_path, 'background.bin')
+        signature_file = os.path.join(cache_path, 'signature.bin')
         if not os.path.exists(signature_file):
             signature_file = None
-        sampling_file = os.path.join(cache_folder, 'sampling.bin')
+        sampling_file = os.path.join(cache_path, 'sampling.bin')
 
         values_mean = None
         values_mean_count = 0
@@ -300,7 +213,7 @@ def _sampling(chunks, sampling_size, output_folder, process):
     return result
 
 
-def _create_background_signature(elements, output_folder, signature_dict, chunk):
+def _create_background_signature(elements, cache_folder, signature_dict, chunk):
 
     i = 0
     total = len(elements)
@@ -310,10 +223,10 @@ def _create_background_signature(elements, output_folder, signature_dict, chunk)
             print("[process-{}] {} of {}".format(chunk, i, total))
         i += 1
 
-        cache_folder = os.path.join(output_folder, "cache", e[len(e) - 2:], e.upper())
-        element_scores_tsv_file = os.path.join(cache_folder, 'background.tsv')
-        element_scores_bin_file = os.path.join(cache_folder, 'background.bin')
-        element_signature_bin_file = os.path.join(cache_folder, 'signature.bin')
+        cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
+        element_scores_tsv_file = os.path.join(cache_path, 'background.tsv')
+        element_scores_bin_file = os.path.join(cache_path, 'background.bin')
+        element_signature_bin_file = os.path.join(cache_path, 'signature.bin')
 
         if os.path.exists(element_scores_bin_file) and os.path.exists(element_signature_bin_file):
             logging.debug("%s - background.bin signature.bin [skip]", e)
@@ -371,9 +284,9 @@ def _create_background_signature(elements, output_folder, signature_dict, chunk)
     return True
 
 
-def _scores_by_position(e, regions_file, scores_file, output_folder):
+def _scores_by_position(e, regions_file, scores_file, cache_folder):
 
-    background_folder = os.path.join(output_folder, "cache", e[len(e) - 2:], e.upper())
+    background_folder = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
     background_tsv_file = os.path.join(background_folder, 'background.tsv')
 
     if not os.path.exists(background_tsv_file):
@@ -394,7 +307,7 @@ def _scores_by_position(e, regions_file, scores_file, output_folder):
     return scores
 
 
-def _compute_score_means(elements, regions_file, scores_file, output_folder, process):
+def _compute_score_means(elements, regions_file, scores_file, cache_folder, process):
 
     result = []
 
@@ -414,7 +327,7 @@ def _compute_score_means(elements, regions_file, scores_file, output_folder, pro
         ## SCORES PHASE
 
         # Read element scores
-        scores = _scores_by_position(element, regions_file, scores_file, output_folder)
+        scores = _scores_by_position(element, regions_file, scores_file, cache_folder)
 
         # Add scores to the element mutations
         muts_by_tissue = {'subs': defaultdict(list)}

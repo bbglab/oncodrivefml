@@ -7,13 +7,13 @@ import pandas as pd
 import os
 
 from multiprocessing.pool import Pool
-from oncodrivefml.utils import _file_name, _load_regions, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
+from oncodrivefml.utils import _file_name, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
     _create_background_signature, _sampling, _load_variants_dict
 
 
 class OncodriveFM2(object):
 
-    def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder, project_name=None, cores=os.cpu_count()):
+    def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder, project_name=None, cores=os.cpu_count(), cache=None):
 
         # Configuration
         self.cores = cores
@@ -31,8 +31,12 @@ class OncodriveFM2(object):
         self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefm2.tsv')
 
         self.store_scores = False
+        self.cache = cache
+        if cache is None:
+            self.cache = os.path.join(self.output_folder, "cache")
 
         # Some initializations
+        _silent_mkdir(self.cache)
         _silent_mkdir(output_folder)
 
     def run(self):
@@ -59,7 +63,7 @@ class OncodriveFM2(object):
             scores_dict = {}
             elements_all = list(variants_dict.items())
             elements_chunks = np.array_split(elements_all, self.cores)
-            compute_arguments = ((chunk, self.regions_file, self.score_file, self.output_folder, num) for num, chunk in enumerate(elements_chunks, start=1))
+            compute_arguments = ((chunk, self.regions_file, self.score_file, self.cache, num) for num, chunk in enumerate(elements_chunks, start=1))
             c = 0
             for done in pool.starmap(_compute_score_means, compute_arguments):
                 c += 1
@@ -99,7 +103,7 @@ class OncodriveFM2(object):
 
                 elements_all = [e for e, _ in scores_dict.items()]
                 elements_chunks = np.array_split(elements_all, self.cores)
-                arguments = [(chunk, self.output_folder, signature_dict, num) for num, chunk in enumerate(elements_chunks, start=1)]
+                arguments = [(chunk, self.cache, signature_dict, num) for num, chunk in enumerate(elements_chunks, start=1)]
 
                 pool = Pool(self.cores)
                 for c, _ in enumerate(pool.starmap(_create_background_signature, arguments), start=1):
@@ -121,7 +125,7 @@ class OncodriveFM2(object):
 
             logging.info("Start sampling ({})".format(num_randomizations))
             torun_chunks = np.array_split(to_run, self.cores)
-            arguments = [(chunk, num_randomizations, self.output_folder, num) for num, chunk in enumerate(torun_chunks, start=1)]
+            arguments = [(chunk, num_randomizations, self.cache, num) for num, chunk in enumerate(torun_chunks, start=1)]
             for result in pool.starmap(_sampling, arguments):
                 for (e, m) in result:
                     # Check if we need more resolution at this element
@@ -170,6 +174,7 @@ def cmdline():
     parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
     parser.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
     parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
+    parser.add_argument('--cache', dest='cache', default=None, help="Folder to store some intermediate data to speed up further executions.")
 
     args = parser.parse_args()
     logging.debug(args)
@@ -182,7 +187,8 @@ def cmdline():
         args.score_file,
         args.output_folder,
         project_name=args.project_name,
-        cores=args.cores
+        cores=args.cores,
+        cache=args.cache
     )
 
     # Run
