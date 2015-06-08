@@ -106,7 +106,7 @@ def _create_background_tsv(background_tsv_file, element, regions_file, scores_fi
 def _get_hg19_mmap(chromosome):
     if chromosome not in HG19_MMAP_FILES:
         fd = open(os.path.join(HG19_DIR, "chr{0}.txt".format(chromosome)), 'rb')
-        HG19_MMAP_FILES[chromosome] = mmap.mmap(fd.fileno(), 0)
+        HG19_MMAP_FILES[chromosome] = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
     return HG19_MMAP_FILES[chromosome]
 
 
