@@ -7,10 +7,10 @@ import pandas as pd
 import numpy as np
 from collections import Counter, defaultdict
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
-from intervaltree import Interval, IntervalTree
+from intervaltree import IntervalTree
 import subprocess
 
-TABIX = "/home/jdeu/programs/tabix-0.2.6/tabix"
+TABIX = "/soft/bio/sequence/tabix-0.2.3/tabix"
 SCORE_CONF = {'chr': 0, 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
 HG19_DIR = "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19"
 HG19_MMAP_FILES = {}
