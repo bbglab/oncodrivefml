@@ -7,7 +7,7 @@ import pandas as pd
 import os
 
 from multiprocessing.pool import Pool
-from oncodrivefm2.utils import _file_name, _load_regions, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
+from oncodrivefml.utils import _file_name, _load_regions, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
     _create_background_signature, _sampling, _load_variants_dict
 
 
