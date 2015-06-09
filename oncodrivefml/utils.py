@@ -11,13 +11,34 @@ import pandas as pd
 import numpy as np
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
 from intervaltree import IntervalTree
-from os.path import join
 
-TABIX = "/soft/bio/sequence/tabix-0.2.3/tabix"
-SCORE_CONF = {'chr': 0, 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
-HG19_DIR = "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19"
+
+#TODO This must be configurable
+TABIX_LIST = [
+    "/usr/bin/tabix",
+    os.path.expanduser(os.path.expandvars("$TABIX_PATH")),
+    "/soft/bio/sequence/tabix-0.2.3/tabix"
+]
+
+TABIX = None
+for t in TABIX_LIST:
+    if os.path.exists(t):
+        TABIX = t
+        break
+
+
+HG19_LIST = [
+    "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19",
+    os.path.expanduser(os.path.expandvars("$FULL_GENOME_PATH"))
+]
+HG19 = None
+for t in HG19_LIST:
+    if os.path.exists(t):
+        HG19 = t
+        break
+
 HG19_MMAP_FILES = {}
-INPUT_FOLDER = "/projects_bg/bg/shared/projects/sampling/input"
+SCORE_CONF = {'chr': 0, 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
 SCORES = {
     'whole_genome_SNVs.tsv.gz': {
         'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5, 'element': None
@@ -85,7 +106,7 @@ def _load_variants_dict(variants_file, regions_file, signature_name='none'):
 
     # Load mutations
     variants_dict = defaultdict(list)
-    logging.info("Loading mutations")
+    logging.info("Loading and mapping mutations")
     with open(variants_file) as fd:
         reader = csv.DictReader(fd, delimiter='\t')
         for r in reader:
@@ -109,7 +130,9 @@ def _load_variants_dict(variants_file, regions_file, signature_name='none'):
 
     return variants_dict
 
+
 def _create_background_tsv(background_tsv_file, element, regions_file, scores_file):
+
     if os.path.exists(background_tsv_file):
         logging.debug("%s - background.tsv [skip]", element)
     else:
@@ -144,7 +167,7 @@ def _create_background_tsv(background_tsv_file, element, regions_file, scores_fi
 
 def _get_hg19_mmap(chromosome):
     if chromosome not in HG19_MMAP_FILES:
-        fd = open(os.path.join(HG19_DIR, "chr{0}.txt".format(chromosome)), 'rb')
+        fd = open(os.path.join(HG19, "chr{0}.txt".format(chromosome)), 'rb')
         HG19_MMAP_FILES[chromosome] = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
     return HG19_MMAP_FILES[chromosome]
 
@@ -205,91 +228,76 @@ def _random_scores(num_samples, sampling_size, scores_file, signature_file, samp
     return result[:sampling_size]
 
 
-def _sampling(chunks, sampling_size, cache_folder, process):
+def _sampling(sampling_size, cache_folder, item):
 
-    result = []
-    total = len(chunks)
-    for i, (e, m) in enumerate(chunks):
+    e, m = item[0], item[1]
 
-        if i % 50 == 0:
-            print("[process-{}] {} of {}".format(process, i, total))
-        i += 1
+    cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
+    scores_file = os.path.join(cache_path, 'background.bin')
+    signature_file = os.path.join(cache_path, 'signature.bin')
+    if not os.path.exists(signature_file):
+        signature_file = None
+    sampling_file = os.path.join(cache_path, 'sampling.bin')
 
-        cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
-        scores_file = os.path.join(cache_path, 'background.bin')
-        signature_file = os.path.join(cache_path, 'signature.bin')
-        if not os.path.exists(signature_file):
-            signature_file = None
-        sampling_file = os.path.join(cache_path, 'sampling.bin')
+    values_mean = None
+    values_mean_count = 0
+    all_scores = []
+    for m_tissue in m['muts_by_tissue']['subs'].keys():
 
-        values_mean = None
-        values_mean_count = 0
-        all_scores = []
-        for m_tissue in m['muts_by_tissue']['subs'].keys():
+        m_scores = m['muts_by_tissue']['subs'][m_tissue]
+        m_count = len(m_scores)
 
-            m_scores = m['muts_by_tissue']['subs'][m_tissue]
-            m_count = len(m_scores)
+        # TODO Use per tissue signature
+        values = _random_scores(m_count, sampling_size, scores_file, signature_file, sampling_file)
 
-            # TODO Use per tissue signature
-            values = _random_scores(m_count, sampling_size, scores_file, signature_file, sampling_file)
+        if values is None:
+            logging.warning("There are no scores at {}-{}-{}".format(e, m_count, sampling_size))
+            continue
 
-            if values is None:
-                logging.warning("There are no scores at {}-{}-{}".format(e, m_count, sampling_size))
-                continue
+        values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count],
+                                 axis=0) if values_mean is not None else values
+        values_mean_count += m_count
 
-            values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count],
-                                     axis=0) if values_mean is not None else values
-            values_mean_count += m_count
+        all_scores += m_scores
 
-            all_scores += m_scores
+    obs = len(values_mean[values_mean >= np.mean(all_scores)]) if len(all_scores) > 0 else float(sampling_size)
 
-        m['obs'] = len(values_mean[values_mean >= np.mean(all_scores)]) if len(all_scores) > 0 else float(sampling_size)
-        m['pvalue'] = max(1, m['obs']) / float(sampling_size)
-        result.append((e, m))
+    logging.debug(" %s - sampling.bin [done]", e)
 
-        logging.debug(" %s - sampling.bin [done]", e)
-
-    return result
+    return e, obs
 
 
-def _create_background_signature(elements, cache_folder, signature_dict, chunk):
+def _create_background_signature(cache_folder, signature_dict, e):
 
-    i = 0
-    total = len(elements)
-    for e in elements:
+    cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
+    element_scores_tsv_file = os.path.join(cache_path, 'background.tsv')
+    element_scores_bin_file = os.path.join(cache_path, 'background.bin')
+    element_signature_bin_file = os.path.join(cache_path, 'signature.bin')
 
-        if i % 50 == 0:
-            print("[process-{}] {} of {}".format(chunk, i, total))
-        i += 1
+    if os.path.exists(element_scores_bin_file) and (os.path.exists(element_signature_bin_file) or signature_dict is None):
+        logging.debug("%s - background.bin signature.bin [skip]", e)
+    else:
 
-        cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
-        element_scores_tsv_file = os.path.join(cache_path, 'background.tsv')
-        element_scores_bin_file = os.path.join(cache_path, 'background.bin')
-        element_signature_bin_file = os.path.join(cache_path, 'signature.bin')
+        probabilities = []
+        scores = []
 
-        if os.path.exists(element_scores_bin_file) and os.path.exists(element_signature_bin_file):
-            logging.debug("%s - background.bin signature.bin [skip]", e)
-        else:
+        with open(element_scores_tsv_file, 'r') as fd:
+            reader = csv.reader(fd, delimiter='\t')
+            for row in reader:
+                # Read score
+                value = float(row[SCORE_CONF['score']])
+                alt = row[SCORE_CONF['alt']]
 
-            probabilities = []
-            scores = []
+                # Expand refseq2 dots
+                if alt == '.':
+                    scores.append(value)
+                    scores.append(value)
+                    scores.append(value)
+                else:
+                    scores.append(value)
 
-            with open(element_scores_tsv_file, 'r') as fd:
-                reader = csv.reader(fd, delimiter='\t')
-                for row in reader:
-                    # Read score
-                    value = float(row[SCORE_CONF['score']])
-                    alt = row[SCORE_CONF['alt']]
-
-                    # Expand refseq2 dots
-                    if alt == '.':
-                        scores.append(value)
-                        scores.append(value)
-                        scores.append(value)
-                    else:
-                        scores.append(value)
-
-                    # Compute signature
+                # Compute signature
+                if signature_dict is not None:
                     ref_triplet = _get_ref_triplet(row[SCORE_CONF['chr']], int(row[SCORE_CONF['pos']]) - 1)
                     ref = row[SCORE_CONF['ref']]
                     alt = row[SCORE_CONF['alt']]
@@ -309,16 +317,17 @@ def _create_background_signature(elements, cache_folder, signature_dict, chunk):
                             logging.warning("Triplet without probability ref: '%s' alt: '%s'", ref_triplet, alt_triplet)
                             probabilities.append(0.0)
 
-            # Save background.bin
-            np.array(scores, dtype='float32').tofile(element_scores_bin_file, format='float32')
-            _group_writable(element_scores_bin_file)
+        # Save background.bin
+        np.array(scores, dtype='float32').tofile(element_scores_bin_file, format='float32')
+        _group_writable(element_scores_bin_file)
 
-            # Save signature.bin
+        # Save signature.bin
+        if signature_dict is not None:
             c_array = np.array([p for p in probabilities], dtype='float32')
             c_array.tofile(element_signature_bin_file, format='float32')
             _group_writable(element_signature_bin_file)
 
-            logging.debug("%s - signature.bin [done]", e)
+        logging.debug("%s - signature.bin [done]", e)
 
     return True
 
@@ -346,91 +355,99 @@ def _scores_by_position(e, regions_file, scores_file, cache_folder):
     return scores
 
 
-def _compute_score_means(elements, regions_file, scores_file, cache_folder, process):
+def _compute_element(regions_file, scores_file, cache_folder, signature_dict, min_randomizations, max_randomizations, element):
 
-    result = []
+    element, item = _compute_score_means(regions_file, scores_file, cache_folder, element)
 
-    i = 1
-    total = len(elements)
+    if item is None:
+        return element, "The element {} has mutations but not scores.".format(element)
 
-    for element, muts in elements:
+    _create_background_signature(cache_folder, signature_dict, element)
 
-        if i % 50 == 0:
-            print("[process-{}] {} of {}".format(process, i, total))
-        i += 1
+    obs = 0
+    randomizations = min_randomizations
+    while obs <= 5:
+        element, obs = _sampling(randomizations, cache_folder, (element, item))
+        if randomizations >= max_randomizations:
+            break
+        randomizations = min(max_randomizations, randomizations*2)
 
-        # Skip features without mutations
-        if len(muts) == 0:
-            continue
+    item['pvalue'] = max(1, obs) / float(randomizations)
+    return element, item
 
-        ## SCORES PHASE
 
-        # Read element scores
-        scores = _scores_by_position(element, regions_file, scores_file, cache_folder)
+def _compute_score_means(regions_file, scores_file, cache_folder, element):
 
-        # Add scores to the element mutations
-        muts_by_tissue = {'subs': defaultdict(list)}
-        scores_by_sample = {}
-        scores_list = []
-        scores_subs_list = []
-        scores_indels_list = []
-        total_subs = 0
-        total_subs_score = 0
-        positions = []
-        mutations = []
-        for m in muts:
+    element, muts = element[0], element[1]
+
+    # Skip features without mutations
+    if len(muts) == 0:
+        return element, None
+
+    # Read element scores
+    scores = _scores_by_position(element, regions_file, scores_file, cache_folder)
+
+    # Add scores to the element mutations
+    muts_by_tissue = {'subs': defaultdict(list)}
+    scores_by_sample = {}
+    scores_list = []
+    scores_subs_list = []
+    scores_indels_list = []
+    total_subs = 0
+    total_subs_score = 0
+    positions = []
+    mutations = []
+    for m in muts:
+
+        if m['TYPE'] == "subs":
+            total_subs += 1
+            values = scores.get(str(m['POSITION']), [])
+            for v in values:
+                if v['ref'] == m['REF'] and (v['alt'] == m['ALT'] or v['alt'] == '.'):
+                    m['SCORE'] = v['value']
+                    total_subs_score += 1
+                    break
+
+        # Update scores
+        if 'SCORE' in m:
+
+            sample = m['SAMPLE']
+            if sample not in scores_by_sample:
+                scores_by_sample[sample] = []
+
+            scores_by_sample[sample].append(m['SCORE'])
+            scores_list.append(m['SCORE'])
 
             if m['TYPE'] == "subs":
-                total_subs += 1
-                values = scores.get(str(m['POSITION']), [])
-                for v in values:
-                    if v['ref'] == m['REF'] and (v['alt'] == m['ALT'] or v['alt'] == '.'):
-                        m['SCORE'] = v['value']
-                        total_subs_score += 1
-                        break
+                scores_subs_list.append(m['SCORE'])
+                muts_by_tissue['subs'][m['SIGNATURE']].append(m['SCORE'])
 
-            # Update scores
-            if 'SCORE' in m:
+            positions.append(m['POSITION'])
+            mutations.append(m)
 
-                sample = m['SAMPLE']
-                if sample not in scores_by_sample:
-                    scores_by_sample[sample] = []
+    if len(scores_list) == 0:
+        return element, None
 
-                scores_by_sample[sample].append(m['SCORE'])
-                scores_list.append(m['SCORE'])
+    # Aggregate scores
+    num_samples = len(scores_by_sample)
 
-                if m['TYPE'] == "subs":
-                    scores_subs_list.append(m['SCORE'])
-                    muts_by_tissue['subs'][m['SIGNATURE']].append(m['SCORE'])
+    item = {
+        'samples_mut': num_samples,
+        'all_mean': np.mean(scores_list),
+        'muts': len(scores_list),
+        'muts_recurrence': len(set(positions)),
+        'samples_max_recurrence': max(Counter(positions).values()),
+        'subs': total_subs,
+        'subs_score': total_subs_score,
+        'scores': scores_list,
+        'scores_subs': scores_subs_list,
+        'scores_indels': scores_indels_list,
+        'positions': positions,
+        'muts_by_tissue': muts_by_tissue,
+        'mutations': mutations
+    }
 
-                positions.append(m['POSITION'])
-                mutations.append(m)
-
-        if len(scores_list) == 0:
-            continue
-
-        # Aggregate scores
-        num_samples = len(scores_by_sample)
-
-        item = {
-            'samples_mut': num_samples,
-            'all_mean': np.mean(scores_list),
-            'muts': len(scores_list),
-            'muts_recurrence': len(set(positions)),
-            'samples_max_recurrence': max(Counter(positions).values()),
-            'subs': total_subs,
-            'subs_score': total_subs_score,
-            'scores': scores_list,
-            'scores_subs': scores_subs_list,
-            'scores_indels': scores_indels_list,
-            'positions': positions,
-            'muts_by_tissue': muts_by_tissue,
-            'mutations': mutations
-        }
-
-        result.append((element, item))
-
-    return result
+    return element, item
 
 
 def _multiple_test_correction(results, num_significant_samples=2):

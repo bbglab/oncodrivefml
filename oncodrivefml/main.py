@@ -1,37 +1,42 @@
 import argparse
-import gzip
-import json
 import logging
-import numpy as np
+import functools
 import pandas as pd
 import os
 
 from multiprocessing.pool import Pool
+from os.path import expanduser
 from oncodrivefml import utils
-from oncodrivefml.utils import _file_name, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
-    _create_background_signature, _sampling, _load_variants_dict
+from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element
 
 
 class OncodriveFM2(object):
 
-    def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder, project_name=None, cores=os.cpu_count(), cache=None):
+    def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
+                 project_name=None, cores=os.cpu_count(), cache=None, min_samplings=10000, max_samplings=1000000):
 
         # Configuration
         self.cores = cores
-        self.variants_file = variants_file
-        self.regions_file = regions_file
-        self.signature_file = signature_file
-        self.score_file = score_file
-        self.output_folder = output_folder
+        self.min_samplings = min_samplings
+        self.max_samplings = max_samplings
+        self.variants_file = expanduser(variants_file)
+        self.regions_file = expanduser(regions_file)
+
+        if signature_file in ['compute', 'none']:
+            self.signature_type = signature_file
+            self.signature_field = None
+            self.signature_file = None
+        else:
+            self.signature_type = 'file'
+            signature_conf = signature_file.split(":")
+            self.signature_field = signature_conf[0]
+            self.signature_file = expanduser(signature_conf[1])
+
+        self.score_file = expanduser(score_file)
+        self.output_folder = expanduser(output_folder)
         self.project_name = project_name if project_name is not None else _file_name(variants_file)
         self.signature_name = _file_name(signature_file)
-
-        # Output files
-        self.variants_dict_file = os.path.join(output_folder, 'variants.json.gz')
-        self.scores_dict_file = os.path.join(output_folder, 'scores.json.gz')
         self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefm2.tsv')
-
-        self.store_scores = False
         self.cache = cache
         if cache is None:
             self.cache = os.path.join(self.output_folder, "cache")
@@ -42,119 +47,65 @@ class OncodriveFM2(object):
 
     def run(self):
 
-        # Create or load variants dictionary
-        if not os.path.exists(self.variants_dict_file):
-            variants_dict = _load_variants_dict(self.variants_file, self.regions_file, signature_name=self.signature_name)
-            logging.info("Storing variants dictionary")
-            with gzip.open(self.variants_dict_file, 'wt') as fd:
-                json.dump(variants_dict, fd)
-
-        with gzip.open(self.variants_dict_file, 'rt') as fd:
-            variants_dict = json.load(fd)
-
-        if not os.path.exists(self.scores_dict_file):
-            # Initialize
-            pool = Pool(self.cores)
-            #pool = itertools
-            if not os.path.exists(self.score_file):
-                raise RuntimeError("Score file not found '{}'".format(self.score_file))
-
-            # Compute elements statistics
-            logging.info("Sampling by element")
-            scores_dict = {}
-            elements_all = list(variants_dict.items())
-            elements_chunks = np.array_split(elements_all, self.cores)
-            compute_arguments = ((chunk, self.regions_file, self.score_file, self.cache, num) for num, chunk in enumerate(elements_chunks, start=1))
-            c = 0
-            for done in pool.starmap(_compute_score_means, compute_arguments):
-                c += 1
-                logging.info("Chunk {} of {} [done]".format(c, self.cores))
-                for element, means in done:
-                    scores_dict[element] = means
-
-            # Store results
-            logging.info("Store scores dictionary")
-            with gzip.open(self.scores_dict_file, 'wt') as fd:
-                    json.dump(scores_dict, fd)
-
-        with gzip.open(self.scores_dict_file, 'rt') as fd:
-            scores_dict = json.load(fd)
-
         # Skip if done
         if os.path.exists(self.results_file):
             logging.info("Already calculated at '{}'".format(self.results_file))
             return
 
-        # Prepare signature
-        if self.signature_file == "none":
+        # Load variants
+        variants_dict = _load_variants_dict(self.variants_file, self.regions_file, signature_name=self.signature_name)
+
+        # Signature
+        signature_dict = None
+        if self.signature_type == "none":
             # We don't use signature
             logging.warning("We are not using any signature")
-        elif self.score_file == "compute":
+        elif self.signature_type == "compute":
             #TODO compute the signature
             logging.warning("TODO: compute signature. Running without signature.")
         else:
-            signature_conf = self.signature_file.split(":")
-            if not os.path.exists(signature_conf[1]):
-                logging.error("Signature file {} not found. Running without signature.".format(signature_conf[1]))
+            if not os.path.exists(self.signature_file):
+                logging.error("Signature file {} not found.".format(self.signature_file))
+                return -1
             else:
-                logging.info("Prepare signature files")
-                signature_probabilities = pd.read_csv(signature_conf[1], sep='\t')
+                logging.info("Loading signature")
+                signature_probabilities = pd.read_csv(self.signature_file, sep='\t')
                 signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
-                signature_dict = signature_probabilities.to_dict()[signature_conf[0]]
+                signature_dict = signature_probabilities.to_dict()[self.signature_field]
 
-                elements_all = [e for e, _ in scores_dict.items()]
-                elements_chunks = np.array_split(elements_all, self.cores)
-                arguments = [(chunk, self.cache, signature_dict, num) for num, chunk in enumerate(elements_chunks, start=1)]
+        # Compute elements statistics
+        logging.info("Computing statistics")
+        elements = [(e, muts) for e, muts in variants_dict.items() if len(muts) > 0]
+        if len(elements) == 0:
+            logging.error("There is no mutation at any element")
+            return -1
 
-                pool = Pool(self.cores)
-                for c, _ in enumerate(pool.starmap(_create_background_signature, arguments), start=1):
-                    logging.info("Chunk {} of {} [done]".format(c, self.cores))
+        results = {}
+        info_step = 10*self.cores
+        pool = Pool(self.cores)
+        compute_element_partial = functools.partial(_compute_element, self.regions_file, self.score_file, self.cache, signature_dict, self.min_samplings, self.max_samplings)
+        for i, (element, item) in enumerate(pool.imap(compute_element_partial, elements)):
+            if i % info_step == 0:
+                logging.info("[{} of {}]".format(i+1, len(elements)))
 
-        # Calculate empirical p-values
-        logging.info("Calculate empirical p-values")
-        if len(scores_dict) == 0:
-            logging.error("The scores file is empty")
-            exit(-1)
-
-        num_randomizations = 10000
-        to_run = [(element, means) for element, means in scores_dict.items()]
-        while len(to_run) > 0:
-
-            # Preprocess samplings
-            next_to_run = []
-            next_num_randomizations = min(1000000, num_randomizations * 2) if num_randomizations < 1000000 else 20000000
-
-            logging.info("Start sampling ({})".format(num_randomizations))
-            torun_chunks = np.array_split(to_run, self.cores)
-            arguments = [(chunk, num_randomizations, self.cache, num) for num, chunk in enumerate(torun_chunks, start=1)]
-            for result in pool.starmap(_sampling, arguments):
-                for (e, m) in result:
-                    # Check if we need more resolution at this element
-                    if m['obs'] <= 5 and next_num_randomizations <= 1000000:
-                        next_to_run.append((e, m))
-                        logging.warning("We need more permutations at {}-{} (obs: {})".format(e, num_randomizations, m['obs']))
-                    else:
-                        scores_dict[e]['pvalue'] = m['pvalue']
-
-            # Next iteration with the elements that need more permutations
-            to_run = np.array(next_to_run)
-            num_randomizations = next_num_randomizations
+            if type(item) != dict:
+                logging.warning(item)
+            else:
+                results[element] = item
+        logging.info("[{} of {}]".format(i+1, len(elements)))
 
         # Run multiple test correction
-        logging.info("Multiple test correction")
-        results_concat = _multiple_test_correction(scores_dict, num_significant_samples=2)
+        logging.info("Computing multiple test correction")
+        results_concat = _multiple_test_correction(results, num_significant_samples=2)
 
         # Sort and store results
         results_concat.sort('pvalue', 0, inplace=True)
-        fields = ['muts', 'muts_recurrence', 'samples_mut', 'samples_max_recurrence', 'subs', 'subs_score', 'pvalue', 'qvalue', 'all_mean', 'scores', 'positions']
+        fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue']
         with open(self.results_file, 'wt') as fd:
             results_concat[fields].to_csv(fd, sep="\t", header=True, index=True)
-        logging.info("Result save at: {}".format(self.results_file))
+        logging.info("Done")
 
-        # Store extra details
-        if self.store_scores:
-            with gzip.open(self.scores_dict_file, 'wt') as fd:
-                json.dump(scores_dict, fd)
+        return 1
 
 
 def cmdline():
@@ -174,11 +125,22 @@ def cmdline():
     # Optional
     parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
     parser.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
+    parser.add_argument('-mins', '--min_samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations")
+    parser.add_argument('-maxs', '--max_samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations")
     parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
     parser.add_argument('--cache', dest='cache', default=None, help="Folder to store some intermediate data to speed up further executions.")
 
     args = parser.parse_args()
     logging.debug(args)
+
+    # Check global configuration
+    if utils.TABIX is None:
+        logging.error("Cannot find 'tabix' executable. Please define the TABIX_PATH global variable.")
+        exit(-1)
+
+    if utils.HG19 is None:
+        logging.error("Cannot find full genome files. Please define the FULL_GENOME_PATH global variable.")
+        exit(-1)
 
     # Initialize OncodriveFM2
     ofm2 = OncodriveFM2(
@@ -189,14 +151,19 @@ def cmdline():
         args.output_folder,
         project_name=args.project_name,
         cores=args.cores,
-        cache=args.cache
+        cache=args.cache,
+        min_samplings=args.min_samplings,
+        max_samplings=args.max_samplings
     )
 
     #TODO allow only one score format
     utils.SCORE_CONF = utils.SCORES[os.path.basename(args.score_file)]
 
     # Run
-    ofm2.run()
+    return_code = ofm2.run()
+
+    if return_code != 1:
+        exit(return_code)
 
 
 if __name__ == "__main__":
