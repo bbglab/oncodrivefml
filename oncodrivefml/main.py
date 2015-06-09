@@ -113,7 +113,7 @@ class OncodriveFM2(object):
         logging.info("Calculate empirical p-values")
         if len(scores_dict) == 0:
             logging.error("The scores file is empty")
-            return
+            exit(-1)
 
         num_randomizations = 10000
         to_run = [(element, means) for element, means in scores_dict.items()]

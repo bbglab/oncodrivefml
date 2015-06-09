@@ -3,26 +3,28 @@ import logging
 import os
 import stat
 import mmap
+import itab
+from collections import Counter, defaultdict
+import subprocess
+
 import pandas as pd
 import numpy as np
-import gzip
-import bz2
-import lzma
-from collections import Counter, defaultdict
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
 from intervaltree import IntervalTree
-import subprocess
+
 
 TABIX = "/soft/bio/sequence/tabix-0.2.3/tabix"
 SCORE_CONF = {'chr': 0, 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
 HG19_DIR = "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19"
 HG19_MMAP_FILES = {}
 
-FILE_READER = {
-    'gz': gzip.open,
-    'bz': bz2.open,
-    'xz': lzma.open
-}
+REGIONS_FILE_HEADER = ['chrom', 'start', 'stop', 'feature']
+REGIONS_FILE_SCHEMA = {
+    'fields': {
+        'chrom': {'PARSER': 'str(x)', 'VALIDATOR': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
+        'start': {'PARSER': 'int(x)', 'VALIDATOR': 'x > 0'},
+        'stop': {'PARSER': 'int(x)', 'VALIDATOR': 'x > 0'}
+}}
 
 
 def _compress_format(file):
@@ -40,16 +42,20 @@ def _load_regions(regions_file):
     if not os.path.exists(regions_file):
         raise RuntimeError("Feature file '{}' not found".format(regions_file))
 
-    reader = FILE_READER.get(_compress_format(regions_file), open)
+    regions = defaultdict(IntervalTree)
+    with itab.open(regions_file, header=REGIONS_FILE_HEADER, schema=REGIONS_FILE_SCHEMA) as reader:
 
-    regions = {}
-    with reader(regions_file, 'rt') as fd:
-        reader = csv.reader(fd, delimiter='\t')
-        for r in reader:
+        for r, errors in reader:
+
+            # Report errors and continue
+            if len(errors) > 0:
+                for e in errors:
+                    logging.error(e)
+                continue
+
             chrom, start, stop, feature = r[0], r[1], r[2], r[3]
-            if chrom not in regions:
-                regions[chrom] = IntervalTree()
-            regions[chrom][int(start):int(stop)] = feature
+
+            regions[chrom][start:stop] = feature
     return regions
 
 
