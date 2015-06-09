@@ -88,10 +88,11 @@ class OncodriveFM2(object):
             if i % info_step == 0:
                 logging.info("[{} of {}]".format(i+1, len(elements)))
 
-            if type(item) != dict:
-                logging.warning(item)
-            else:
+            if type(item) == dict:
                 results[element] = item
+            else:
+                logging.debug(item)
+
         logging.info("[{} of {}]".format(i+1, len(elements)))
 
         # Run multiple test correction
