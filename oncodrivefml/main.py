@@ -81,7 +81,7 @@ class OncodriveFM2(object):
             return -1
 
         results = {}
-        info_step = 10*self.cores
+        info_step = 12*self.cores
         pool = Pool(self.cores)
         compute_element_partial = functools.partial(_compute_element, self.regions_file, self.score_file, self.cache, signature_dict, self.min_samplings, self.max_samplings)
         for i, (element, item) in enumerate(pool.imap(compute_element_partial, elements)):

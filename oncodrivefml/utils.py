@@ -82,19 +82,23 @@ def _load_regions(regions_file):
         raise RuntimeError("Feature file '{}' not found".format(regions_file))
 
     regions = defaultdict(IntervalTree)
+    elements = []
     with itab.open(regions_file, header=REGIONS_FILE_HEADER, schema=REGIONS_FILE_SCHEMA) as reader:
-
         for r, errors in reader:
-
             # Report errors and continue
             if len(errors) > 0:
                 for e in errors:
                     logging.error(e)
                 continue
+            elements.append((r[0], r[1], r[2], r[3]))
 
-            chrom, start, stop, feature = r[0], r[1], r[2], r[3]
+    for i, r in enumerate(elements):
+        if i % 15632 == 0:
+            logging.info("[{} of {}]".format(i+1, len(elements)))
+        chrom, start, stop, feature = r[0], r[1], r[2], r[3]
+        regions[chrom][start:stop] = feature
+    logging.info("[{} of {}]".format(i+1, len(elements)))
 
-            regions[chrom][start:stop] = feature
     return regions
 
 
