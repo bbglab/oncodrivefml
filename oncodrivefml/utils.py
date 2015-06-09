@@ -5,6 +5,9 @@ import stat
 import mmap
 import pandas as pd
 import numpy as np
+import gzip
+import bz2
+import lzma
 from collections import Counter, defaultdict
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
 from intervaltree import IntervalTree
@@ -15,20 +18,32 @@ SCORE_CONF = {'chr': 0, 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
 HG19_DIR = "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19"
 HG19_MMAP_FILES = {}
 
+FILE_READER = {
+    'gz': gzip.open,
+    'bz': bz2.open,
+    'xz': lzma.open
+}
+
+
 def _compress_format(file):
-    if file.endswith("gz"):
+    if file.endswith(".gz"):
         return "gzip"
-    if file.endswith("bz"):
+    if file.endswith(".bz2"):
         return "bz2"
+    if file.endswith(".xz"):
+        return "xz"
     return None
 
 
 def _load_regions(regions_file):
+
     if not os.path.exists(regions_file):
         raise RuntimeError("Feature file '{}' not found".format(regions_file))
 
+    reader = FILE_READER.get(_compress_format(regions_file), open)
+
     regions = {}
-    with open(regions_file, 'rt') as fd:
+    with reader(regions_file, 'rt') as fd:
         reader = csv.reader(fd, delimiter='\t')
         for r in reader:
             chrom, start, stop, feature = r[0], r[1], r[2], r[3]
