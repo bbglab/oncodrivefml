@@ -163,7 +163,7 @@ def _random_scores(num_samples, sampling_size, scores_file, signature_file, samp
         result.tofile(sampling_file, format='float32')
         _group_writable(sampling_file)
 
-    return result
+    return result[:sampling_size]
 
 
 def _sampling(chunks, sampling_size, cache_folder, process):
