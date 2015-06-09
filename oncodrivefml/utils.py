@@ -11,12 +11,30 @@ import pandas as pd
 import numpy as np
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
 from intervaltree import IntervalTree
-
+from os.path import join
 
 TABIX = "/soft/bio/sequence/tabix-0.2.3/tabix"
 SCORE_CONF = {'chr': 0, 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
 HG19_DIR = "/projects_bg/bg/soft/intogen_home/gencluster/software/mutsigCV/reffiles/chr_files_hg19"
 HG19_MMAP_FILES = {}
+INPUT_FOLDER = "/projects_bg/bg/shared/projects/sampling/input"
+SCORES = {
+    'whole_genome_SNVs.tsv.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5, 'element': None
+    },
+    'hg19_wg_score.tsv.gz': {
+        'chr': 0, 'chr_prefix': 'chr', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
+    },
+    'hg19_rnasnp_scores.txt.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 3, 'alt': 4, 'score': 5, 'element': 6
+    },
+    'tfbs_creation.tsv.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
+    },
+    'tfbs_disruption.tsv.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
+    }
+}
 
 REGIONS_FILE_HEADER = ['chrom', 'start', 'stop', 'feature']
 REGIONS_FILE_SCHEMA = {

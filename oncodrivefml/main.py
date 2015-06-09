@@ -7,6 +7,7 @@ import pandas as pd
 import os
 
 from multiprocessing.pool import Pool
+from oncodrivefml import utils
 from oncodrivefml.utils import _file_name, _silent_mkdir, _compute_score_means, _multiple_test_correction, \
     _create_background_signature, _sampling, _load_variants_dict
 
@@ -190,6 +191,9 @@ def cmdline():
         cores=args.cores,
         cache=args.cache
     )
+
+    #TODO allow only one score format
+    utils.SCORE_CONF = utils.SCORES[os.path.basename(args.score_file)]
 
     # Run
     ofm2.run()
