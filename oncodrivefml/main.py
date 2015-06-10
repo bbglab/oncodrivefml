@@ -36,7 +36,7 @@ class OncodriveFM2(object):
         self.output_folder = expanduser(output_folder)
         self.project_name = project_name if project_name is not None else _file_name(variants_file)
         self.signature_name = _file_name(signature_file)
-        self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefm2.tsv')
+        self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefml.tsv')
         self.cache = cache
         if cache is None:
             self.cache = os.path.join(self.output_folder, "cache")
