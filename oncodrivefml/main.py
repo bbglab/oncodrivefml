@@ -106,11 +106,11 @@ class OncodriveFM2(object):
         # Sort and store results
         results_concat.sort('pvalue', 0, inplace=True)
         fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue']
-        df = results_concat[fields]
+        df = results_concat[fields].copy()
         df.reset_index(inplace=True)
         df = add_symbol(df)
         with open(self.results_file, 'wt') as fd:
-            df.to_csv(fd, sep="\t", header=True, index=True)
+            df.to_csv(fd, sep="\t", header=True, index=False)
 
         logging.info("Creating figures")
         qqplot(self.results_file, self.qqplot_file)
