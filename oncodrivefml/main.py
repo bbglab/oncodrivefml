@@ -1,13 +1,13 @@
 import argparse
 import logging
 import functools
-import itertools
 import pandas as pd
 import os
 
 from multiprocessing.pool import Pool
 from os.path import expanduser
 from oncodrivefml import utils
+from oncodrivefml.qqplot import qqplot
 from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element, \
     _compute_signature
 
@@ -39,6 +39,7 @@ class OncodriveFM2(object):
         self.project_name = project_name if project_name is not None else _file_name(variants_file)
         self.signature_name = _file_name(signature_file)
         self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefml.tsv')
+        self.qqplot_file = os.path.join(output_folder, self.project_name + '-oncodrivefml.png')
         self.cache = cache
         if cache is None:
             self.cache = os.path.join(self.output_folder, "cache")
@@ -83,7 +84,7 @@ class OncodriveFM2(object):
             return -1
 
         results = {}
-        info_step = 12*self.cores
+        info_step = 6*self.cores
         pool = Pool(self.cores)
 
         compute_element_partial = functools.partial(_compute_element, self.regions_file, self.score_file, self.cache, signature_dict, self.min_samplings, self.max_samplings)
@@ -107,6 +108,9 @@ class OncodriveFM2(object):
         fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue']
         with open(self.results_file, 'wt') as fd:
             results_concat[fields].to_csv(fd, sep="\t", header=True, index=True)
+
+        logging.info("Creating figures")
+        qqplot(self.results_file, self.qqplot_file)
         logging.info("Done")
 
         return 1
