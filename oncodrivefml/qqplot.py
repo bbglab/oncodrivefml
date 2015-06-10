@@ -1,12 +1,13 @@
 import gzip
 import os
 import matplotlib
+matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import logging
 
-matplotlib.use('Agg')
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 def eliminate_duplicates(df):
