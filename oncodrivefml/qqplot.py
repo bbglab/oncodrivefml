@@ -19,6 +19,13 @@ def eliminate_duplicates(df):
     else:
         return x, y, 'grey'
 
+def add_symbol(df):
+    ensemble_file = os.path.join(__location__, "ensemble_genes_75.txt.gz")
+    gene_conversion = {line.split("\t")[0]: line.strip().split("\t")[-1]
+                       for line in gzip.open(ensemble_file, 'rt').readlines()}
+    df['symbol'] = df[df.columns[0]].apply(lambda e: gene_conversion.get(e, e))
+    return df
+
 def qqplot(input_file, output_file, show=False):
     pvalue='pvalue'
     qvalue='qvalue'
@@ -27,10 +34,6 @@ def qqplot(input_file, output_file, show=False):
     annotate=True
     cut=True
     #############################
-
-    ensemble_file = os.path.join(__location__, "ensemble_genes_75.txt.gz")
-    gene_conversion = {line.split("\t")[0]: line.strip().split("\t")[-1]
-                       for line in gzip.open(ensemble_file, 'rt').readlines()}
 
     MIN_PVALUE = 10000
     MAX_ANNOTATED_GENES = 50
@@ -53,7 +56,6 @@ def qqplot(input_file, output_file, show=False):
     obs_color = df['samples_mut'].map(lambda x: colors[1] if x >= min_samples else colors[0])
     obs_alpha = df['samples_mut'].map(lambda x: 0.7 if x >= min_samples else 0.3)
 
-    df['symbol'] = df[df.columns[0]].apply(lambda e: gene_conversion.get(e, e))
     data = pd.DataFrame({'HugoID': df['symbol'],
                          'observed': obs_pvalues,
                          'color': obs_color,

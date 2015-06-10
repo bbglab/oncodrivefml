@@ -7,7 +7,7 @@ import os
 from multiprocessing.pool import Pool
 from os.path import expanduser
 from oncodrivefml import utils
-from oncodrivefml.qqplot import qqplot
+from oncodrivefml.qqplot import qqplot, add_symbol
 from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element, \
     _compute_signature
 
@@ -106,8 +106,10 @@ class OncodriveFM2(object):
         # Sort and store results
         results_concat.sort('pvalue', 0, inplace=True)
         fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue']
+        df = results_concat[fields]
+        df = add_symbol(df)
         with open(self.results_file, 'wt') as fd:
-            results_concat[fields].to_csv(fd, sep="\t", header=True, index=True)
+            df.to_csv(fd, sep="\t", header=True, index=True)
 
         logging.info("Creating figures")
         qqplot(self.results_file, self.qqplot_file)
