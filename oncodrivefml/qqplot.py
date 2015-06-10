@@ -22,12 +22,14 @@ def eliminate_duplicates(df):
     else:
         return x, y, 'grey'
 
+
 def add_symbol(df):
     ensemble_file = os.path.join(__location__, "ensemble_genes_75.txt.gz")
     gene_conversion = {line.split("\t")[0]: line.strip().split("\t")[-1]
                        for line in gzip.open(ensemble_file, 'rt').readlines()}
-    df['symbol'] = df[df.columns[0]].apply(lambda e: gene_conversion.get(e, e))
+    df.loc[:, 'symbol'] = df[df.columns[0]].apply(lambda e: gene_conversion.get(e, e))
     return df
+
 
 def qqplot(input_file, output_file, show=False):
     pvalue='pvalue'
