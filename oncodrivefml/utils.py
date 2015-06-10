@@ -16,6 +16,7 @@ from intervaltree import IntervalTree
 #TODO This must be configurable
 TABIX_LIST = [
     "/usr/bin/tabix",
+    os.path.expanduser('~/bin/tabix'),
     os.path.expanduser(os.path.expandvars("$TABIX_PATH")),
     "/soft/bio/sequence/tabix-0.2.3/tabix"
 ]
@@ -57,13 +58,24 @@ SCORES = {
     }
 }
 
-REGIONS_FILE_HEADER = ['chrom', 'start', 'stop', 'feature']
-REGIONS_FILE_SCHEMA = {
+REGIONS_HEADER = ['chrom', 'start', 'stop', 'feature']
+REGIONS_SCHEMA = {
     'fields': {
         'chrom': {'PARSER': 'str(x)', 'VALIDATOR': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
         'start': {'PARSER': 'int(x)', 'VALIDATOR': 'x > 0'},
         'stop': {'PARSER': 'int(x)', 'VALIDATOR': 'x > 0'}
 }}
+
+MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE"]
+MUTATIONS_SCHEMA = {
+    'fields': {
+        'CHROMOSOME': {'PARSER': 'str(x)', 'VALIDATOR': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
+        'POSITION':   {'PARSER': 'int(x)', 'VALIDATOR': 'x > 0'},
+        'REF':        {'PARSER': 'str(x).upper()', 'VALIDATOR': 'match("^[ACTG-]*$",x)'},
+        'ALT':        {'PARSER': 'str(x).upper()', 'VALIDATOR': 'match("^[ACTG-]*$",x)'},
+        'TYPE':       {'NULLABLE': 'True', 'VALIDATOR': 'x in ["subs", "indel"]'}
+    }
+}
 
 
 def _compress_format(file):
@@ -83,7 +95,7 @@ def _load_regions(regions_file):
 
     regions = defaultdict(IntervalTree)
     elements = []
-    with itab.open(regions_file, header=REGIONS_FILE_HEADER, schema=REGIONS_FILE_SCHEMA) as reader:
+    with itab.open(regions_file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
         for r, errors in reader:
             # Report errors and continue
             if len(errors) > 0:
@@ -111,11 +123,24 @@ def _load_variants_dict(variants_file, regions_file, signature_name='none'):
     # Load mutations
     variants_dict = defaultdict(list)
     logging.info("Loading and mapping mutations")
-    with open(variants_file) as fd:
-        reader = csv.DictReader(fd, delimiter='\t')
-        for r in reader:
-            if r['TYPE'] not in ['subs', 'indel']:
+
+    # Check the file format
+    with itab.DictReader(variants_file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA) as reader:
+        for r, errors in reader:
+            # Report errors and continue
+            if len(errors) > 0:
+                if reader.line_num == 1:
+                    # Most probable this is a file with a header
+                    continue
+                for e in errors:
+                    logging.warning(e)
                 continue
+
+            if 'TYPE' not in r:
+                if '-' in r['REF'] or '-' in r['ALT'] or len(r['REF']) > 1 or len(r['ALT']) > 1:
+                    r['TYPE'] = 'indel'
+                else:
+                    r['TYPE'] = 'subs'
 
             if r['CHROMOSOME'] not in regions:
                 continue
