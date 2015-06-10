@@ -96,13 +96,22 @@ def _load_regions(regions_file):
     regions = defaultdict(IntervalTree)
     elements = []
     with itab.open(regions_file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
+        all_errors = []
         for r, errors in reader:
             # Report errors and continue
             if len(errors) > 0:
-                for e in errors:
-                    logging.error(e)
+                all_errors += errors
                 continue
             elements.append((r[0], r[1], r[2], r[3]))
+
+        if len(all_errors) > 0:
+            logging.warning("There are {} errors at {}. {}".format(
+                len(all_errors, os.path.basename(regions_file)),
+                " I show you only the ten first errors." if len(all_errors) > 10 else ""
+            ))
+            for e in all_errors[:10]:
+                logging.warning(e)
+
 
     for i, r in enumerate(elements):
         if i % 15632 == 0:
@@ -458,16 +467,25 @@ def _multiple_test_correction(results, num_significant_samples=2):
 
 def load_mutations(file):
     reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
+    all_errors = []
     for ix, (row, errors) in enumerate(reader, start=1):
         if len(errors) > 0:
             if reader.line_num == 1:
                 # Most probable this is a file with a header
                 continue
-            for e in errors:
-                logging.warning(e)
+            all_errors += errors
             continue
 
         yield row
+
+    if len(all_errors) > 0:
+            logging.warning("There are {} errors at {}. {}".format(
+                len(all_errors, os.path.basename(file)),
+                " I show you only the ten first errors." if len(all_errors) > 10 else ""
+            ))
+            for e in all_errors[:10]:
+                logging.warning(e)
+
     reader.fd.close()
 
 def _get_reference_signature(line):
