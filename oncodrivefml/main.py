@@ -107,6 +107,7 @@ class OncodriveFM2(object):
         results_concat.sort('pvalue', 0, inplace=True)
         fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue']
         df = results_concat[fields]
+        df.reset_index()
         df = add_symbol(df)
         with open(self.results_file, 'wt') as fd:
             df.to_csv(fd, sep="\t", header=True, index=True)
