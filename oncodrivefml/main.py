@@ -8,7 +8,8 @@ import os
 from multiprocessing.pool import Pool
 from os.path import expanduser
 from oncodrivefml import utils
-from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element
+from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element, \
+    _compute_signature
 
 
 class OncodriveFM2(object):
@@ -62,8 +63,8 @@ class OncodriveFM2(object):
             # We don't use signature
             logging.warning("We are not using any signature")
         elif self.signature_type == "compute":
-            #TODO compute the signature
-            logging.warning("TODO: compute signature. Running without signature.")
+            logging.info("Computing signature")
+            signature_dict = _compute_signature(self.variants_file)
         else:
             if not os.path.exists(self.signature_file):
                 logging.error("Signature file {} not found.".format(self.signature_file))

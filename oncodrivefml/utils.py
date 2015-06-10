@@ -125,37 +125,28 @@ def _load_variants_dict(variants_file, regions_file, signature_name='none'):
     logging.info("Loading and mapping mutations")
 
     # Check the file format
-    with itab.DictReader(variants_file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA) as reader:
-        for r, errors in reader:
-            # Report errors and continue
-            if len(errors) > 0:
-                if reader.line_num == 1:
-                    # Most probable this is a file with a header
-                    continue
-                for e in errors:
-                    logging.warning(e)
-                continue
+    for r in load_mutations(variants_file):
 
-            if r.get('TYPE', None) is None:
-                if '-' in r['REF'] or '-' in r['ALT'] or len(r['REF']) > 1 or len(r['ALT']) > 1:
-                    r['TYPE'] = 'indel'
-                else:
-                    r['TYPE'] = 'subs'
+        if r.get('TYPE', None) is None:
+            if '-' in r['REF'] or '-' in r['ALT'] or len(r['REF']) > 1 or len(r['ALT']) > 1:
+                r['TYPE'] = 'indel'
+            else:
+                r['TYPE'] = 'subs'
 
-            if r['CHROMOSOME'] not in regions:
-                continue
+        if r['CHROMOSOME'] not in regions:
+            continue
 
-            position = int(r['POSITION'])
-            for interval in regions[r['CHROMOSOME']][position]:
-                variants_dict[interval.data].append({
-                    'CHROMOSOME': r['CHROMOSOME'],
-                    'POSITION': position,
-                    'SAMPLE': r['SAMPLE'],
-                    'TYPE': r['TYPE'],
-                    'REF': r['REF'],
-                    'ALT': r['ALT'],
-                    'SIGNATURE': signature_name
-                })
+        position = int(r['POSITION'])
+        for interval in regions[r['CHROMOSOME']][position]:
+            variants_dict[interval.data].append({
+                'CHROMOSOME': r['CHROMOSOME'],
+                'POSITION': position,
+                'SAMPLE': r['SAMPLE'],
+                'TYPE': r['TYPE'],
+                'REF': r['REF'],
+                'ALT': r['ALT'],
+                'SIGNATURE': signature_name
+            })
 
     return variants_dict
 
@@ -207,28 +198,23 @@ def _get_ref_triplet(chromosome, start):
     return mm_file.read(3).decode().upper()
 
 
-def _random_scores(num_samples, sampling_size, scores_file, signature_file, sampling_file):
+def _random_scores(num_samples, sampling_size, background, signature):
 
     values = None
-    if os.path.exists(sampling_file):
-        values = np.fromfile(sampling_file, dtype='float32').astype('float64')
 
     result = None
     if num_samples > 0:
-        background = np.fromfile(scores_file, dtype='float32').astype('float64')
 
         if len(background) == 0:
             return None
 
-        if signature_file is None:
-
+        if signature is None:
             # Subs sampling without signature
             p_normalized = None
 
         else:
             # Subs sampling with signature
-            probabilities = np.fromfile(signature_file, dtype='float32').astype('float64')
-            p_normalized = probabilities / sum(probabilities)
+            p_normalized = signature / sum(signature)
 
         to_pick = sampling_size - len(values) if values is not None else sampling_size
         if to_pick > 0:
@@ -250,23 +236,12 @@ def _random_scores(num_samples, sampling_size, scores_file, signature_file, samp
             else:
                 result = values
 
-        # Store the sampling
-        result.tofile(sampling_file, format='float32')
-        _group_writable(sampling_file)
-
     return result[:sampling_size]
 
 
-def _sampling(sampling_size, cache_folder, item):
+def _sampling(sampling_size, scores, signature, item):
 
     e, m = item[0], item[1]
-
-    cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
-    scores_file = os.path.join(cache_path, 'background.bin')
-    signature_file = os.path.join(cache_path, 'signature.bin')
-    if not os.path.exists(signature_file):
-        signature_file = None
-    sampling_file = os.path.join(cache_path, 'sampling.bin')
 
     values_mean = None
     values_mean_count = 0
@@ -277,7 +252,7 @@ def _sampling(sampling_size, cache_folder, item):
         m_count = len(m_scores)
 
         # TODO Use per tissue signature
-        values = _random_scores(m_count, sampling_size, scores_file, signature_file, sampling_file)
+        values = _random_scores(m_count, sampling_size, scores, signature)
 
         if values is None:
             logging.warning("There are no scores at {}-{}-{}".format(e, m_count, sampling_size))
@@ -300,65 +275,49 @@ def _create_background_signature(cache_folder, signature_dict, e):
 
     cache_path = os.path.join(cache_folder, e[len(e) - 2:], e.upper())
     element_scores_tsv_file = os.path.join(cache_path, 'background.tsv')
-    element_scores_bin_file = os.path.join(cache_path, 'background.bin')
-    element_signature_bin_file = os.path.join(cache_path, 'signature.bin')
 
-    if os.path.exists(element_scores_bin_file) and (os.path.exists(element_signature_bin_file) or signature_dict is None):
-        logging.debug("%s - background.bin signature.bin [skip]", e)
-    else:
+    probabilities = []
+    scores = []
 
-        probabilities = []
-        scores = []
+    with open(element_scores_tsv_file, 'r') as fd:
+        reader = csv.reader(fd, delimiter='\t')
+        for row in reader:
+            # Read score
+            value = float(row[SCORE_CONF['score']])
+            alt = row[SCORE_CONF['alt']]
 
-        with open(element_scores_tsv_file, 'r') as fd:
-            reader = csv.reader(fd, delimiter='\t')
-            for row in reader:
-                # Read score
-                value = float(row[SCORE_CONF['score']])
+            # Expand refseq2 dots
+            if alt == '.':
+                scores.append(value)
+                scores.append(value)
+                scores.append(value)
+            else:
+                scores.append(value)
+
+            # Compute signature
+            if signature_dict is not None:
+                ref_triplet = _get_ref_triplet(row[SCORE_CONF['chr']], int(row[SCORE_CONF['pos']]) - 1)
+                ref = row[SCORE_CONF['ref']]
                 alt = row[SCORE_CONF['alt']]
 
-                # Expand refseq2 dots
-                if alt == '.':
-                    scores.append(value)
-                    scores.append(value)
-                    scores.append(value)
-                else:
-                    scores.append(value)
+                if ref_triplet[1] != ref:
+                    logging.warning("Background mismatch at position %d at '%s'", int(row[SCORE_CONF['pos']]), element_scores_tsv_file)
 
-                # Compute signature
-                if signature_dict is not None:
-                    ref_triplet = _get_ref_triplet(row[SCORE_CONF['chr']], int(row[SCORE_CONF['pos']]) - 1)
-                    ref = row[SCORE_CONF['ref']]
-                    alt = row[SCORE_CONF['alt']]
+                # Expand funseq2 dots
+                alts = alt if alt != '.' else 'ACGT'.replace(ref, '')
 
-                    if ref_triplet[1] != ref:
-                        logging.warning("Background mismatch at position %d at '%s'", int(row[SCORE_CONF['pos']]), element_scores_tsv_file)
+                for a in alts:
+                    alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+                    try:
+                        signature = signature_dict[(ref_triplet, alt_triplet)]
+                        probabilities.append(signature)
+                    except KeyError:
+                        logging.warning("Triplet without probability ref: '%s' alt: '%s' (%s:%s)", ref_triplet, alt_triplet, row[SCORE_CONF['chr']], row[SCORE_CONF['pos']])
+                        probabilities.append(0.0)
 
-                    # Expand funseq2 dots
-                    alts = alt if alt != '.' else 'ACGT'.replace(ref, '')
-
-                    for a in alts:
-                        alt_triplet = ref_triplet[0] + a + ref_triplet[2]
-                        try:
-                            signature = signature_dict[(ref_triplet, alt_triplet)]
-                            probabilities.append(signature)
-                        except KeyError:
-                            logging.warning("Triplet without probability ref: '%s' alt: '%s'", ref_triplet, alt_triplet)
-                            probabilities.append(0.0)
-
-        # Save background.bin
-        np.array(scores, dtype='float32').tofile(element_scores_bin_file, format='float32')
-        _group_writable(element_scores_bin_file)
-
-        # Save signature.bin
-        if signature_dict is not None:
-            c_array = np.array([p for p in probabilities], dtype='float32')
-            c_array.tofile(element_signature_bin_file, format='float32')
-            _group_writable(element_signature_bin_file)
-
-        logging.debug("%s - signature.bin [done]", e)
-
-    return True
+    signature = np.array(probabilities) if len(probabilities) > 0 else None
+    scores = np.array(scores)
+    return scores, signature
 
 
 def _scores_by_position(e, regions_file, scores_file, cache_folder):
@@ -391,12 +350,12 @@ def _compute_element(regions_file, scores_file, cache_folder, signature_dict, mi
     if item is None:
         return element, "The element {} has mutations but not scores.".format(element)
 
-    _create_background_signature(cache_folder, signature_dict, element)
+    scores, signature = _create_background_signature(cache_folder, signature_dict, element)
 
     obs = 0
     randomizations = min_randomizations
     while obs <= 5:
-        element, obs = _sampling(randomizations, cache_folder, (element, item))
+        element, obs = _sampling(randomizations, scores, signature, (element, item))
         if randomizations >= max_randomizations:
             break
         randomizations = min(max_randomizations, randomizations*2)
@@ -497,6 +456,36 @@ def _multiple_test_correction(results, num_significant_samples=2):
     results_concat = pd.concat([results_good, results_masked])
     return results_concat
 
+def load_mutations(file):
+    reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
+    for ix, (row, errors) in enumerate(reader, start=1):
+        if len(errors) > 0:
+            if reader.line_num == 1:
+                # Most probable this is a file with a header
+                continue
+            for e in errors:
+                logging.warning(e)
+            continue
+
+        yield row
+    reader.fd.close()
+
+def _get_reference_signature(line):
+    return _get_ref_triplet(line['CHROMOSOME'], line['POSITION'] - 1)
+
+def _get_alternate_signature(line):
+    return line['Signature_reference'][0] + line['ALT'] + line['Signature_reference'][2]
+
+def _compute_signature(variants_file):
+    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file) if r['TYPE'] == 'subs'])
+    mutations = mutations.groupby(['CHROMOSOME', 'POSITION', 'REF', 'ALT']).count()
+    mutations.reset_index(inplace=True)
+    mutations['Signature_reference'] = mutations.apply(_get_reference_signature, axis=1)
+    mutations['Signature_alternate'] = mutations.apply(_get_alternate_signature, axis=1)
+    result = mutations.groupby(['Signature_reference', 'Signature_alternate']).agg({'SAMPLE': 'sum'})
+    result.columns = ['count']
+    result['probability'] = result['count'] / result['count'].sum()
+    return result.to_dict()['probability']
 
 def _file_name(file):
     if file is None:
