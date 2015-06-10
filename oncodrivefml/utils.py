@@ -106,7 +106,7 @@ def _load_regions(regions_file):
 
         if len(all_errors) > 0:
             logging.warning("There are {} errors at {}. {}".format(
-                len(all_errors, os.path.basename(regions_file)),
+                len(all_errors), os.path.basename(regions_file),
                 " I show you only the ten first errors." if len(all_errors) > 10 else ""
             ))
             for e in all_errors[:10]:
@@ -479,12 +479,12 @@ def load_mutations(file):
         yield row
 
     if len(all_errors) > 0:
-            logging.warning("There are {} errors at {}. {}".format(
-                len(all_errors, os.path.basename(file)),
-                " I show you only the ten first errors." if len(all_errors) > 10 else ""
-            ))
-            for e in all_errors[:10]:
-                logging.warning(e)
+        logging.warning("There are {} errors at {}. {}".format(
+            len(all_errors), os.path.basename(file),
+            " I show you only the ten first errors." if len(all_errors) > 10 else ""
+        ))
+        for e in all_errors[:10]:
+            logging.warning(e)
 
     reader.fd.close()
 
