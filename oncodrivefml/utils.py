@@ -88,36 +88,35 @@ def _compress_format(file):
     return None
 
 
-def _load_regions(regions_file):
-
-    if not os.path.exists(regions_file):
-        raise RuntimeError("Feature file '{}' not found".format(regions_file))
-
-    regions = defaultdict(IntervalTree)
-    elements = []
-    with itab.open(regions_file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
+def load_regions(file):
+    with itab.DictReader(file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
         all_errors = []
         for r, errors in reader:
             # Report errors and continue
             if len(errors) > 0:
                 all_errors += errors
                 continue
-            elements.append((r[0], r[1], r[2], r[3]))
+            yield r
 
         if len(all_errors) > 0:
             logging.warning("There are {} errors at {}. {}".format(
-                len(all_errors), os.path.basename(regions_file),
+                len(all_errors), os.path.basename(file),
                 " I show you only the ten first errors." if len(all_errors) > 10 else ""
             ))
             for e in all_errors[:10]:
                 logging.warning(e)
 
+def _load_regions_tree(regions_file):
 
+    if not os.path.exists(regions_file):
+        raise RuntimeError("Feature file '{}' not found".format(regions_file))
+
+    regions = defaultdict(IntervalTree)
+    elements = list(load_regions(regions_file))
     for i, r in enumerate(elements):
         if i % 15632 == 0:
             logging.info("[{} of {}]".format(i+1, len(elements)))
-        chrom, start, stop, feature = r[0], r[1], r[2], r[3]
-        regions[chrom][start:stop] = feature
+        regions[r['chrom']][r['start']:r['stop']] = r['feature']
     logging.info("[{} of {}]".format(i+1, len(elements)))
 
     return regions
@@ -127,7 +126,7 @@ def _load_variants_dict(variants_file, regions_file, signature_name='none'):
 
     # Load regions
     logging.info("Loading regions")
-    regions = _load_regions(regions_file)
+    regions = _load_regions_tree(regions_file)
 
     # Load mutations
     variants_dict = defaultdict(list)
@@ -170,15 +169,12 @@ def _create_background_tsv(background_tsv_file, element, regions_file, scores_fi
             raise RuntimeError("File {} not found".format(regions_file))
 
         # Load regions at this feature
-        all_regions = pd.read_csv(regions_file,
-                                  names=['chr', 'start', 'stop', 'feature'],
-                                  dtype={'chr': object, 'start': np.int, 'stop': np.int, 'feature': object},
-                                  sep='\t')
+        all_regions = pd.DataFrame.from_dict(load_regions(regions_file))
         regions = all_regions[all_regions.feature == element]
 
         # Build the command to query with Tabix
         cmd = [TABIX, scores_file]
-        cmd += ['{}:{}-{}'.format(region.chr, region.start, region.stop) for idx, region in regions.iterrows()]
+        cmd += ['{}:{}-{}'.format(region.chrom, region.start, region.stop) for idx, region in regions.iterrows()]
         cmd += ['>', background_tsv_file]
 
         # Execute it
@@ -464,6 +460,7 @@ def _multiple_test_correction(results, num_significant_samples=2):
     # Concat results
     results_concat = pd.concat([results_good, results_masked])
     return results_concat
+
 
 def load_mutations(file):
     reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
