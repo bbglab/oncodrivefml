@@ -1,6 +1,7 @@
 import argparse
 import logging
 import functools
+import itertools
 import pandas as pd
 import os
 
@@ -83,6 +84,7 @@ class OncodriveFM2(object):
         results = {}
         info_step = 12*self.cores
         pool = Pool(self.cores)
+
         compute_element_partial = functools.partial(_compute_element, self.regions_file, self.score_file, self.cache, signature_dict, self.min_samplings, self.max_samplings)
         for i, (element, item) in enumerate(pool.imap(compute_element_partial, elements)):
             if i % info_step == 0:
@@ -111,9 +113,6 @@ class OncodriveFM2(object):
 
 def cmdline():
 
-    # Configure the logging
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S', level=logging.INFO)
-
     # Parse the arguments
     parser = argparse.ArgumentParser()
 
@@ -130,8 +129,11 @@ def cmdline():
     parser.add_argument('-maxs', '--max_samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations")
     parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
     parser.add_argument('--cache', dest='cache', default=None, help="Folder to store some intermediate data to speed up further executions.")
-
+    parser.add_argument('--debug', dest='debug', default=False, action='store_true')
     args = parser.parse_args()
+
+    # Configure the logging
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG if args.debug else logging.INFO)
     logging.debug(args)
 
     # Check global configuration

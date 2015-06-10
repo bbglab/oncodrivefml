@@ -136,7 +136,7 @@ def _load_variants_dict(variants_file, regions_file, signature_name='none'):
                     logging.warning(e)
                 continue
 
-            if 'TYPE' not in r:
+            if r.get('TYPE', None) is None:
                 if '-' in r['REF'] or '-' in r['ALT'] or len(r['REF']) > 1 or len(r['ALT']) > 1:
                     r['TYPE'] = 'indel'
                 else:
@@ -480,6 +480,7 @@ def _compute_score_means(regions_file, scores_file, cache_folder, element):
 
 
 def _multiple_test_correction(results, num_significant_samples=2):
+
     results_all = pd.DataFrame.from_dict(results, orient='index')
 
     # Filter minimum samples
