@@ -1,18 +1,17 @@
 import argparse
 import logging
 import functools
-import pandas as pd
 import os
 
 from multiprocessing.pool import Pool
 from os.path import expanduser
 from oncodrivefml import utils
+from oncodrivefml.drmaa import drmaa_run
 from oncodrivefml.qqplot import qqplot, add_symbol
-from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element, \
-    _compute_signature
+from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element, _load_signature
 
 
-class OncodriveFM2(object):
+class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
                  project_name=None, cores=os.cpu_count(), cache=None, min_samplings=10000, max_samplings=1000000):
@@ -48,7 +47,7 @@ class OncodriveFM2(object):
         _silent_mkdir(self.cache)
         _silent_mkdir(output_folder)
 
-    def run(self):
+    def run(self, drmaa=None, figures=True):
 
         # Skip if done
         if os.path.exists(self.results_file):
@@ -59,22 +58,12 @@ class OncodriveFM2(object):
         variants_dict = _load_variants_dict(self.variants_file, self.regions_file, signature_name=self.signature_name)
 
         # Signature
-        signature_dict = None
-        if self.signature_type == "none":
-            # We don't use signature
-            logging.warning("We are not using any signature")
-        elif self.signature_type == "compute":
-            logging.info("Computing signature")
-            signature_dict = _compute_signature(self.variants_file)
-        else:
-            if not os.path.exists(self.signature_file):
-                logging.error("Signature file {} not found.".format(self.signature_file))
-                return -1
-            else:
-                logging.info("Loading signature")
-                signature_probabilities = pd.read_csv(self.signature_file, sep='\t')
-                signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
-                signature_dict = signature_probabilities.to_dict()[self.signature_field]
+        signature_dict = _load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type)
+
+        # Run in a DRMAA cluster
+        if drmaa is not None:
+            return drmaa_run(variants_dict, signature_dict, self, drmaa, figures=figures)
+
 
         # Compute elements statistics
         logging.info("Computing statistics")
@@ -112,10 +101,11 @@ class OncodriveFM2(object):
         with open(self.results_file, 'wt') as fd:
             df.to_csv(fd, sep="\t", header=True, index=False)
 
-        logging.info("Creating figures")
-        qqplot(self.results_file, self.qqplot_file)
-        logging.info("Done")
+        if figures:
+            logging.info("Creating figures")
+            qqplot(self.results_file, self.qqplot_file)
 
+        logging.info("Done")
         return 1
 
 
@@ -138,6 +128,8 @@ def cmdline():
     parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
     parser.add_argument('--cache', dest='cache', default=None, help="Folder to store some intermediate data to speed up further executions.")
     parser.add_argument('--debug', dest='debug', default=False, action='store_true')
+    parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true')
+    parser.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
     args = parser.parse_args()
 
     # Configure the logging
@@ -154,7 +146,7 @@ def cmdline():
         exit(-1)
 
     # Initialize OncodriveFM2
-    ofm2 = OncodriveFM2(
+    ofm2 = OncodriveFML(
         args.input_file,
         args.regions_file,
         args.signature_file,
@@ -171,7 +163,7 @@ def cmdline():
     utils.SCORE_CONF = utils.SCORES[os.path.basename(args.score_file)]
 
     # Run
-    return_code = ofm2.run()
+    return_code = ofm2.run(drmaa=args.drmaa, figures=not args.no_figures)
 
     if return_code != 1:
         exit(return_code)

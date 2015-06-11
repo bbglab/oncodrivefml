@@ -6,6 +6,7 @@ setup(
     name='oncodrivefml',
     version=__version__,
     packages=find_packages(),
+    package_data={'oncodrivefml': ['*.txt.gz']},
     url='http://bg.upf.edu',
     license='UPF Free Source Code',
     author='Biomedical Genomics Group',

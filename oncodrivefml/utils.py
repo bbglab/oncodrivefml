@@ -122,6 +122,26 @@ def _load_regions_tree(regions_file):
     return regions
 
 
+def _load_signature(variants_file, signature_file, signature_field, signature_type):
+    signature_dict = None
+    if signature_type == "none":
+        # We don't use signature
+        logging.warning("We are not using any signature")
+    elif signature_type == "compute":
+        logging.info("Computing signature")
+        signature_dict = _compute_signature(variants_file)
+    else:
+        if not os.path.exists(signature_file):
+            logging.error("Signature file {} not found.".format(signature_file))
+            return -1
+        else:
+            logging.info("Loading signature")
+            signature_probabilities = pd.read_csv(signature_file, sep='\t')
+            signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
+            signature_dict = signature_probabilities.to_dict()[signature_field]
+    return signature_dict
+
+
 def _load_variants_dict(variants_file, regions_file, signature_name='none'):
 
     # Load regions
@@ -134,12 +154,6 @@ def _load_variants_dict(variants_file, regions_file, signature_name='none'):
 
     # Check the file format
     for r in load_mutations(variants_file):
-
-        if r.get('TYPE', None) is None:
-            if '-' in r['REF'] or '-' in r['ALT'] or len(r['REF']) > 1 or len(r['ALT']) > 1:
-                r['TYPE'] = 'indel'
-            else:
-                r['TYPE'] = 'subs'
 
         if r['CHROMOSOME'] not in regions:
             continue
@@ -472,6 +486,12 @@ def load_mutations(file):
                 continue
             all_errors += errors
             continue
+
+        if row.get('TYPE', None) is None:
+            if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) > 1 or len(row['ALT']) > 1:
+                row['TYPE'] = 'indel'
+            else:
+                row['TYPE'] = 'subs'
 
         yield row
 
