@@ -361,7 +361,7 @@ def _compute_element(regions_file, scores_file, cache_folder, signature_dict, mi
     randomizations = min_randomizations
     while obs <= 5:
         element, obs = _sampling(randomizations, scores, signature, (element, item))
-        if randomizations >= max_randomizations:
+        if randomizations >= max_randomizations or obs > 5:
             break
         randomizations = min(max_randomizations, randomizations*2)
 
