@@ -106,6 +106,7 @@ def load_regions(file):
             for e in all_errors[:10]:
                 logging.warning(e)
 
+
 def _load_regions_tree(regions_file):
 
     if not os.path.exists(regions_file):
@@ -298,6 +299,7 @@ def _create_background_signature(cache_folder, signature_dict, e):
     probabilities = []
     scores = []
 
+    missing_signatures = {}
     with open(element_scores_tsv_file, 'r') as fd:
         reader = csv.reader(fd, delimiter='\t')
         for row in reader:
@@ -331,12 +333,12 @@ def _create_background_signature(cache_folder, signature_dict, e):
                         signature = signature_dict[(ref_triplet, alt_triplet)]
                         probabilities.append(signature)
                     except KeyError:
-                        logging.warning("Triplet without probability ref: '%s' alt: '%s' (%s:%s)", ref_triplet, alt_triplet, row[SCORE_CONF['chr']], row[SCORE_CONF['pos']])
+                        missing_signatures[ref_triplet] = alt_triplet
                         probabilities.append(0.0)
 
     signature = np.array(probabilities) if len(probabilities) > 0 else None
     scores = np.array(scores)
-    return scores, signature
+    return scores, signature, [(k, v) for k, v in missing_signatures.items()]
 
 
 def _scores_by_position(e, regions_file, scores_file, cache_folder):
@@ -367,9 +369,9 @@ def _compute_element(regions_file, scores_file, cache_folder, signature_dict, mi
     element, item = _compute_score_means(regions_file, scores_file, cache_folder, element)
 
     if item is None:
-        return element, "The element {} has mutations but not scores.".format(element)
+        return element, "The element {} has mutations but not scores.".format(element), []
 
-    scores, signature = _create_background_signature(cache_folder, signature_dict, element)
+    scores, signature, missing_signatures = _create_background_signature(cache_folder, signature_dict, element)
 
     obs = 0
     randomizations = min_randomizations
@@ -380,7 +382,7 @@ def _compute_element(regions_file, scores_file, cache_folder, signature_dict, mi
         randomizations = min(max_randomizations, randomizations*2)
 
     item['pvalue'] = max(1, obs) / float(randomizations)
-    return element, item
+    return element, item, missing_signatures
 
 
 def _compute_score_means(regions_file, scores_file, cache_folder, element):
@@ -476,7 +478,7 @@ def _multiple_test_correction(results, num_significant_samples=2):
     return results_concat
 
 
-def load_mutations(file):
+def load_mutations(file, show_warnings=True):
     reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
     all_errors = []
     for ix, (row, errors) in enumerate(reader, start=1):
@@ -495,7 +497,7 @@ def load_mutations(file):
 
         yield row
 
-    if len(all_errors) > 0:
+    if show_warnings and len(all_errors) > 0:
         logging.warning("There are {} errors at {}. {}".format(
             len(all_errors), os.path.basename(file),
             " I show you only the ten first errors." if len(all_errors) > 10 else ""
@@ -505,14 +507,17 @@ def load_mutations(file):
 
     reader.fd.close()
 
+
 def _get_reference_signature(line):
     return _get_ref_triplet(line['CHROMOSOME'], line['POSITION'] - 1)
+
 
 def _get_alternate_signature(line):
     return line['Signature_reference'][0] + line['ALT'] + line['Signature_reference'][2]
 
+
 def _compute_signature(variants_file):
-    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file) if r['TYPE'] == 'subs'])
+    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file, show_warnings=False) if r['TYPE'] == 'subs'])
     mutations = mutations.groupby(['CHROMOSOME', 'POSITION', 'REF', 'ALT']).count()
     mutations.reset_index(inplace=True)
     mutations['Signature_reference'] = mutations.apply(_get_reference_signature, axis=1)
@@ -521,6 +526,7 @@ def _compute_signature(variants_file):
     result.columns = ['count']
     result['probability'] = result['count'] / result['count'].sum()
     return result.to_dict()['probability']
+
 
 def _file_name(file):
     if file is None:

@@ -77,7 +77,8 @@ class OncodriveFML(object):
         pool = Pool(self.cores)
 
         compute_element_partial = functools.partial(_compute_element, self.regions_file, self.score_file, self.cache, signature_dict, self.min_samplings, self.max_samplings)
-        for i, (element, item) in enumerate(pool.imap(compute_element_partial, elements)):
+        all_missing_signatures = {}
+        for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
             if i % info_step == 0:
                 logging.info("[{} of {}]".format(i+1, len(elements)))
 
@@ -85,6 +86,17 @@ class OncodriveFML(object):
                 results[element] = item
             else:
                 logging.debug(item)
+
+            for ref, alt in missing_signatures:
+                all_missing_signatures[ref] = alt
+
+        if len(all_missing_signatures) > 0:
+            logging.warning("There are positions without signature probability. We are using a score of zero at these positions.")
+            logging.warning("If you are computing the signature from the input file, most probable this means that you don't have enough mutations.")
+            logging.warning("Try using a precomputed signature of a similar cancer type, or without signature.")
+            logging.warning("The missing signatures are:")
+            for ref_triplet, alt_triplet in all_missing_signatures.items():
+                logging.warning("\tref: '%s' alt: '%s'", ref_triplet, alt_triplet)
 
         logging.info("[{} of {}]".format(i+1, len(elements)))
 
