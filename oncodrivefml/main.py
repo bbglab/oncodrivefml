@@ -7,7 +7,8 @@ from multiprocessing.pool import Pool
 from os.path import expanduser
 from oncodrivefml import utils
 from oncodrivefml.drmaa import drmaa_run
-from oncodrivefml.qqplot import qqplot, add_symbol
+from oncodrivefml.qqplot import qqplot_png as qqplot
+from oncodrivefml.qqplot import add_symbol
 from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element, _load_signature
 
 
@@ -63,7 +64,6 @@ class OncodriveFML(object):
         # Run in a DRMAA cluster
         if drmaa is not None:
             return drmaa_run(variants_dict, signature_dict, self, drmaa, figures=figures)
-
 
         # Compute elements statistics
         logging.info("Computing statistics")
