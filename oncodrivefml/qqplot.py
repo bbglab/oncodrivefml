@@ -332,7 +332,7 @@ def qqplot_html(input_file, output_path, showit=False):
     fig = gridplot([[ax]], toolbar_location='above')
 
     # Save the plot
-    if output_path:
+    if output_path is not None:
         output_file(output_path)
 
     if showit:
