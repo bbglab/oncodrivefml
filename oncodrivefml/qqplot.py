@@ -14,8 +14,8 @@ from bokeh.models import HoverTool, PrintfTickFormatter
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 
-TOOLS = "pan,lasso_select,box_zoom,box_select,resize,wheel_zoom,tap,"
-TOOLS += "poly_select,hover,reset,previewsave,crosshair"
+TOOLS = "pan,box_zoom,resize,wheel_zoom,"
+TOOLS += "reset,previewsave,crosshair"
 
 
 def eliminate_duplicates(df):
@@ -213,7 +213,7 @@ def qqplot_html(input_file, output_path, showit=False):
     obs_alpha = df['samples_mut'].map(lambda x: 0.7 if x >= min_samples else 0.3)
 
     data = pd.DataFrame({'HugoID': df['symbol'],
-                         'GeneID': df.index.tolist(),
+                         'GeneID': df['index'],
                          'observed': obs_pvalues,
                          'color': obs_color,
                          'alpha': obs_alpha,
