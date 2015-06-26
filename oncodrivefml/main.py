@@ -7,9 +7,9 @@ from multiprocessing.pool import Pool
 from os.path import expanduser
 from oncodrivefml import utils
 from oncodrivefml.drmaa import drmaa_run
-from oncodrivefml.qqplot import qqplot_png as qqplot
+from oncodrivefml.qqplot import qqplot_png, qqplot_html
 from oncodrivefml.qqplot import add_symbol
-from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _sampling, _load_variants_dict, _compute_element, _load_signature
+from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _load_variants_dict, _compute_element, _load_signature
 
 
 class OncodriveFML(object):
@@ -39,7 +39,7 @@ class OncodriveFML(object):
         self.project_name = project_name if project_name is not None else _file_name(variants_file)
         self.signature_name = _file_name(signature_file)
         self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefml.tsv')
-        self.qqplot_file = os.path.join(output_folder, self.project_name + '-oncodrivefml.png')
+        self.qqplot_file = os.path.join(output_folder, self.project_name + '-oncodrivefml')
         self.cache = cache
         if cache is None:
             self.cache = os.path.join(self.output_folder, "cache")
@@ -115,7 +115,8 @@ class OncodriveFML(object):
 
         if figures:
             logging.info("Creating figures")
-            qqplot(self.results_file, self.qqplot_file)
+            qqplot_png(self.results_file, self.qqplot_file + ".png")
+            qqplot_html(self.results_file, self.qqplot_file + ".html")
 
         logging.info("Done")
         return 1
