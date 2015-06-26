@@ -197,7 +197,7 @@ def qqplot_png(input_file, output_file, showit=False):
     plt.close()
 
 
-def qqplot_html(input_file, output_file, showit=False):
+def qqplot_html(input_file, output_path, showit=False):
 
     pvalue = 'pvalue'
     qvalue = 'qvalue'
@@ -332,8 +332,8 @@ def qqplot_html(input_file, output_file, showit=False):
     fig = gridplot([[ax]], toolbar_location='above')
 
     # Save the plot
-    if output_file:
-        output_file(output_file)
+    if output_path:
+        output_file(output_path)
 
     if showit:
         show(fig)
