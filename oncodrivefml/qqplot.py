@@ -198,18 +198,14 @@ def qqplot_png(input_file, output_file, showit=False):
 
 
 def qqplot_html(input_file, output_file, showit=False):
+
     pvalue = 'pvalue'
     qvalue = 'qvalue'
     min_samples = 2
     draw_greys = True
-    #annotate = True
-    #cut = True
-    #############################
-
     MIN_PVALUE = 10000
-    #MAX_ANNOTATED_GENES = 50
 
-    df = pd.read_csv(input_file, header=0, sep="\t", compression='gzip', index_col=0)
+    df = pd.read_csv(input_file, header=0, sep="\t")
 
     colors = ['royalblue', 'blue']
     obs_pvalues = df[pvalue].map(lambda x: -np.log10(x) if x > 0 else -np.log10(1 / MIN_PVALUE))
@@ -290,8 +286,6 @@ def qqplot_html(input_file, output_file, showit=False):
     max_y = float(data[['observed']].apply(np.max))
 
     # Give some extra space (+-5%)
-    #min_x = max_x * -0.05
-    #min_y = max_y * -0.05
     max_x *= 1.1
     max_y *= 1.1
 
@@ -314,7 +308,7 @@ def qqplot_html(input_file, output_file, showit=False):
             fdr_x = np.min(blue[blue['observed'] == fdr_y]['expected'])
             ax.line((fdr_x - max_x * 0.025, fdr_x + max_x * 0.025), (fdr_y, fdr_y),
                     color=fdr_color, line_width=2)
-            #ax.line((0, max_x), (fdr_y, fdr_y), color=fdr_color, line_width=2, line_dash=[5, 5])
+
             # Add the name of the significant genes
             genes = blue[(blue['observed'] >= fdr_y) & (blue['expected'] >= fdr_x)]
             for count, line in genes.iterrows():
@@ -328,8 +322,6 @@ def qqplot_html(input_file, output_file, showit=False):
     hover.point_policy = "snap_to_data"
     hover.names = ['greys', 'blues']
     hover.tooltips = OrderedDict([
-        #("index", "$index"),
-        #("(x,y)", "($x, $y)"),
         ("symbol", "@symbol"),
         ("geneid", "@geneid"),
         ("p-value", "@pvalue"),
