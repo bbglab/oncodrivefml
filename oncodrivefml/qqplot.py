@@ -15,7 +15,7 @@ __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file
 
 
 TOOLS = "pan,box_zoom,resize,wheel_zoom,"
-TOOLS += "reset,previewsave,crosshair"
+TOOLS += "reset,previewsave,crosshair,hover"
 
 
 def eliminate_duplicates(df):
