@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import logging
 from collections import OrderedDict
-from bokeh.plotting import figure, output_file, show, gridplot, ColumnDataSource
+from bokeh.plotting import figure, output_file, show, gridplot, ColumnDataSource, save
 from bokeh.models import HoverTool, PrintfTickFormatter
 
 
@@ -337,3 +337,5 @@ def qqplot_html(input_file, output_path, showit=False):
 
     if showit:
         show(fig)
+    else:
+        save(fig)
