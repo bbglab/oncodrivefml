@@ -5,17 +5,19 @@ import os
 
 from multiprocessing.pool import Pool
 from os.path import expanduser
-from oncodrivefml import utils
+from oncodrivefml import compute, signature
 from oncodrivefml.drmaa import drmaa_run
 from oncodrivefml.qqplot import qqplot_png, qqplot_html
 from oncodrivefml.qqplot import add_symbol
-from oncodrivefml.utils import _file_name, _silent_mkdir, _multiple_test_correction, _load_variants_dict, _compute_element, _load_signature
+from oncodrivefml.compute import file_name, silent_mkdir, multiple_test_correction, compute_element
+from oncodrivefml.load import load_variants_dict, load_regions
+from oncodrivefml.signature import load_signature
 
 
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
-                 project_name=None, cores=os.cpu_count(), cache=None, min_samplings=10000, max_samplings=1000000):
+                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000):
 
         # Configuration
         self.cores = cores
@@ -36,17 +38,13 @@ class OncodriveFML(object):
 
         self.score_file = expanduser(score_file)
         self.output_folder = expanduser(output_folder)
-        self.project_name = project_name if project_name is not None else _file_name(variants_file)
-        self.signature_name = _file_name(signature_file)
+        self.project_name = project_name if project_name is not None else file_name(variants_file)
+        self.signature_name = file_name(signature_file)
         self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefml.tsv')
         self.qqplot_file = os.path.join(output_folder, self.project_name + '-oncodrivefml')
-        self.cache = cache
-        if cache is None:
-            self.cache = os.path.join(self.output_folder, "cache")
 
         # Some initializations
-        _silent_mkdir(self.cache)
-        _silent_mkdir(output_folder)
+        silent_mkdir(output_folder)
 
     def run(self, drmaa=None, figures=True):
 
@@ -55,11 +53,16 @@ class OncodriveFML(object):
             logging.info("Already calculated at '{}'".format(self.results_file))
             return
 
+        # Load regions
+        logging.info("Loading regions")
+        regions = load_regions(self.regions_file)
+
         # Load variants
-        variants_dict = _load_variants_dict(self.variants_file, self.regions_file, signature_name=self.signature_name)
+        logging.info("Loading and mapping mutations")
+        variants_dict = load_variants_dict(self.variants_file, regions, signature_name=self.signature_name)
 
         # Signature
-        signature_dict = _load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type)
+        signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type)
 
         # Run in a DRMAA cluster
         if drmaa is not None:
@@ -67,7 +70,7 @@ class OncodriveFML(object):
 
         # Compute elements statistics
         logging.info("Computing statistics")
-        elements = [(e, muts) for e, muts in variants_dict.items() if len(muts) > 0]
+        elements = [(e, muts, regions[e]) for e, muts in variants_dict.items() if len(muts) > 0]
         if len(elements) == 0:
             logging.error("There is no mutation at any element")
             return -1
@@ -76,7 +79,8 @@ class OncodriveFML(object):
         info_step = 6*self.cores
         pool = Pool(self.cores)
 
-        compute_element_partial = functools.partial(_compute_element, self.regions_file, self.score_file, self.cache, signature_dict, self.min_samplings, self.max_samplings)
+        compute_element_partial = functools.partial(compute_element, self.score_file, signature_dict, self.min_samplings, self.max_samplings)
+
         all_missing_signatures = {}
         for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
             if i % info_step == 0:
@@ -90,6 +94,8 @@ class OncodriveFML(object):
             for ref, alt in missing_signatures:
                 all_missing_signatures[ref] = alt
 
+        logging.info("[{} of {}]".format(i+1, len(elements)))
+
         if len(all_missing_signatures) > 0:
             logging.warning("There are positions without signature probability. We are using a score of zero at these positions.")
             logging.warning("If you are computing the signature from the input file, most probable this means that you don't have enough mutations.")
@@ -98,11 +104,9 @@ class OncodriveFML(object):
             for ref_triplet, alt_triplet in all_missing_signatures.items():
                 logging.warning("\tref: '%s' alt: '%s'", ref_triplet, alt_triplet)
 
-        logging.info("[{} of {}]".format(i+1, len(elements)))
-
         # Run multiple test correction
         logging.info("Computing multiple test correction")
-        results_concat = _multiple_test_correction(results, num_significant_samples=2)
+        results_concat = multiple_test_correction(results, num_significant_samples=2)
 
         # Sort and store results
         results_concat.sort('pvalue', 0, inplace=True)
@@ -139,7 +143,6 @@ def cmdline():
     parser.add_argument('-mins', '--min_samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations")
     parser.add_argument('-maxs', '--max_samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations")
     parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
-    parser.add_argument('--cache', dest='cache', default=None, help="Folder to store some intermediate data to speed up further executions.")
     parser.add_argument('--debug', dest='debug', default=False, action='store_true')
     parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true')
     parser.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
@@ -149,12 +152,7 @@ def cmdline():
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG if args.debug else logging.INFO)
     logging.debug(args)
 
-    # Check global configuration
-    if utils.TABIX is None:
-        logging.error("Cannot find 'tabix' executable. Please define the TABIX_PATH global variable.")
-        exit(-1)
-
-    if utils.HG19 is None:
+    if signature.HG19 is None:
         logging.error("Cannot find full genome files. Please define the FULL_GENOME_PATH global variable.")
         exit(-1)
 
@@ -167,13 +165,12 @@ def cmdline():
         args.output_folder,
         project_name=args.project_name,
         cores=args.cores,
-        cache=args.cache,
         min_samplings=args.min_samplings,
         max_samplings=args.max_samplings
     )
 
     #TODO allow only one score format
-    utils.SCORE_CONF = utils.SCORES[os.path.basename(args.score_file)]
+    compute.SCORE_CONF = compute.SCORES[os.path.basename(args.score_file)]
 
     # Run
     return_code = ofm2.run(drmaa=args.drmaa, figures=not args.no_figures)

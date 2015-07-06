@@ -17,7 +17,7 @@ setup(
         'bgcore >= 0.6.0',
         'numpy >= 1.9.0',
         'scipy >= 0.14.0',
-        'pandas >= 0.15.2', 'matplotlib'
+        'pandas >= 0.15.2', 'matplotlib', 'intervaltree'
     ],
 
     dependency_links=[
