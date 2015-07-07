@@ -67,10 +67,6 @@ def load_mutations(file, signature=None, show_warnings=True):
 
 def load_regions(file):
 
-    # If this is a pratial run, the variants are already mapped at the input file.
-    if file == 'partial_run':
-        return None
-
     regions = defaultdict(list)
     with itab.DictReader(file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
         all_errors = []

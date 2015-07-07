@@ -108,7 +108,7 @@ class OncodriveFML(object):
                 logging.warning("\tref: '%s' alt: '%s'", ref_triplet, alt_triplet)
 
         # Store partial result
-        if self.regions_file == "partial_run":
+        if self.variants_file.endswith(".pickle.gz"):
             logging.info("Store partial result")
             with gzip.open(os.path.join(self.output_folder, self.project_name + '.pickle.gz'), 'wb') as fd:
                 pickle.dump(results, fd)

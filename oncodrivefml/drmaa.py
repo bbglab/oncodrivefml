@@ -33,7 +33,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
         split_file = os.path.join(task.output_folder, "split_{}.pickle.gz".format(i))
         with gzip.open(split_file, 'wb') as fd:
             pickle.dump(split, fd)
-            arguments.append("-s {} -i {} -t none:{} -r partial_run -n split_{}".format(task.score_file, split_file, signature_file, i))
+            arguments.append("-s {} -i {} -t none:{} -r {} -n split_{}".format(task.score_file, split_file, signature_file, task.regions_file, i))
             partial_results.append("split_{}.pickle.gz".format(i))
 
     # QMap chuncks
