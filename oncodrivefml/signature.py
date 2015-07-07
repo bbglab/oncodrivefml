@@ -56,7 +56,7 @@ def compute_signature(variants_file, signature_name):
 def load_signature(variants_file, signature_file, signature_field, signature_type, signature_name):
 
     if signature_file is not None and signature_file.endswith(".pickle.gz"):
-        with gzip.open(variants_file, 'rb') as fd:
+        with gzip.open(signature_file, 'rb') as fd:
             return pickle.load(fd)
 
     signature_dict = None
