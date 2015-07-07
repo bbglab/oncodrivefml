@@ -113,7 +113,7 @@ class OncodriveFML(object):
             with gzip.open(os.path.join(self.output_folder, self.project_name + '.pickle.gz'), 'wb') as fd:
                 pickle.dump(results, fd)
             logging.info("Done")
-            return 1
+            return 0
 
         # Run multiple test correction
         logging.info("Computing multiple test correction")
@@ -134,7 +134,7 @@ class OncodriveFML(object):
             qqplot_html(self.results_file, self.qqplot_file + ".html")
 
         logging.info("Done")
-        return 1
+        return 0
 
 
 def cmdline():
@@ -188,7 +188,7 @@ def cmdline():
     # Run
     return_code = ofm2.run(drmaa=args.drmaa, figures=not args.no_figures)
 
-    if return_code != 1:
+    if return_code != 0:
         exit(return_code)
 
 

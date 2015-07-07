@@ -33,7 +33,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
         split_file = os.path.join(task.output_folder, "split_{}.pickle.gz".format(i))
         with gzip.open(split_file, 'wb') as fd:
             pickle.dump(split, fd)
-            arguments.append("-s {} -i {} -t {} -r partial_run -n split_{}".format(task.score_file, split_file, signature_file, i))
+            arguments.append("-s {} -i {} -t none:{} -r partial_run -n split_{}".format(task.score_file, split_file, signature_file, i))
             partial_results.append("split_{}.pickle.gz".format(i))
 
     # QMap chuncks
@@ -75,7 +75,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
     if jobs_fail > 0:
         logging.error("%d jobs fail. Check the logs at '%s'.", jobs_fail, logs_dir)
-        return 0
+        return -1
 
     # Join results
     logging.info("Joining jobs output")
@@ -105,4 +105,4 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
         qqplot_html(task.results_file, task.qqplot_file + ".html")
 
     logging.info("Done")
-    return 1
+    return 0
