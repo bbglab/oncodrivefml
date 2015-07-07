@@ -31,7 +31,7 @@ def load_scores(element, regions, scores_file, signature_dict):
     tb = tabix.open(scores_file)
     scores_by_pos = defaultdict(list)
     scores_by_segment = defaultdict(list)
-    signature_by_segment = defaultdict(list)
+    signature_by_segment = defaultdict(lambda: defaultdict(list))
     missing_signatures = {}
 
     for region in regions:
@@ -67,11 +67,13 @@ def load_scores(element, regions, scores_file, signature_dict):
                 for a in alts:
                     alt_triplet = ref_triplet[0] + a + ref_triplet[2]
                     try:
-                        signature = signature_dict[(ref_triplet, alt_triplet)]
-                        signature_by_segment[region['segment']].append(signature)
+                        for k in signature_dict.keys():
+                            signature = signature_dict[k][(ref_triplet, alt_triplet)]
+                            signature_by_segment[region['segment']][k].append(signature)
                     except KeyError:
                         missing_signatures[ref_triplet] = alt_triplet
-                        signature_by_segment[region['segment']].append(0.0)
+                        for k in signature_dict.keys():
+                            signature_by_segment[region['segment']][k].append(0.0)
 
     return scores_by_pos, scores_by_segment, signature_by_segment, [(k, v) for k, v in missing_signatures.items()]
 
@@ -126,8 +128,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m):
         for segment, m_scores in muts_by_segment.items():
             m_count = len(m_scores)
 
-            # TODO Use per tissue signature
-            signature = signature_by_segment[segment]
+            signature = signature_by_segment[segment][m_tissue]
             scores = scores_by_segment[segment]
             values = random_scores(m_count, sampling_size, scores, signature)
 
@@ -141,8 +142,6 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m):
             all_scores += m_scores
 
     obs = len(values_mean[values_mean >= np.mean(all_scores)]) if len(all_scores) > 0 else float(sampling_size)
-
-    logging.debug(" %s - sampling.bin [done]", e)
 
     return e, obs
 

@@ -36,25 +36,29 @@ def get_alternate_signature(line):
     return line['Signature_reference'][0] + line['ALT'] + line['Signature_reference'][2]
 
 
-def compute_signature(variants_file):
-    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file, show_warnings=False) if r['TYPE'] == 'subs'])
-    mutations = mutations.groupby(['CHROMOSOME', 'POSITION', 'REF', 'ALT']).count()
+def compute_signature(variants_file, signature_name):
+    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file, signature=signature_name, show_warnings=False) if r['TYPE'] == 'subs'])
+    mutations = mutations.groupby(['CHROMOSOME', 'POSITION', 'REF', 'ALT', 'SIGNATURE']).count()
     mutations.reset_index(inplace=True)
     mutations['Signature_reference'] = mutations.apply(get_reference_signature, axis=1)
     mutations['Signature_alternate'] = mutations.apply(get_alternate_signature, axis=1)
-    result = mutations.groupby(['Signature_reference', 'Signature_alternate']).agg({'SAMPLE': 'sum'})
-    result.columns = ['count']
-    result['probability'] = result['count'] / result['count'].sum()
-    return result.to_dict()['probability']
+    groups = dict(list(mutations.groupby(['SIGNATURE'])))
+    signature = {}
+    for k, v in groups.items():
+        result = mutations.groupby(['Signature_reference', 'Signature_alternate']).agg({'SAMPLE': 'sum'})
+        result.columns = ['count']
+        result['probability'] = result['count'] / result['count'].sum()
+        signature[k] = result.to_dict()['probability']
+    return signature
 
-def load_signature(variants_file, signature_file, signature_field, signature_type):
+def load_signature(variants_file, signature_file, signature_field, signature_type, signature_name):
     signature_dict = None
     if signature_type == "none":
         # We don't use signature
         logging.warning("We are not using any signature")
     elif signature_type == "compute":
         logging.info("Computing signature")
-        signature_dict = compute_signature(variants_file)
+        signature_dict = compute_signature(variants_file, signature_name)
     else:
         if not os.path.exists(signature_file):
             logging.error("Signature file {} not found.".format(signature_file))
@@ -63,5 +67,5 @@ def load_signature(variants_file, signature_file, signature_field, signature_typ
             logging.info("Loading signature")
             signature_probabilities = pd.read_csv(signature_file, sep='\t')
             signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
-            signature_dict = signature_probabilities.to_dict()[signature_field]
+            signature_dict = {signature_name: signature_probabilities.to_dict()[signature_field]}
     return signature_dict

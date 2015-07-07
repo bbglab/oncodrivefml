@@ -14,7 +14,7 @@ REGIONS_SCHEMA = {
         'segment': {'reader': 'str(x)', 'nullable': 'True'}
 }}
 
-MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE"]
+MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
 MUTATIONS_SCHEMA = {
     'fields': {
         'CHROMOSOME': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
@@ -22,12 +22,13 @@ MUTATIONS_SCHEMA = {
         'REF':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
         'ALT':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
         'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel"]'},
-        'SAMPLE':     {'reader': 'str(x)'}
+        'SAMPLE':     {'reader': 'str(x)'},
+        'SIGNATURE':  {'reader': 'str(x)'}
     }
 }
 
 
-def load_mutations(file, show_warnings=True):
+def load_mutations(file, signature=None, show_warnings=True):
     reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
     all_errors = []
     for ix, (row, errors) in enumerate(reader, start=1):
@@ -43,6 +44,12 @@ def load_mutations(file, show_warnings=True):
                 row['TYPE'] = 'indel'
             else:
                 row['TYPE'] = 'subs'
+
+        if row.get('SIGNATURE', None) is None:
+            row['SIGNATURE'] = signature
+
+        if row.get('CANCER_TYPE', None) is not None:
+            row['SIGNATURE'] = row['CANCER_TYPE']
 
         yield row
 
@@ -103,7 +110,7 @@ def load_variants_dict(variants_file, regions, signature_name='none'):
     variants_dict = defaultdict(list)
 
     # Check the file format
-    for r in load_mutations(variants_file):
+    for r in load_mutations(variants_file, signature=signature_name):
 
         if r['CHROMOSOME'] not in regions_tree:
             continue
@@ -118,7 +125,7 @@ def load_variants_dict(variants_file, regions, signature_name='none'):
                 'TYPE': r['TYPE'],
                 'REF': r['REF'],
                 'ALT': r['ALT'],
-                'SIGNATURE': signature_name,
+                'SIGNATURE': r['SIGNATURE'],
                 'SEGMENT': segment
             })
 

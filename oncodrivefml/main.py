@@ -62,7 +62,7 @@ class OncodriveFML(object):
         variants_dict = load_variants_dict(self.variants_file, regions, signature_name=self.signature_name)
 
         # Signature
-        signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type)
+        signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type, self.signature_name)
 
         # Run in a DRMAA cluster
         if drmaa is not None:
