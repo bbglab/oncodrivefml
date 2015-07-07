@@ -3,7 +3,7 @@ import logging
 import os
 import pickle
 import shutil
-import bgcore
+from bgcore.multiprocess.qmap import QMapExecutor
 from oncodrivefml.compute import multiple_test_correction
 from oncodrivefml.qqplot import qqplot_png, qqplot_html, add_symbol
 
@@ -45,7 +45,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     while retry <= 5:
 
         # Create the qmap executor
-        executor = bgcore.multiprocess.qmap.QMapExecutor(
+        executor = QMapExecutor(
             ['normal', 'long', 'short-high', 'short-low', 'bigmem'],
             task.max_jobs,
             task.cores,
