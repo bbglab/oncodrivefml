@@ -1,6 +1,8 @@
+import gzip
 import logging
 import os
 import mmap
+import pickle
 import pandas as pd
 from oncodrivefml.load import load_mutations
 
@@ -52,6 +54,11 @@ def compute_signature(variants_file, signature_name):
     return signature
 
 def load_signature(variants_file, signature_file, signature_field, signature_type, signature_name):
+
+    if signature_file.endswith(".pickle.gz"):
+        with gzip.open(variants_file, 'rb') as fd:
+            return pickle.load(fd)
+
     signature_dict = None
     if signature_type == "none":
         # We don't use signature

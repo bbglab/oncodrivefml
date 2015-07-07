@@ -1,6 +1,8 @@
 from collections import defaultdict
+import gzip
 import logging
 import os
+import pickle
 from intervaltree import IntervalTree
 import itab
 
@@ -64,6 +66,11 @@ def load_mutations(file, signature=None, show_warnings=True):
     reader.fd.close()
 
 def load_regions(file):
+
+    # If this is a pratial run, the variants are already mapped at the input file.
+    if file == 'partial_run':
+        return None
+
     regions = defaultdict(list)
     with itab.DictReader(file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
         all_errors = []
@@ -102,6 +109,10 @@ def build_regions_tree(regions):
     return regions_tree
 
 def load_variants_dict(variants_file, regions, signature_name='none'):
+
+    if variants_file.endswith(".pickle.gz"):
+        with gzip.open(variants_file, 'rb') as fd:
+            return pickle.load(fd)
 
     # Build regions tree
     regions_tree = build_regions_tree(regions)

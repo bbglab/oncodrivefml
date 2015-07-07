@@ -1,10 +1,12 @@
 import argparse
+import gzip
 import logging
 import functools
 import os
 
 from multiprocessing.pool import Pool
 from os.path import expanduser
+import pickle
 from oncodrivefml import compute, signature
 from oncodrivefml.drmaa import drmaa_run
 from oncodrivefml.qqplot import qqplot_png, qqplot_html
@@ -17,10 +19,11 @@ from oncodrivefml.signature import load_signature
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
-                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000):
+                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000, max_jobs=100):
 
         # Configuration
         self.cores = cores
+        self.max_jobs = max_jobs
         self.min_samplings = min_samplings
         self.max_samplings = max_samplings
         self.variants_file = expanduser(variants_file)
@@ -104,6 +107,14 @@ class OncodriveFML(object):
             for ref_triplet, alt_triplet in all_missing_signatures.items():
                 logging.warning("\tref: '%s' alt: '%s'", ref_triplet, alt_triplet)
 
+        # Store partial result
+        if self.regions_file == "partial_run":
+            logging.info("Store partial result")
+            with gzip.open(os.path.join(self.output_folder, self.project_name + '.pickle.gz'), 'wb') as fd:
+                pickle.dump(results, fd)
+            logging.info("Done")
+            return 1
+
         # Run multiple test correction
         logging.info("Computing multiple test correction")
         results_concat = multiple_test_correction(results, num_significant_samples=2)
@@ -146,6 +157,7 @@ def cmdline():
     parser.add_argument('--debug', dest='debug', default=False, action='store_true')
     parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true')
     parser.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
+    parser.add_argument('--drmaa-max-jobs', dest='drmaa_max_jobs', type=int, default=100, help="Maximum parallell concurrent jobs")
     args = parser.parse_args()
 
     # Configure the logging
@@ -166,7 +178,8 @@ def cmdline():
         project_name=args.project_name,
         cores=args.cores,
         min_samplings=args.min_samplings,
-        max_samplings=args.max_samplings
+        max_samplings=args.max_samplings,
+        max_jobs=args.drmaa_max_jobs
     )
 
     #TODO allow only one score format
