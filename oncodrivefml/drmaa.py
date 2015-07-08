@@ -30,11 +30,11 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     arguments = []
     partial_results = []
     for i, split in enumerate(variants_dict_split):
-        split_file = os.path.join(task.output_folder, "split_{}.pickle.gz".format(i))
+        split_file = os.path.join(task.output_folder, "split_in_{}.pickle.gz".format(i))
         with gzip.open(split_file, 'wb') as fd:
             pickle.dump(split, fd)
-            arguments.append("-s {} -i {} -t none:{} -r {} -n split_{} -o {}".format(task.score_file, split_file, signature_file, task.regions_file, i, task.output_folder))
-            partial_results.append("split_{}.pickle.gz".format(i))
+            arguments.append("-s {} -i {} -t none:{} -r {} -n split_out_{} -o {}".format(task.score_file, split_file, signature_file, task.regions_file, i, task.output_folder))
+            partial_results.append("split_out_{}.pickle.gz".format(i))
 
     # QMap chuncks
     logging.info("Submit {} jobs to the cluster".format(len(variants_dict_split)))
@@ -68,7 +68,6 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
         if jobs_fail == 0:
             shutil.rmtree(logs_dir)
-            return jobs_done, jobs_fail
         else:
             retry += 1
             logging.info("Some jobs fail, retry {} of maximum 5".format(retry))
