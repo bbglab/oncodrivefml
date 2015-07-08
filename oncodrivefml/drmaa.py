@@ -68,6 +68,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
         if jobs_fail == 0:
             shutil.rmtree(logs_dir)
+            break
         else:
             retry += 1
             logging.info("Some jobs fail, retry {} of maximum 5".format(retry))
