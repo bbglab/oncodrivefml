@@ -29,12 +29,14 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     logging.info("Splitting the input in {} jobs".format(len(variants_dict_split)))
     arguments = []
     partial_results = []
+    partial_inputs = []
     for i, split in enumerate(variants_dict_split):
         split_file = os.path.join(task.output_folder, "split_in_{}.pickle.gz".format(i))
         with gzip.open(split_file, 'wb') as fd:
             pickle.dump(split, fd)
             arguments.append("-s {} -i {} -t none:{} -r {} -n split_out_{} -o {}".format(task.score_file, split_file, signature_file, task.regions_file, i, task.output_folder))
             partial_results.append("split_out_{}.pickle.gz".format(i))
+            partial_inputs.append(split_file)
 
     # QMap chuncks
     logging.info("Submit {} jobs to the cluster".format(len(variants_dict_split)))
@@ -68,6 +70,9 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
         if jobs_fail == 0:
             shutil.rmtree(logs_dir)
+            os.remove(signature_file)
+            for partial_input in partial_inputs:
+                os.remove(partial_input)
             break
         else:
             retry += 1
@@ -81,10 +86,12 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     logging.info("Joining jobs output")
     results = {}
     for partial_result_file in partial_results:
-        with gzip.open(os.path.join(task.output_folder, partial_result_file), 'rb') as fd:
+        partial_result_path = os.path.join(task.output_folder, partial_result_file)
+        with gzip.open(partial_result_path, 'rb') as fd:
             partial_result = pickle.load(fd)
             for k, v in partial_result.items():
                 results[k] = v
+        os.remove(partial_result_path)
 
     # Run multiple test correction
     logging.info("Computing multiple test correction")
