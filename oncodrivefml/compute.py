@@ -24,8 +24,29 @@ SCORES = {
     },
     'tfbs_disruption.tsv.gz': {
         'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
+    },
+    'disruption_v2.txt.bgz': {
+        'chr': 0, 'chr_prefix': 'chr', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None, 'extra': 5
     }
 }
+
+def read_score(row, score_conf, element):
+    value_str = row[score_conf['score']]
+    if value_str is None or value_str == '':
+        if 'extra' in score_conf:
+            value_str = row[score_conf['extra']].split(',')
+            value = 0
+            for val in value_str:
+                elm, vals = val.split(':')
+                if elm == element:
+                    value = float(vals)
+                    break
+        else:
+            value = 0
+    else:
+        value = float(value_str)
+
+    return value
 
 def load_scores(element, regions, scores_file, signature_dict):
     tb = tabix.open(scores_file)
@@ -36,7 +57,7 @@ def load_scores(element, regions, scores_file, signature_dict):
 
     for region in regions:
         for row in tb.query("{}{}".format(SCORE_CONF['chr_prefix'], region['chrom']), region['start'], region['stop']):
-            value = float(row[SCORE_CONF['score']])
+            value = read_score(row, SCORE_CONF, element)
             ref = row[SCORE_CONF['ref']]
             alt = row[SCORE_CONF['alt']]
             pos = row[SCORE_CONF['pos']]

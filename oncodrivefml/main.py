@@ -182,8 +182,8 @@ def cmdline():
         max_jobs=args.drmaa_max_jobs
     )
 
-    #TODO allow only one score format
-    compute.SCORE_CONF = compute.SCORES[os.path.basename(args.score_file)]
+    #TODO allow only one score format or move this to external configuration
+    compute.SCORE_CONF = compute.SCORES.get(os.path.basename(args.score_file), compute.SCORES['whole_genome_SNVs.tsv.gz'])
 
     # Run
     return_code = ofm2.run(drmaa=args.drmaa, figures=not args.no_figures)
