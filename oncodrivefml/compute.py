@@ -75,7 +75,7 @@ def load_scores(element, regions, scores_file, signature_dict):
 
             # Compute signature
             if signature_dict is not None:
-                ref_triplet = get_ref_triplet(row[SCORE_CONF['chr']], int(row[SCORE_CONF['pos']]) - 1)
+                ref_triplet = get_ref_triplet(row[SCORE_CONF['chr']].replace(SCORE_CONF['chr_prefix'], ''), int(row[SCORE_CONF['pos']]) - 1)
                 ref = row[SCORE_CONF['ref']]
                 alt = row[SCORE_CONF['alt']]
 
