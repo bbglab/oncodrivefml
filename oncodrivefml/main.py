@@ -19,10 +19,11 @@ from oncodrivefml.signature import load_signature
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
-                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000, max_jobs=100):
+                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000, max_jobs=100, debug=False):
 
         # Configuration
         self.cores = cores
+        self.debug = debug
         self.max_jobs = max_jobs
         self.min_samplings = min_samplings
         self.max_samplings = max_samplings
@@ -179,7 +180,8 @@ def cmdline():
         cores=args.cores,
         min_samplings=args.min_samplings,
         max_samplings=args.max_samplings,
-        max_jobs=args.drmaa_max_jobs
+        max_jobs=args.drmaa_max_jobs,
+        debug=args.debug
     )
 
     #TODO allow only one score format or move this to external configuration

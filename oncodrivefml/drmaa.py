@@ -69,10 +69,11 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
         executor.exit()
 
         if jobs_fail == 0:
-            shutil.rmtree(logs_dir)
-            os.remove(signature_file)
-            for partial_input in partial_inputs:
-                os.remove(partial_input)
+            if not task.debug:
+                shutil.rmtree(logs_dir)
+                os.remove(signature_file)
+                for partial_input in partial_inputs:
+                    os.remove(partial_input)
             break
         else:
             retry += 1
@@ -91,7 +92,8 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
             partial_result = pickle.load(fd)
             for k, v in partial_result.items():
                 results[k] = v
-        os.remove(partial_result_path)
+        if not task.debug:
+            os.remove(partial_result_path)
 
     # Run multiple test correction
     logging.info("Computing multiple test correction")
