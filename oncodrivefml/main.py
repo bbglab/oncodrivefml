@@ -19,11 +19,13 @@ from oncodrivefml.signature import load_signature
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
-                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000, max_jobs=100, debug=False):
+                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
+                 max_jobs=100, debug=False, trace=None):
 
         # Configuration
         self.cores = cores
         self.debug = debug
+        self.trace = [] if trace is None else trace
         self.max_jobs = max_jobs
         self.min_samplings = min_samplings
         self.max_samplings = max_samplings
@@ -74,7 +76,15 @@ class OncodriveFML(object):
 
         # Compute elements statistics
         logging.info("Computing statistics")
-        elements = [(e, muts, regions[e]) for e, muts in variants_dict.items() if len(muts) > 0]
+        elements = []
+        for e, muts in variants_dict.items():
+            if len(muts) > 0:
+                if e in self.trace:
+                    trace = os.path.join(self.output_folder, "{}.pickle.gz".format(e))
+                else:
+                    trace = None
+                elements.append((e, muts, regions[e], trace))
+
         if len(elements) == 0:
             logging.error("There is no mutation at any element")
             return -1
@@ -159,6 +169,7 @@ def cmdline():
     parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true')
     parser.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
     parser.add_argument('--drmaa-max-jobs', dest='drmaa_max_jobs', type=int, default=100, help="Maximum parallell concurrent jobs")
+    parser.add_argument('--trace', dest='trace', nargs='+', type=str, default=None, help="Elements IDs to store files to trace and reproduce the execution")
     args = parser.parse_args()
 
     # Configure the logging
@@ -181,7 +192,8 @@ def cmdline():
         min_samplings=args.min_samplings,
         max_samplings=args.max_samplings,
         max_jobs=args.drmaa_max_jobs,
-        debug=args.debug
+        debug=args.debug,
+        trace=args.trace
     )
 
     #TODO allow only one score format or move this to external configuration

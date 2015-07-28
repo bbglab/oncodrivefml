@@ -1,5 +1,7 @@
+import gzip
 import logging
 import os
+import pickle
 import pandas as pd
 import numpy as np
 import tabix
@@ -168,7 +170,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m):
 
 def compute_element(scores_file, signature_dict, min_randomizations, max_randomizations, input_data):
 
-    element, muts, regions = input_data
+    element, muts, regions, trace = input_data
 
     # Load all element scores
     scores_by_position, scores_by_segment, signature_by_segment, missing_signatures = load_scores(
@@ -193,6 +195,21 @@ def compute_element(scores_file, signature_dict, min_randomizations, max_randomi
         randomizations = min(max_randomizations, randomizations*2)
 
     item['pvalue'] = max(1, obs) / float(randomizations)
+
+    if trace is not None:
+        with gzip.open(trace, 'wb') as fd:
+
+            # Remove defaultdict lambdas
+            item['muts_by_tissue'] = {k: dict(v) for k, v in item['muts_by_tissue'].items()}
+            signature_by_segment = {k: dict(v) for k, v in signature_by_segment.items()}
+
+            trace_object = {
+                'item': item,
+                'scores_by_segment': scores_by_segment,
+                'signature_by_segment': signature_by_segment
+            }
+
+            pickle.dump(trace_object, fd)
 
     # Remove this key to simplify serialization
     del item['muts_by_tissue']
