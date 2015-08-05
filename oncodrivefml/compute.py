@@ -32,6 +32,7 @@ SCORES = {
     }
 }
 
+
 def read_score(row, score_conf, element):
     value_str = row[score_conf['score']]
     if value_str is None or value_str == '':
@@ -49,6 +50,7 @@ def read_score(row, score_conf, element):
         value = float(value_str)
 
     return value
+
 
 def load_scores(element, regions, scores_file, signature_dict):
     tb = tabix.open(scores_file)

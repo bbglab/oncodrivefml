@@ -1,5 +1,4 @@
-from distutils.core import setup
-from setuptools import find_packages
+from setuptools import setup, find_packages
 from oncodrivefml import __version__
 
 setup(
@@ -14,14 +13,15 @@ setup(
     description='',
     install_requires=[
         'configobj >= 5.0.6',
-        'bgcore >= 0.6.0',
+        'bgqmap >= 1.0.0',
         'numpy >= 1.9.0',
         'scipy >= 0.14.0',
-        'pandas >= 0.15.2', 'matplotlib', 'intervaltree'
-    ],
-
-    dependency_links=[
-        'git+https://bitbucket.org/bbglab/bgcore.git@develop#egg=bgcore-0.6.0'
+        'statsmodels >= 0.6.1',
+        'pytabix >= 0.1',
+        'bokeh >= 0.9.2',
+        'pandas >= 0.15.2',
+        'matplotlib',
+        'intervaltree'
     ],
 
     entry_points={

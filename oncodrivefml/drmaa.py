@@ -3,7 +3,7 @@ import logging
 import os
 import pickle
 import shutil
-from bgcore.multiprocess.qmap import QMapExecutor
+from bgqmap import QMapExecutor
 from oncodrivefml.compute import multiple_test_correction
 from oncodrivefml.qqplot import qqplot_png, qqplot_html, add_symbol
 
