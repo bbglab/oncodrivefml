@@ -3,6 +3,7 @@ import logging
 import os
 import pickle
 import shutil
+import tempfile
 from bgqmap import QMapExecutor
 from oncodrivefml.compute import multiple_test_correction
 from oncodrivefml.qqplot import qqplot_png, qqplot_html, add_symbol
@@ -43,7 +44,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
     retry = 1
     jobs_fail = 0
-    logs_dir = os.path.join(task.output_folder, 'logs')
+    logs_dir = tempfile.mkdtemp(prefix="logs_", dir=task.output_folder)
     while retry <= 5:
 
         # Create the qmap executor
