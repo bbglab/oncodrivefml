@@ -35,7 +35,7 @@ SCORES = {
 
 
 def gmean(a):
-    return stats.gmean(a + 1.0) - 1.0
+    return stats.gmean(np.array(a) + 1.0) - 1.0
 
 
 def read_score(row, score_conf, element):
