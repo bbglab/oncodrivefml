@@ -7,6 +7,7 @@ import os
 from multiprocessing.pool import Pool
 from os.path import expanduser
 import pickle
+from configobj import ConfigObj
 from oncodrivefml import compute, signature
 from oncodrivefml.drmaa import drmaa_run
 from oncodrivefml.qqplot import qqplot_png, qqplot_html
@@ -182,12 +183,25 @@ def cmdline():
         logging.error("Cannot find full genome files. Please define the FULL_GENOME_PATH global variable.")
         exit(-1)
 
+    # Allow scores with different formats
+    if args.score_file.endswith(".conf"):
+        score_conf = ConfigObj(args.score_file, {
+            'file': 'string', 'chr': 'string', 'chr_prefix': 'string', 'pos': 'integer', 'ref': 'integer',
+            'alt': 'integer', 'score': 'integer', 'element': 'string(default=None)', 'extra': 'intger'
+        })
+        compute.SCORE_CONF = score_conf
+        score_file = score_conf['file']
+    else:
+        # TODO allow only one score format or move this to external configuration
+        compute.SCORE_CONF = compute.SCORES.get(os.path.basename(args.score_file), compute.SCORES['whole_genome_SNVs.tsv.gz'])
+        score_file = args.score_file
+
     # Initialize OncodriveFM2
     ofm2 = OncodriveFML(
         args.input_file,
         args.regions_file,
         args.signature_file,
-        args.score_file,
+        score_file,
         args.output_folder,
         project_name=args.project_name,
         cores=args.cores,
@@ -198,9 +212,6 @@ def cmdline():
         trace=args.trace,
         geometric=args.geometric
     )
-
-    #TODO allow only one score format or move this to external configuration
-    compute.SCORE_CONF = compute.SCORES.get(os.path.basename(args.score_file), compute.SCORES['whole_genome_SNVs.tsv.gz'])
 
     # Run
     return_code = ofm2.run(drmaa=args.drmaa, figures=not args.no_figures)

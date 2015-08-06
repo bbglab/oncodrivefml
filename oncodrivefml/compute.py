@@ -107,6 +107,7 @@ def load_scores(element, regions, scores_file, signature_dict):
 
     return scores_by_pos, scores_by_segment, signature_by_segment, [(k, v) for k, v in missing_signatures.items()]
 
+
 def random_scores(num_samples, sampling_size, background, signature, geometric):
 
     values = None
@@ -304,6 +305,7 @@ def compute_muts_statistics(muts, scores, geometric):
 
     return item
 
+
 def multiple_test_correction(results, num_significant_samples=2):
 
     results_all = pd.DataFrame.from_dict(results, orient='index')
@@ -322,10 +324,12 @@ def multiple_test_correction(results, num_significant_samples=2):
     results_concat = pd.concat([results_good, results_masked])
     return results_concat
 
+
 def file_name(file):
     if file is None:
         return None
     return os.path.splitext(os.path.basename(file))[0]
+
 
 def silent_mkdir(folder):
     if not os.path.exists(folder):
