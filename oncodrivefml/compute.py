@@ -5,6 +5,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import tabix
+from scipy import stats
 
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
 from collections import Counter, defaultdict
@@ -31,6 +32,10 @@ SCORES = {
         'chr': 0, 'chr_prefix': 'chr', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None, 'extra': 5
     }
 }
+
+
+def gmean(a):
+    return stats.gmean(a + 1.0) - 1.0
 
 
 def read_score(row, score_conf, element):
@@ -130,7 +135,7 @@ def random_scores(num_samples, sampling_size, background, signature, geometric):
             else:
 
                 # Select mean
-                mean = np.gmean if geometric else np.mean
+                mean = gmean if geometric else np.mean
 
                 result = np.array(
                     [mean(np.random.choice(background, size=num_samples, p=p_normalized, replace=False)) for a in range(to_pick)],
