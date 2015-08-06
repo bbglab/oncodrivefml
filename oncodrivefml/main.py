@@ -185,7 +185,7 @@ def cmdline():
 
     # Allow scores with different formats
     if args.score_file.endswith(".conf"):
-        score_conf = ConfigObj(args.score_file, {
+        score_conf = ConfigObj(args.score_file, configspec={
             'file': 'string', 'chr': 'string', 'chr_prefix': 'string', 'pos': 'integer', 'ref': 'integer',
             'alt': 'integer', 'score': 'integer', 'element': 'string(default=None)', 'extra': 'intger'
         })
