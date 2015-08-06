@@ -20,7 +20,7 @@ class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
                  project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
-                 max_jobs=100, debug=False, trace=None):
+                 max_jobs=100, debug=False, trace=None, geometric=False):
 
         # Configuration
         self.cores = cores
@@ -31,6 +31,7 @@ class OncodriveFML(object):
         self.max_samplings = max_samplings
         self.variants_file = expanduser(variants_file)
         self.regions_file = expanduser(regions_file)
+        self.geometric = geometric
 
         if signature_file in ['compute', 'none']:
             self.signature_type = signature_file
@@ -93,7 +94,7 @@ class OncodriveFML(object):
         info_step = 6*self.cores
         pool = Pool(self.cores)
 
-        compute_element_partial = functools.partial(compute_element, self.score_file, signature_dict, self.min_samplings, self.max_samplings)
+        compute_element_partial = functools.partial(compute_element, self.score_file, signature_dict, self.min_samplings, self.max_samplings, self.geometric)
 
         all_missing_signatures = {}
         for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
@@ -170,6 +171,7 @@ def cmdline():
     parser.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
     parser.add_argument('--drmaa-max-jobs', dest='drmaa_max_jobs', type=int, default=100, help="Maximum parallell concurrent jobs")
     parser.add_argument('--trace', dest='trace', nargs='+', type=str, default=None, help="Elements IDs to store files to trace and reproduce the execution")
+    parser.add_argument('--geometric', dest='geometric', default=False, action='store_true')
     args = parser.parse_args()
 
     # Configure the logging
@@ -193,7 +195,8 @@ def cmdline():
         max_samplings=args.max_samplings,
         max_jobs=args.drmaa_max_jobs,
         debug=args.debug,
-        trace=args.trace
+        trace=args.trace,
+        geometric=args.geometric
     )
 
     #TODO allow only one score format or move this to external configuration

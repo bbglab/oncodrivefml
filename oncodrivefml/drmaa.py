@@ -31,11 +31,15 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     arguments = []
     partial_results = []
     partial_inputs = []
+
+    # Optional arguments
+    optional_args = "--geometric" if task.geometric else ""
+
     for i, split in enumerate(variants_dict_split):
         split_file = os.path.join(task.output_folder, "{}-split_in_{}.pickle.gz".format(task.project_name, i))
         with gzip.open(split_file, 'wb') as fd:
             pickle.dump(split, fd)
-            arguments.append("-s {} -i {} -t none:{} -r {} -n {}-split_out_{} -o {}".format(task.score_file, split_file, signature_file, task.regions_file, task.project_name, i, task.output_folder))
+            arguments.append("-s {} -i {} -t none:{} -r {} -n {}-split_out_{} -o {} {}".format(task.score_file, split_file, signature_file, task.regions_file, task.project_name, i, task.output_folder, optional_args))
             partial_results.append("{}-split_out_{}.pickle.gz".format(task.project_name, i))
             partial_inputs.append(split_file)
 
