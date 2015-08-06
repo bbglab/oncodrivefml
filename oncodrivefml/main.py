@@ -48,7 +48,6 @@ class OncodriveFML(object):
 
         # Configuration
         self.cores = cores
-        self.score_conf = score_conf
         self.debug = debug
         self.trace = [] if trace is None else trace
         self.max_jobs = max_jobs
@@ -69,6 +68,8 @@ class OncodriveFML(object):
             self.signature_file = expanduser(signature_conf[1])
 
         self.score_file = expanduser(score_file)
+        self.score_conf = score_conf
+        self.score_conf['file'] = expanduser(score_conf['file'])
         self.output_folder = expanduser(output_folder)
         self.project_name = project_name if project_name is not None else file_name(variants_file)
         self.signature_name = file_name(signature_file)
@@ -119,7 +120,7 @@ class OncodriveFML(object):
         info_step = 6*self.cores
         pool = Pool(self.cores)
 
-        compute_element_partial = functools.partial(compute_element, self.score_file, signature_dict, self.min_samplings, self.max_samplings, self.geometric, self.score_conf)
+        compute_element_partial = functools.partial(compute_element, signature_dict, self.min_samplings, self.max_samplings, self.geometric, self.score_conf)
 
         all_missing_signatures = {}
         for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
@@ -214,19 +215,17 @@ def cmdline():
             'alt': 'integer', 'score': 'integer', 'element': 'integer', 'extra': 'integer'
         })
         score_conf.validate(Validator(), preserve_errors=True)
-
-        score_file = score_conf['file']
     else:
         # TODO allow only one score format or move this to external configuration
         score_conf = SCORES.get(os.path.basename(args.score_file), SCORES['whole_genome_SNVs.tsv.gz'])
-        score_file = args.score_file
+        score_conf['file'] = args.score_file
 
     # Initialize OncodriveFM2
     ofm2 = OncodriveFML(
         args.input_file,
         args.regions_file,
         args.signature_file,
-        score_file,
+        args.score_file,
         args.output_folder,
         project_name=args.project_name,
         cores=args.cores,

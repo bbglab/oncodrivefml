@@ -35,8 +35,8 @@ def read_score(row, score_conf, element):
     return value
 
 
-def load_scores(element, regions, scores_file, signature_dict, score_conf):
-    tb = tabix.open(scores_file)
+def load_scores(element, regions, signature_dict, score_conf):
+    tb = tabix.open(score_conf['file'])
     scores_by_pos = defaultdict(list)
     scores_by_segment = defaultdict(list)
     signature_by_segment = defaultdict(lambda: defaultdict(list))
@@ -163,7 +163,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     return e, obs
 
 
-def compute_element(scores_file, signature_dict, min_randomizations, max_randomizations, geometric, score_conf, input_data):
+def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, input_data):
 
     element, muts, regions, trace = input_data
 
@@ -171,7 +171,6 @@ def compute_element(scores_file, signature_dict, min_randomizations, max_randomi
     scores_by_position, scores_by_segment, signature_by_segment, missing_signatures = load_scores(
         element,
         regions,
-        scores_file,
         signature_dict,
         score_conf
     )
