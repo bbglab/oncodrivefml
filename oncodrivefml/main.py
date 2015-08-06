@@ -9,7 +9,7 @@ from multiprocessing.pool import Pool
 from os.path import expanduser
 from configobj import ConfigObj
 from validate import Validator
-from oncodrivefml import compute, signature
+from oncodrivefml import signature
 from oncodrivefml.drmaa import drmaa_run
 from oncodrivefml.qqplot import qqplot_png, qqplot_html
 from oncodrivefml.qqplot import add_symbol
@@ -18,14 +18,37 @@ from oncodrivefml.load import load_variants_dict, load_regions
 from oncodrivefml.signature import load_signature
 
 
+SCORES = {
+    'whole_genome_SNVs.tsv.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5, 'element': None
+    },
+    'hg19_wg_score.tsv.gz': {
+        'chr': 0, 'chr_prefix': 'chr', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
+    },
+    'hg19_rnasnp_scores.txt.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 3, 'alt': 4, 'score': 5, 'element': 6
+    },
+    'tfbs_creation.tsv.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
+    },
+    'tfbs_disruption.tsv.gz': {
+        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
+    },
+    'disruption_v2.txt.bgz': {
+        'chr': 0, 'chr_prefix': 'chr', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None, 'extra': 5
+    }
+}
+
+
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
                  project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
-                 max_jobs=100, debug=False, trace=None, geometric=False):
+                 max_jobs=100, debug=False, trace=None, geometric=False, score_conf=None):
 
         # Configuration
         self.cores = cores
+        self.score_conf = score_conf
         self.debug = debug
         self.trace = [] if trace is None else trace
         self.max_jobs = max_jobs
@@ -96,7 +119,7 @@ class OncodriveFML(object):
         info_step = 6*self.cores
         pool = Pool(self.cores)
 
-        compute_element_partial = functools.partial(compute_element, self.score_file, signature_dict, self.min_samplings, self.max_samplings, self.geometric)
+        compute_element_partial = functools.partial(compute_element, self.score_file, signature_dict, self.min_samplings, self.max_samplings, self.geometric, self.score_conf)
 
         all_missing_signatures = {}
         for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
@@ -192,11 +215,10 @@ def cmdline():
         })
         score_conf.validate(Validator(), preserve_errors=True)
 
-        compute.SCORE_CONF = score_conf
         score_file = score_conf['file']
     else:
         # TODO allow only one score format or move this to external configuration
-        compute.SCORE_CONF = compute.SCORES.get(os.path.basename(args.score_file), compute.SCORES['whole_genome_SNVs.tsv.gz'])
+        score_conf = SCORES.get(os.path.basename(args.score_file), SCORES['whole_genome_SNVs.tsv.gz'])
         score_file = args.score_file
 
     # Initialize OncodriveFM2
@@ -213,7 +235,8 @@ def cmdline():
         max_jobs=args.drmaa_max_jobs,
         debug=args.debug,
         trace=args.trace,
-        geometric=args.geometric
+        geometric=args.geometric,
+        score_conf=score_conf
     )
 
     # Run

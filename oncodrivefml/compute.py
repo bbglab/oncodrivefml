@@ -11,28 +11,6 @@ from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
 from collections import Counter, defaultdict
 from oncodrivefml.signature import get_ref_triplet
 
-SCORE_CONF = {'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5}
-SCORES = {
-    'whole_genome_SNVs.tsv.gz': {
-        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 5, 'element': None
-    },
-    'hg19_wg_score.tsv.gz': {
-        'chr': 0, 'chr_prefix': 'chr', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
-    },
-    'hg19_rnasnp_scores.txt.gz': {
-        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 3, 'alt': 4, 'score': 5, 'element': 6
-    },
-    'tfbs_creation.tsv.gz': {
-        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
-    },
-    'tfbs_disruption.tsv.gz': {
-        'chr': 0, 'chr_prefix': '', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None
-    },
-    'disruption_v2.txt.bgz': {
-        'chr': 0, 'chr_prefix': 'chr', 'pos': 1, 'ref': 2, 'alt': 3, 'score': 4, 'element': None, 'extra': 5
-    }
-}
-
 
 def gmean(a):
     return stats.gmean(np.array(a) + 1.0) - 1.0
@@ -57,7 +35,7 @@ def read_score(row, score_conf, element):
     return value
 
 
-def load_scores(element, regions, scores_file, signature_dict):
+def load_scores(element, regions, scores_file, signature_dict, score_conf):
     tb = tabix.open(scores_file)
     scores_by_pos = defaultdict(list)
     scores_by_segment = defaultdict(list)
@@ -65,11 +43,11 @@ def load_scores(element, regions, scores_file, signature_dict):
     missing_signatures = {}
 
     for region in regions:
-        for row in tb.query("{}{}".format(SCORE_CONF['chr_prefix'], region['chrom']), region['start'], region['stop']):
-            value = read_score(row, SCORE_CONF, element)
-            ref = row[SCORE_CONF['ref']]
-            alt = row[SCORE_CONF['alt']]
-            pos = row[SCORE_CONF['pos']]
+        for row in tb.query("{}{}".format(score_conf['chr_prefix'], region['chrom']), region['start'], region['stop']):
+            value = read_score(row, score_conf, element)
+            ref = row[score_conf['ref']]
+            alt = row[score_conf['alt']]
+            pos = row[score_conf['pos']]
 
             scores_by_pos[pos].append({'ref': ref, 'alt': alt, 'value': value})
 
@@ -84,12 +62,12 @@ def load_scores(element, regions, scores_file, signature_dict):
 
             # Compute signature
             if signature_dict is not None:
-                ref_triplet = get_ref_triplet(row[SCORE_CONF['chr']].replace(SCORE_CONF['chr_prefix'], ''), int(row[SCORE_CONF['pos']]) - 1)
-                ref = row[SCORE_CONF['ref']]
-                alt = row[SCORE_CONF['alt']]
+                ref_triplet = get_ref_triplet(row[score_conf['chr']].replace(score_conf['chr_prefix'], ''), int(row[score_conf['pos']]) - 1)
+                ref = row[score_conf['ref']]
+                alt = row[score_conf['alt']]
 
                 if ref_triplet[1] != ref:
-                    logging.warning("Background mismatch at position %d at '%s'", int(row[SCORE_CONF['pos']]), element)
+                    logging.warning("Background mismatch at position %d at '%s'", int(row[score_conf['pos']]), element)
 
                 # Expand funseq2 dots
                 alts = alt if alt != '.' else 'ACGT'.replace(ref, '')
@@ -185,7 +163,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     return e, obs
 
 
-def compute_element(scores_file, signature_dict, min_randomizations, max_randomizations, geometric, input_data):
+def compute_element(scores_file, signature_dict, min_randomizations, max_randomizations, geometric, score_conf, input_data):
 
     element, muts, regions, trace = input_data
 
@@ -194,7 +172,8 @@ def compute_element(scores_file, signature_dict, min_randomizations, max_randomi
         element,
         regions,
         scores_file,
-        signature_dict
+        signature_dict,
+        score_conf
     )
 
     # Compute elements statistics
