@@ -19,7 +19,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
     # Save signature dict
     logging.info("Store signature dictionary")
-    signature_file = os.path.join(task.output_folder, "signature.pickle.gz")
+    signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))
     with gzip.open(signature_file, 'wb') as fd:
         pickle.dump(signature_dict, fd)
 
@@ -32,11 +32,11 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     partial_results = []
     partial_inputs = []
     for i, split in enumerate(variants_dict_split):
-        split_file = os.path.join(task.output_folder, "split_in_{}.pickle.gz".format(i))
+        split_file = os.path.join(task.output_folder, "{}-split_in_{}.pickle.gz".format(task.project_name, i))
         with gzip.open(split_file, 'wb') as fd:
             pickle.dump(split, fd)
-            arguments.append("-s {} -i {} -t none:{} -r {} -n split_out_{} -o {}".format(task.score_file, split_file, signature_file, task.regions_file, i, task.output_folder))
-            partial_results.append("split_out_{}.pickle.gz".format(i))
+            arguments.append("-s {} -i {} -t none:{} -r {} -n {}-split_out_{} -o {}".format(task.score_file, split_file, signature_file, task.regions_file, task.project_name, i, task.output_folder))
+            partial_results.append("{}-split_out_{}.pickle.gz".format(task.project_name, i))
             partial_inputs.append(split_file)
 
     # QMap chuncks
