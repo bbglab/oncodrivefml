@@ -2,12 +2,13 @@ import argparse
 import gzip
 import logging
 import functools
+import pickle
 import os
 
 from multiprocessing.pool import Pool
 from os.path import expanduser
-import pickle
 from configobj import ConfigObj
+from validate import Validator
 from oncodrivefml import compute, signature
 from oncodrivefml.drmaa import drmaa_run
 from oncodrivefml.qqplot import qqplot_png, qqplot_html
@@ -186,9 +187,11 @@ def cmdline():
     # Allow scores with different formats
     if args.score_file.endswith(".conf"):
         score_conf = ConfigObj(args.score_file, configspec={
-            'file': 'string', 'chr': 'string', 'chr_prefix': 'string', 'pos': 'integer', 'ref': 'integer',
-            'alt': 'integer', 'score': 'integer', 'element': 'string(default=None)', 'extra': 'intger'
+            'file': 'string', 'chr': 'integer', 'chr_prefix': 'string', 'pos': 'integer', 'ref': 'integer',
+            'alt': 'integer', 'score': 'integer', 'element': 'integer', 'extra': 'integer'
         })
+        score_conf.validate(Validator(), preserve_errors=True)
+
         compute.SCORE_CONF = score_conf
         score_file = score_conf['file']
     else:
