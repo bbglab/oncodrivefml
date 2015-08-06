@@ -177,7 +177,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
             all_scores += m_scores
 
     # Select mean
-    mean = np.gmean if geometric else np.mean
+    mean = gmean if geometric else np.mean
 
     obs = len(values_mean[values_mean >= mean(all_scores)]) if len(all_scores) > 0 else float(sampling_size)
 
@@ -284,7 +284,7 @@ def compute_muts_statistics(muts, scores, geometric):
     num_samples = len(scores_by_sample)
 
     # Select mean
-    mean = np.gmean if geometric else np.mean
+    mean = gmean if geometric else np.mean
 
     item = {
         'samples_mut': num_samples,
