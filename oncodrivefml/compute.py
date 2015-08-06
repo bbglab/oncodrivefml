@@ -179,7 +179,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     return e, obs
 
 
-def compute_element(scores_file, signature_dict, min_randomizations, max_randomizations, input_data, geometric):
+def compute_element(scores_file, signature_dict, min_randomizations, max_randomizations, geometric, input_data):
 
     element, muts, regions, trace = input_data
 
