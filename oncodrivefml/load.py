@@ -65,6 +65,7 @@ def load_mutations(file, signature=None, show_warnings=True):
 
     reader.fd.close()
 
+
 def load_regions(file):
 
     regions = defaultdict(list)
@@ -91,6 +92,7 @@ def load_regions(file):
                 logging.warning(e)
     return regions
 
+
 def build_regions_tree(regions):
     regions_tree = defaultdict(IntervalTree)
     for i, (k, allr) in enumerate(regions.items()):
@@ -103,6 +105,7 @@ def build_regions_tree(regions):
 
     logging.info("[{} of {}]".format(i+1, len(regions)))
     return regions_tree
+
 
 def load_variants_dict(variants_file, regions, signature_name='none'):
 

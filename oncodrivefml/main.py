@@ -192,12 +192,12 @@ def cmdline():
     parser.add_argument('-mins', '--min_samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations")
     parser.add_argument('-maxs', '--max_samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations")
     parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
-    parser.add_argument('--debug', dest='debug', default=False, action='store_true')
-    parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true')
+    parser.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
+    parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true', help="Output only the tsv results file")
     parser.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
     parser.add_argument('--drmaa-max-jobs', dest='drmaa_max_jobs', type=int, default=100, help="Maximum parallell concurrent jobs")
     parser.add_argument('--trace', dest='trace', nargs='+', type=str, default=None, help="Elements IDs to store files to trace and reproduce the execution")
-    parser.add_argument('--geometric', dest='geometric', default=False, action='store_true')
+    parser.add_argument('--geometric', dest='geometric', default=False, action='store_true', help="Use geometric mean instead of arithmetic mean")
     args = parser.parse_args()
 
     # Configure the logging

@@ -6,7 +6,8 @@ setup(
     version=__version__,
     packages=find_packages(),
     package_data={'oncodrivefml': ['*.txt.gz']},
-    url='http://bg.upf.edu',
+    url="https://bitbucket.org/bbglab/oncodrivefml",
+    download_url="https://bitbucket.org/bbglab/oncodrivefml/get/"+__version__+".tar.gz",
     license='UPF Free Source Code',
     author='Biomedical Genomics Group',
     author_email='nuria.lopez@upf.edu',
@@ -20,8 +21,10 @@ setup(
         'pytabix >= 0.1',
         'bokeh >= 0.9.2',
         'pandas >= 0.15.2',
-        'matplotlib',
-        'intervaltree'
+        'itab >= 0.1.0',
+        'matplotlib >= 1.4.3',
+        'intervaltree >= 2.1.0',
+        'bgdata >= 0.3.0'
     ],
 
     entry_points={
