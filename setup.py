@@ -22,7 +22,7 @@ setup(
         'bokeh >= 0.9.2',
         'pandas >= 0.15.2',
         'itab >= 0.1.0',
-        'matplotlib >= 1.4.3',
+        'matplotlib >= 1.4.0',
         'intervaltree >= 2.1.0',
         'bgdata >= 0.3.0'
     ],
