@@ -21,3 +21,4 @@ example/output
 # Python bytecode
 *.pyc
 *.egg-info/
+dist/

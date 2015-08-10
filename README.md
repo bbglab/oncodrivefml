@@ -4,9 +4,7 @@ Recent years saw the development of methods to detect signals of positive select
 
 ## Installation ##
 
-OncodriveFML depends on Python 3 and some external libraries, [numpy](http://www.numpy.org/), [scipy](http://www.scipy.org/), [pandas](http://pandas.pydata.org/) and [statsmodels](http://statsmodels.sourceforge.net/).
-
-The easiest way to install all this software stack is using the well known [Anaconda Python distribution](http://continuum.io/downloads#34).
+OncodriveFML depends on Python 3.4 and some external libraries. The easiest way to install all this software stack is using the well known [Anaconda Python distribution](http://continuum.io/downloads#34).
 
 Then to get OncodriveFML installed run the following command:
 
