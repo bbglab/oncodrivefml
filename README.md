@@ -2,6 +2,9 @@
 
 Recent years saw the development of methods to detect signals of positive selection in the pattern of somatic mutations in genes across cohorts of tumors, and the discovery of hundreds of driver genes. The next major challenge in tumor genomics is the identification of non-coding regions which may also drive tumorigenesis. We present OncodriveFML, a method that estimates the accumulated functional impact bias of somatic mutations in any genomic region of interest based on a local simulation of the mutational process affecting it. It may be applied to all genomic elements to detect likely drivers amongst them. Here, we describe the results of its application to identify driver genes, promoters and UTRs in several malignancies, and compare it to current generation methods. Furthermore, we demonstrate that OncodriveFML can discover signals of positive selection when only a small fraction of the genome, like a panel of genes, has been sequenced.
 
+## License ##
+OncodriveFML is made available to the general public subject to certain conditions described in its [LICENSE](LICENSE). For the avoidance of doubt, you may use the software and any data accessed through UPF software for academic, non-commercial and personal use only, and you may not copy, distribute, transmit, duplicate, reduce or alter in any way for commercial purposes, or for the purpose of redistribution, without a license from the Universitat Pompeu Fabra (UPF). Requests for information regarding a license for commercial use or redistribution of OncodriveFML may be sent via e-mail to innovacio@upf.edu.
+
 ## Installation ##
 
 OncodriveFML depends on Python 3.4 and some external libraries. The easiest way to install all this software stack is using the well known [Anaconda Python distribution](http://continuum.io/downloads#34).
