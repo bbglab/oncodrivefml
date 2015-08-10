@@ -7,6 +7,7 @@ import os
 
 from multiprocessing.pool import Pool
 from os.path import expanduser
+import bgdata
 from configobj import ConfigObj
 from validate import Validator
 from oncodrivefml import signature
@@ -181,10 +182,10 @@ def cmdline():
     parser = argparse.ArgumentParser()
 
     # Mandatory
-    parser.add_argument('-i', '--input', dest='input_file', help='Variants file (maf, vcf or tab formated)')
-    parser.add_argument('-r', '--regions', dest='regions_file', help='Genomic regions to analyse')
+    parser.add_argument('-i', '--input', dest='input_file', required=True, help='Variants file (maf, vcf or tab formated)')
+    parser.add_argument('-r', '--regions', dest='regions_file', required=True, help='Genomic regions to analyse')
     parser.add_argument('-t', '--signature', dest='signature_file', default="none", help='Trinucleotide signature file')
-    parser.add_argument('-s', '--score', dest='score_file', help='Tabix score file')
+    parser.add_argument('-s', '--score', dest='score_file', required=True, help='Tabix score file')
 
     # Optional
     parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
@@ -204,8 +205,10 @@ def cmdline():
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG if args.debug else logging.INFO)
     logging.debug(args)
 
+    # Always run dataset setup or update
+    signature.HG19 = bgdata.get_path('datasets', 'genomereference', 'hg19')
     if signature.HG19 is None:
-        logging.error("Cannot find full genome files. Please define the FULL_GENOME_PATH global variable.")
+        logging.error("Cannot download full genome reference files. Try again later or contact the authors.")
         exit(-1)
 
     # Allow scores with different formats

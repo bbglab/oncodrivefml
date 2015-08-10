@@ -3,11 +3,10 @@ import logging
 import os
 import mmap
 import pickle
-import bgdata
 import pandas as pd
 from oncodrivefml.load import load_mutations
 
-HG19 = bgdata.get_path('datasets', 'genomereference', 'hg19')
+HG19 = None
 HG19_MMAP_FILES = {}
 
 

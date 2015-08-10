@@ -12,7 +12,7 @@ Then to get OncodriveFML installed run the following command:
 
 	$ pip install oncodrivefml
 
-The first time that you run OncodriveFML it will download the genome reference from our servers. By default the downloaded datasets go to ~/.bgdata if you want to move this datasets to another folder you have to define the system environment variable BGDATA_LOCA with an export command. 
+The first time that you run OncodriveFML it will download the genome reference from our servers. By default the downloaded datasets go to ~/.bgdata if you want to move this datasets to another folder you have to define the system environment variable BGDATA_LOCAL with an export command. 
 The following command will show you the command help:
 
 	$ oncodrivefml --help
@@ -53,4 +53,5 @@ The following command will show you the command help:
                             Elements IDs to store files to trace and reproduce the
                             execution
       --geometric           Use geometric mean instead of arithmetic mean
+      
 
