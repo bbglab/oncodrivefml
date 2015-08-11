@@ -45,10 +45,11 @@ class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
                  project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
-                 max_jobs=100, debug=False, trace=None, geometric=False, score_conf=None):
+                 max_jobs=100, debug=False, trace=None, geometric=False, score_conf=None, queues=[]):
 
         # Configuration
         self.cores = cores
+        self.queues = ['normal', 'long', 'short-high', 'short-low', 'bigmem'] if len(queues) == 0 else queues
         self.debug = debug
         self.trace = [] if trace is None else trace
         self.max_jobs = max_jobs
@@ -80,7 +81,7 @@ class OncodriveFML(object):
         # Some initializations
         silent_mkdir(output_folder)
 
-    def run(self, drmaa=None, figures=True):
+    def run(self, drmaa=None, resume=False, figures=True):
 
         # Skip if done
         if os.path.exists(self.results_file):
@@ -91,12 +92,16 @@ class OncodriveFML(object):
         logging.info("Loading regions")
         regions = load_regions(self.regions_file)
 
-        # Load variants
-        logging.info("Loading and mapping mutations")
-        variants_dict = load_variants_dict(self.variants_file, regions, signature_name=self.signature_name)
+        if not resume:
+            # Load variants
+            logging.info("Loading and mapping mutations")
+            variants_dict = load_variants_dict(self.variants_file, regions, signature_name=self.signature_name)
 
-        # Signature
-        signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type, self.signature_name)
+            # Signature
+            signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type, self.signature_name)
+        else:
+            variants_dict = None
+            signature_dict = None
 
         # Run in a DRMAA cluster
         if drmaa is not None:
@@ -199,6 +204,8 @@ def cmdline():
     parser.add_argument('--drmaa-max-jobs', dest='drmaa_max_jobs', type=int, default=100, help="Maximum parallell concurrent jobs")
     parser.add_argument('--trace', dest='trace', nargs='+', type=str, default=None, help="Elements IDs to store files to trace and reproduce the execution")
     parser.add_argument('--geometric', dest='geometric', default=False, action='store_true', help="Use geometric mean instead of arithmetic mean")
+    parser.add_argument('--resume', dest='resume', default=False, action='store_true', help="Resume a DRMAA execution")
+    parser.add_argument('-q', action='append', default=[], dest="queues", help="DRMAA cluster queues")
     args = parser.parse_args()
 
     # Configure the logging
@@ -238,11 +245,12 @@ def cmdline():
         debug=args.debug,
         trace=args.trace,
         geometric=args.geometric,
-        score_conf=score_conf
+        score_conf=score_conf,
+        queues=args.queues
     )
 
     # Run
-    return_code = ofm2.run(drmaa=args.drmaa, figures=not args.no_figures)
+    return_code = ofm2.run(drmaa=args.drmaa, resume=args.resume, figures=not args.no_figures)
 
     if return_code != 0:
         exit(return_code)

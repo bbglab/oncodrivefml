@@ -1,3 +1,4 @@
+import glob
 import gzip
 import logging
 import os
@@ -17,76 +18,94 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
         raise RuntimeError("It's not possible to import 'drmaa' python package. May be it's not installed or you"
                            "don't have the DRMAA_LIBRARY_PATH environment variable defined.")
 
-    # Save signature dict
-    logging.info("Store signature dictionary")
-    signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))
-    with gzip.open(signature_file, 'wb') as fd:
-        pickle.dump(signature_dict, fd)
-
-    # Split variants file into several chunks
-    variants_list = list(variants_dict.items())
-    variants_list_split = [variants_list[i:i+size] for i in range(0, len(variants_list), size)]
-    variants_dict_split = [{k: v for k, v in i} for i in variants_list_split]
-    logging.info("Splitting the input in {} jobs".format(len(variants_dict_split)))
-    arguments = []
-    partial_results = []
-    partial_inputs = []
-
     # Optional arguments
     optional_args = "--geometric" if task.geometric else ""
 
-    for i, split in enumerate(variants_dict_split):
+    # Save signature dict
+    signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))
+    if signature_dict is None:
+        if not os.path.exists(signature_file):
+            raise RuntimeError("Signature file '{}' not found.".format(os.path.basename(signature_file)))
+    else:
+        logging.info("Store signature dictionary")
+
+        with gzip.open(signature_file, 'wb') as fd:
+            pickle.dump(signature_dict, fd)
+
+    arguments = []
+    partial_results = []
+    partial_inputs = []
+    if variants_dict is None:
+        # Resume a previous run
+        i = 0
         split_file = os.path.join(task.output_folder, "{}-split_in_{}.pickle.gz".format(task.project_name, i))
-        with gzip.open(split_file, 'wb') as fd:
-            pickle.dump(split, fd)
-            arguments.append("-s {} -i {} -t none:{} -r {} -n {}-split_out_{} -o {} {}".format(task.score_file, split_file, signature_file, task.regions_file, task.project_name, i, task.output_folder, optional_args))
-            partial_results.append("{}-split_out_{}.pickle.gz".format(task.project_name, i))
+        while os.path.exists(split_file):
+            split_out = "{}-split_out_{}.pickle.gz".format(task.project_name, i)
+            if not os.path.exists(os.path.join(task.output_folder, split_out)):
+                arguments.append("-s {} -i {} -t none:{} -r {} -n {}-split_out_{} -o {} {}".format(task.score_file, split_file, signature_file, task.regions_file, task.project_name, i, task.output_folder, optional_args))
+            partial_results.append(split_out)
             partial_inputs.append(split_file)
+            i += 1
+    else:
+        # Split variants file into several chunks
+        variants_list = list(variants_dict.items())
+        variants_list_split = [variants_list[i:i+size] for i in range(0, len(variants_list), size)]
+        variants_dict_split = [{k: v for k, v in i} for i in variants_list_split]
+        logging.info("Splitting the input in {} jobs".format(len(variants_dict_split)))
 
-    # QMap chuncks
-    logging.info("Submit {} jobs to the cluster".format(len(variants_dict_split)))
+        for i, split in enumerate(variants_dict_split):
+            split_file = os.path.join(task.output_folder, "{}-split_in_{}.pickle.gz".format(task.project_name, i))
+            with gzip.open(split_file, 'wb') as fd:
+                pickle.dump(split, fd)
+                arguments.append("-s {} -i {} -t none:{} -r {} -n {}-split_out_{} -o {} {}".format(task.score_file, split_file, signature_file, task.regions_file, task.project_name, i, task.output_folder, optional_args))
+                partial_results.append("{}-split_out_{}.pickle.gz".format(task.project_name, i))
+                partial_inputs.append(split_file)
 
-    retry = 1
-    jobs_fail = 0
-    logs_dir = tempfile.mkdtemp(prefix="logs_", dir=task.output_folder)
-    while retry <= 5:
+    if len(arguments) > 0:
+        # QMap jobs
+        logging.info("Submit {} jobs to the cluster".format(len(arguments)))
 
-        # Create the qmap executor
-        executor = QMapExecutor(
-            ['normal', 'long', 'short-high', 'short-low', 'bigmem'],
-            task.max_jobs,
-            task.cores,
-            output_folder=logs_dir,
-            interactive=False,
-            adaptative=False,
-            commands_per_job=1
-        )
+        retry = 1
+        jobs_fail = 0
+        logs_dir = tempfile.mkdtemp(prefix="logs_", dir=task.output_folder)
+        while retry <= 5:
 
-        # Run all
-        jobs_done, jobs_fail, jobs_skip = executor.run(
-            "oncodrivefml",
-            arguments,
-            len(arguments),
-            job_name="ofml"
-        )
+            # Create the qmap executor
+            executor = QMapExecutor(
+                task.queues,
+                task.max_jobs,
+                task.cores,
+                output_folder=logs_dir,
+                interactive=False,
+                adaptative=False,
+                commands_per_job=1
+            )
 
-        # Close the executor
-        executor.exit()
+            # Run all
+            jobs_done, jobs_fail, jobs_skip = executor.run(
+                "oncodrivefml",
+                arguments,
+                len(arguments),
+                job_name="ofml"
+            )
 
-        if jobs_fail == 0:
-            if not task.debug:
-                shutil.rmtree(logs_dir)
-                os.remove(signature_file)
-                for partial_input in partial_inputs:
-                    os.remove(partial_input)
-            break
-        else:
-            retry += 1
-            logging.info("Some jobs fail, retry {} of maximum 5".format(retry))
+            # Close the executor
+            executor.exit()
 
-    if jobs_fail > 0:
-        logging.error("%d jobs fail. Check the logs at '%s'.", jobs_fail, logs_dir)
-        return -1
+            if jobs_fail == 0:
+                if not task.debug:
+                    shutil.rmtree(logs_dir)
+                    os.remove(signature_file)
+                    for partial_input in partial_inputs:
+                        os.remove(partial_input)
+                break
+            else:
+                retry += 1
+                logging.info("Some jobs fail, retry {} of maximum 5".format(retry))
+
+        if jobs_fail > 0:
+            logging.error("%d jobs fail. Check the logs at '%s'.", jobs_fail, logs_dir)
+            return -1
 
     # Join results
     logging.info("Joining jobs output")
