@@ -39,9 +39,9 @@ The following command will show you the command help:
                             Output folder
       -n PROJECT_NAME, --name PROJECT_NAME
                             Project name
-      -mins MIN_SAMPLINGS, --min_samplings MIN_SAMPLINGS
+      -mins MIN_SAMPLINGS, --min-samplings MIN_SAMPLINGS
                             Minimum number of randomizations
-      -maxs MAX_SAMPLINGS, --max_samplings MAX_SAMPLINGS
+      -maxs MAX_SAMPLINGS, --max-samplings MAX_SAMPLINGS
                             Maximum number of randomizations
       --cores CORES         Maximum CPU cores to use (default all available)
       --debug               Show more progress details

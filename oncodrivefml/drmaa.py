@@ -46,6 +46,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
             partial_results.append(split_out)
             partial_inputs.append(split_file)
             i += 1
+            split_file = os.path.join(task.output_folder, "{}-split_in_{}.pickle.gz".format(task.project_name, i))
     else:
         # Split variants file into several chunks
         variants_list = list(variants_dict.items())
