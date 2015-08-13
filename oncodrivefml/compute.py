@@ -16,6 +16,14 @@ def gmean(a):
     return stats.gmean(np.array(a) + 1.0) - 1.0
 
 
+def gmean_weighted(vectors, weights):
+    v_a = [np.array(i) + 1 for i in vectors]
+    v_b = [np.power(i, wi) for i, wi in zip(v_a,weights)]
+    total_weight = np.sum(weights)
+    v_c = [(np.prod([j[i] for j in v_b])**(1/total_weight)) - 1.0 for i in range(len(vectors[0]))]
+    return np.array(v_c)
+
+
 def read_score(row, score_conf, element):
     value_str = row[score_conf['score']]
     if value_str is None or value_str == '':
@@ -150,8 +158,13 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                 logging.warning("There are no scores at {}-{}-{}".format(e, m_count, sampling_size))
                 continue
 
-            values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count],
-                                     axis=0) if values_mean is not None else values
+            if values_mean is None:
+                values_mean = values
+            elif geometric:
+                values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
+            else:
+                values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
+
             values_mean_count += m_count
             all_scores += m_scores
 
