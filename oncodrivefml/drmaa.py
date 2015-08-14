@@ -19,7 +19,8 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
                            "don't have the DRMAA_LIBRARY_PATH environment variable defined.")
 
     # Optional arguments
-    optional_args = "--geometric" if task.geometric else ""
+    optional_args = " --cores {}".format(task.cores)
+    optional_args += " --geometric" if task.geometric else ""
 
     # Save signature dict
     signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))
