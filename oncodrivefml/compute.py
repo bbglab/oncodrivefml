@@ -173,7 +173,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
         return e, None
 
     obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
-    
+
     return e, obs
 
 
@@ -199,7 +199,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
     randomizations = min_randomizations
     while obs <= 5:
         element, obs = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric)
-        if randomizations >= max_randomizations or obs > 5:
+        if randomizations >= max_randomizations or obs is None or obs > 5:
             break
         randomizations = min(max_randomizations, randomizations*2)
 
