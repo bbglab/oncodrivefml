@@ -29,6 +29,18 @@ MUTATIONS_SCHEMA = {
     }
 }
 
+INDELS_HEADER = ["CHROM", "POS", "REF", "ALT", "RawScore", "PHRED"]
+INDELS_SCHEMA = {
+    'fields': {
+        'CHROM': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
+        'POS': {'reader': 'int(x)', 'validator': 'x > 0'},
+        'REF': {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
+        'ALT': {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
+        'RawScore': {'reader': 'float(x)'},
+        'PHRED': {'reader': 'float(x)'}
+    }
+}
+
 
 def load_mutations(file, signature=None, show_warnings=True):
     reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
@@ -107,7 +119,36 @@ def build_regions_tree(regions):
     return regions_tree
 
 
-def load_variants_dict(variants_file, regions, signature_name='none'):
+def load_indels_dict(indels_file):
+
+    if indels_file is None:
+        return None
+
+    indels = {}
+    with itab.DictReader(indels_file, schema=INDELS_SCHEMA) as reader:
+        all_errors = []
+        for r, errors in reader:
+
+            # Report errors and continue
+            if len(errors) > 0:
+                all_errors += errors
+                continue
+
+            indel_key = "{}|{}|{}|{}".format(r['CHROM'], r['POS'], r['REF'], r['ALT'])
+            indels[indel_key] = r['PHRED']
+
+        if len(all_errors) > 0:
+            logging.warning("There are {} errors at {}. {}".format(
+                len(all_errors), os.path.basename(indels_file),
+                " I show you only the ten first errors." if len(all_errors) > 10 else ""
+            ))
+            for e in all_errors[:10]:
+                logging.warning(e)
+
+    return indels
+
+
+def load_variants_dict(variants_file, regions, indels=None, signature_name='none'):
 
     if variants_file.endswith(".pickle.gz"):
         with gzip.open(variants_file, 'rb') as fd:
@@ -120,13 +161,29 @@ def load_variants_dict(variants_file, regions, signature_name='none'):
     variants_dict = defaultdict(list)
 
     # Check the file format
+    indels_skip = []
     for r in load_mutations(variants_file, signature=signature_name):
 
         if r['CHROMOSOME'] not in regions_tree:
             continue
 
         position = int(r['POSITION'])
-        for interval in regions_tree[r['CHROMOSOME']][position]:
+        intervals = regions_tree[r['CHROMOSOME']][position]
+
+        if len(intervals) > 0:
+            if r['TYPE'] == 'indel':
+                if indels is None:
+                    continue
+                else:
+                    score = indels.get("{}|{}|{}|{}".format(r['CHROMOSOME'], r['POSITION'], r['REF'], r['ALT']), None)
+                    if score is None:
+                        # Skip indels without score (may be are very long indels)
+                        indels_skip.append("At {}:{} of length {}.".format(r['CHROMOSOME'], r['POSITION'], max(len(r['REF']), len(r['ALT']))))
+                        continue
+            else:
+                score = None
+
+        for interval in intervals:
             feature, segment = interval.data
             variants_dict[feature].append({
                 'CHROMOSOME': r['CHROMOSOME'],
@@ -135,8 +192,17 @@ def load_variants_dict(variants_file, regions, signature_name='none'):
                 'TYPE': r['TYPE'],
                 'REF': r['REF'],
                 'ALT': r['ALT'],
+                'SCORE': score,
                 'SIGNATURE': r['SIGNATURE'],
                 'SEGMENT': segment
             })
+
+    if len(indels_skip) > 0:
+        logging.warning("There are {} indels without score. {}".format(
+            len(indels_skip),
+            " I show you only the ten first." if len(indels_skip) > 10 else ""
+        ))
+        for e in indels_skip[:10]:
+            logging.warning(e)
 
     return variants_dict

@@ -143,7 +143,6 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
 
     values_mean = None
     values_mean_count = 0
-    all_scores = []
     for m_tissue, muts_by_segment in m['muts_by_tissue']['subs'].items():
 
         # Do randomization per segment
@@ -166,12 +165,11 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                 values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
 
             values_mean_count += m_count
-            all_scores += m_scores
 
     # Select mean
     mean = gmean if geometric else np.mean
 
-    obs = len(values_mean[values_mean >= mean(all_scores)]) if len(all_scores) > 0 else float(sampling_size)
+    obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
 
     return e, obs
 
@@ -243,6 +241,7 @@ def compute_muts_statistics(muts, scores, geometric):
     mutations = []
     for m in muts:
 
+        # Get substitutions scores
         if m['TYPE'] == "subs":
             total_subs += 1
             values = scores.get(str(m['POSITION']), [])
@@ -253,7 +252,7 @@ def compute_muts_statistics(muts, scores, geometric):
                     break
 
         # Update scores
-        if 'SCORE' in m:
+        if m.get('SCORE', None) is not None:
 
             sample = m['SAMPLE']
             if sample not in scores_by_sample:
@@ -265,6 +264,9 @@ def compute_muts_statistics(muts, scores, geometric):
             if m['TYPE'] == "subs":
                 scores_subs_list.append(m['SCORE'])
                 muts_by_tissue['subs'][m['SIGNATURE']][m['SEGMENT']].append(m['SCORE'])
+            elif m['TYPE'] == "indel":
+                scores_indels_list.append(m['SCORE'])
+                muts_by_tissue['indel'][m['SIGNATURE']][m['SEGMENT']].append(m['SCORE'])
 
             positions.append(m['POSITION'])
             mutations.append(m)

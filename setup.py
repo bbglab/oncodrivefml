@@ -14,17 +14,17 @@ setup(
     description='',
     install_requires=[
         'configobj >= 5.0.6',
-        'bgqmap >= 1.0.0',
         'numpy >= 1.9.0',
         'scipy >= 0.14.0',
         'statsmodels >= 0.6.1',
         'pytabix >= 0.1',
         'bokeh >= 0.9.2',
         'pandas >= 0.15.2',
-        'itab >= 0.1.0',
         'matplotlib >= 1.4.0',
         'intervaltree >= 2.1.0',
-        'bgdata >= 0.3.0'
+        'bgqmap >= 1.0.0',
+        'bgdata >= 0.4.0',
+        'itab >= 0.3.0'
     ],
 
     entry_points={

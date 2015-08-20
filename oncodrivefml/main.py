@@ -15,7 +15,7 @@ from oncodrivefml.drmaa import drmaa_run
 from oncodrivefml.qqplot import qqplot_png, qqplot_html
 from oncodrivefml.qqplot import add_symbol
 from oncodrivefml.compute import file_name, silent_mkdir, multiple_test_correction, compute_element
-from oncodrivefml.load import load_variants_dict, load_regions
+from oncodrivefml.load import load_variants_dict, load_regions, load_indels_dict
 from oncodrivefml.signature import load_signature
 
 
@@ -44,7 +44,7 @@ SCORES = {
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
-                 project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
+                 indels_file=None, project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
                  max_jobs=100, debug=False, trace=None, geometric=False, score_conf=None, queues=[]):
 
         # Configuration
@@ -69,6 +69,7 @@ class OncodriveFML(object):
             self.signature_field = signature_conf[0]
             self.signature_file = expanduser(signature_conf[1])
 
+        self.indels_file = indels_file
         self.score_file = expanduser(score_file)
         self.score_conf = score_conf
         self.score_conf['file'] = expanduser(score_conf['file'])
@@ -92,10 +93,17 @@ class OncodriveFML(object):
         logging.info("Loading regions")
         regions = load_regions(self.regions_file)
 
+        # Load indels scores dictionary
+        if self.indels_file is None:
+            indels_dict = None
+        else:
+            logging.info("Loading indels scores")
+            indels_dict = load_indels_dict(self.indels_file)
+
         if not resume:
             # Load variants
             logging.info("Loading and mapping mutations")
-            variants_dict = load_variants_dict(self.variants_file, regions, signature_name=self.signature_name)
+            variants_dict = load_variants_dict(self.variants_file, regions, indels=indels_dict, signature_name=self.signature_name)
 
             # Signature
             signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type, self.signature_name)
@@ -190,9 +198,10 @@ def cmdline():
     parser.add_argument('-i', '--input', dest='input_file', required=True, help='Variants file (maf, vcf or tab formated)')
     parser.add_argument('-r', '--regions', dest='regions_file', required=True, help='Genomic regions to analyse')
     parser.add_argument('-t', '--signature', dest='signature_file', default="none", help='Trinucleotide signature file')
-    parser.add_argument('-s', '--score', dest='score_file', required=True, help='Tabix score file')
+    parser.add_argument('-s', '--score', dest='score_file', required=True, help='Substitutions scores file')
 
     # Optional
+    parser.add_argument('-D', '--indels', dest='indels_file', default=None, help='Indels scores file')
     parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
     parser.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
     parser.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations")
@@ -237,6 +246,7 @@ def cmdline():
         args.signature_file,
         args.score_file,
         args.output_folder,
+        indels_file=args.indels_file,
         project_name=args.project_name,
         cores=args.cores,
         min_samplings=args.min_samplings,
