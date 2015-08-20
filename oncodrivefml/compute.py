@@ -172,8 +172,8 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     try:
         obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
     except TypeError as e:
-        print(values_mean)
-        print(m['scores'])
+        logging.error(values_mean)
+        logging.error(m['scores'])
         raise e
 
     return e, obs
