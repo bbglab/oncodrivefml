@@ -230,7 +230,7 @@ def compute_muts_statistics(muts, scores, geometric):
         return None
 
     # Add scores to the element mutations
-    muts_by_tissue = {'subs': defaultdict(lambda: defaultdict(list))}
+    muts_by_tissue = {'subs': defaultdict(lambda: defaultdict(list)), 'indel': defaultdict(lambda: defaultdict(list))}
     scores_by_sample = {}
     scores_list = []
     scores_subs_list = []
