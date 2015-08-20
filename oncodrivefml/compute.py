@@ -169,13 +169,11 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     # Select mean
     mean = gmean if geometric else np.mean
 
-    try:
-        obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
-    except TypeError as e:
-        logging.error(values_mean)
-        logging.error(m['scores'])
-        raise e
+    if values_mean is None:
+        return e, None
 
+    obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
+    
     return e, obs
 
 
@@ -205,7 +203,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
             break
         randomizations = min(max_randomizations, randomizations*2)
 
-    item['pvalue'] = max(1, obs) / float(randomizations)
+    item['pvalue'] = max(1, obs) / float(randomizations) if obs is not None else None
 
     if trace is not None:
         with gzip.open(trace, 'wb') as fd:
