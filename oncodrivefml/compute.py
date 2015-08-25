@@ -307,8 +307,8 @@ def multiple_test_correction(results, num_significant_samples=2):
     results_all = pd.DataFrame.from_dict(results, orient='index')
 
     # Filter minimum samples
-    results_good = results_all[results_all['samples_mut'] >= num_significant_samples].copy()
-    results_masked = results_all[results_all['samples_mut'] < num_significant_samples].copy()
+    results_good = results_all[(results_all['samples_mut'] >= num_significant_samples) & (~results_all['pvalue'].isnull())].copy()
+    results_masked = results_all[(results_all['samples_mut'] < num_significant_samples) | (results_all['pvalue'].isnull())].copy()
 
     # Multiple test correction
     if len(results_good) > 1:

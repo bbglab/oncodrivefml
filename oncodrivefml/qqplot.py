@@ -52,6 +52,7 @@ def qqplot_png(input_file, output_file, showit=False):
     MAX_ANNOTATED_GENES = 50
 
     df = pd.read_csv(input_file, header=0, sep="\t")
+    df.dropna(subset=[pvalue], inplace=True)
 
     # Define the shape of the figure
     NROW = 1
@@ -206,6 +207,7 @@ def qqplot_html(input_file, output_path, showit=False):
     MIN_PVALUE = 10000
 
     df = pd.read_csv(input_file, header=0, sep="\t")
+    df.dropna(subset=[pvalue], inplace=True)
 
     colors = ['royalblue', 'blue']
     obs_pvalues = df[pvalue].map(lambda x: -np.log10(x) if x > 0 else -np.log10(1 / MIN_PVALUE))
