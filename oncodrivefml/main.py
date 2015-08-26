@@ -78,8 +78,8 @@ class OncodriveFML(object):
             self.signature_field = signature_conf[0]
             self.signature_file = check_exists(expanduser(signature_conf[1]))
 
-        self.indels_file = check_exists(expanduser(indels_file))
-        self.indels_background = check_exists(expanduser(indels_background))
+        self.indels_file = check_exists(expanduser(indels_file)) if indels_file is not None else None
+        self.indels_background = check_exists(expanduser(indels_background)) if indels_background is not None else None
         self.score_file = check_exists(expanduser(score_file))
         self.score_conf = score_conf
         self.score_conf['file'] = check_exists(expanduser(score_conf['file']))
