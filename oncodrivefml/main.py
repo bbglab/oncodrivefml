@@ -44,7 +44,7 @@ SCORES = {
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
-                 indels_file=None, project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
+                 indels_file=None, indels_background=None, project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
                  max_jobs=100, debug=False, trace=None, geometric=False, score_conf=None, queues=[]):
 
         # Configuration
@@ -70,6 +70,7 @@ class OncodriveFML(object):
             self.signature_file = expanduser(signature_conf[1])
 
         self.indels_file = indels_file
+        self.indels_background = indels_background
         self.score_file = expanduser(score_file)
         self.score_conf = score_conf
         self.score_conf['file'] = expanduser(score_conf['file'])
@@ -134,7 +135,7 @@ class OncodriveFML(object):
         info_step = 6*self.cores
         pool = Pool(self.cores)
 
-        compute_element_partial = functools.partial(compute_element, signature_dict, self.min_samplings, self.max_samplings, self.geometric, self.score_conf)
+        compute_element_partial = functools.partial(compute_element, signature_dict, self.min_samplings, self.max_samplings, self.geometric, self.score_conf, self.indels_background)
 
         all_missing_signatures = {}
         for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
@@ -202,6 +203,7 @@ def cmdline():
 
     # Optional
     parser.add_argument('-D', '--indels', dest='indels_file', default=None, help='Indels scores file')
+    parser.add_argument('--indels-background', dest='indels_background', default=None, help="Indels random background scores")
     parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
     parser.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
     parser.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations")
@@ -247,6 +249,7 @@ def cmdline():
         args.score_file,
         args.output_folder,
         indels_file=args.indels_file,
+        indels_background=args.indels_background,
         project_name=args.project_name,
         cores=args.cores,
         min_samplings=args.min_samplings,

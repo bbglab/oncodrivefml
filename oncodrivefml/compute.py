@@ -139,10 +139,12 @@ def random_scores(num_samples, sampling_size, background, signature, geometric):
     return result[:sampling_size]
 
 
-def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geometric):
+def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geometric, indels_background):
 
     values_mean = None
     values_mean_count = 0
+
+    # Substitutions sampling
     for m_tissue, muts_by_segment in m['muts_by_tissue']['subs'].items():
 
         # Do randomization per segment
@@ -169,6 +171,38 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     # Select mean
     mean = gmean if geometric else np.mean
 
+    # Indels sampling
+    if indels_background is not None:
+        for m_tissue, muts_by_segment in m['muts_by_tissue']['indel'].items():
+
+            # Count total indels
+            m_count = 0
+            for segment, m_scores in muts_by_segment.items():
+                m_count += len(m_scores)
+
+            # Load random scores
+            if m_count > 0:
+                indels_file = os.path.join(indels_background, e[-2:], e, "{}.bin".format(m_tissue))
+                if os.path.exists(indels_file):
+                    values = np.fromfile(indels_file, dtype='float32')
+
+                    if m_count > 1:
+                        values = np.array([mean(values[i:i+m_count]) for i in range(0, len(values), m_count)])
+
+                    remaining_values = len(values_mean) - len(values)
+                    if remaining_values > 0:
+                        # Select uniformly randomly the needed values
+                        values_random = np.random.choice(values, size=remaining_values, replace=True)
+                        values = np.concatenate((values, values_random))
+
+                    # Add random scores to the mean
+                    elif geometric:
+                        values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
+                    else:
+                        values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
+                else:
+                    logging.warning("Indels background file '{}' not found.".format(indels_file))
+
     if values_mean is None:
         return e, None
 
@@ -177,7 +211,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     return e, obs
 
 
-def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, input_data):
+def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, input_data):
 
     element, muts, regions, trace = input_data
 
@@ -198,7 +232,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
     obs = 0
     randomizations = min_randomizations
     while obs <= 5:
-        element, obs = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric)
+        element, obs = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric, indels_background)
         if randomizations >= max_randomizations or obs is None or obs > 5:
             break
         randomizations = min(max_randomizations, randomizations*2)
