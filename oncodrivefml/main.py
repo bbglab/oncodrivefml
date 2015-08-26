@@ -9,6 +9,7 @@ from multiprocessing.pool import Pool
 from os.path import expanduser
 import bgdata
 from configobj import ConfigObj
+import sys
 from validate import Validator
 from oncodrivefml import signature
 from oncodrivefml.drmaa import drmaa_run
@@ -41,6 +42,14 @@ SCORES = {
 }
 
 
+def check_exists(path):
+    if path is not None:
+        if not os.path.exists(path):
+            logging.error("File '{}' not found".format(path))
+            sys.exit(-1)
+    return path
+
+
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
@@ -55,8 +64,8 @@ class OncodriveFML(object):
         self.max_jobs = max_jobs
         self.min_samplings = min_samplings
         self.max_samplings = max_samplings
-        self.variants_file = expanduser(variants_file)
-        self.regions_file = expanduser(regions_file)
+        self.variants_file = check_exists(expanduser(variants_file))
+        self.regions_file = check_exists(expanduser(regions_file))
         self.geometric = geometric
 
         if signature_file in ['compute', 'none']:
@@ -67,13 +76,13 @@ class OncodriveFML(object):
             self.signature_type = 'file'
             signature_conf = signature_file.split(":")
             self.signature_field = signature_conf[0]
-            self.signature_file = expanduser(signature_conf[1])
+            self.signature_file = check_exists(expanduser(signature_conf[1]))
 
-        self.indels_file = indels_file
-        self.indels_background = indels_background
-        self.score_file = expanduser(score_file)
+        self.indels_file = check_exists(expanduser(indels_file))
+        self.indels_background = check_exists(expanduser(indels_background))
+        self.score_file = check_exists(expanduser(score_file))
         self.score_conf = score_conf
-        self.score_conf['file'] = expanduser(score_conf['file'])
+        self.score_conf['file'] = check_exists(expanduser(score_conf['file']))
         self.output_folder = expanduser(output_folder)
         self.project_name = project_name if project_name is not None else file_name(variants_file)
         self.signature_name = file_name(signature_file)
@@ -240,6 +249,7 @@ def cmdline():
         # TODO allow only one score format or move this to external configuration
         score_conf = SCORES.get(os.path.basename(args.score_file), SCORES['whole_genome_SNVs.tsv.gz'])
         score_conf['file'] = args.score_file
+
 
     # Initialize OncodriveFM2
     ofm2 = OncodriveFML(
