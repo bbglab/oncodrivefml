@@ -90,6 +90,8 @@ def load_scores(element, regions, signature_dict, score_conf):
                         missing_signatures[ref_triplet] = alt_triplet
                         for k in signature_dict.keys():
                             signature_by_segment[region['segment']][k].append(0.0)
+            else:
+                signature_by_segment = None
 
     return scores_by_pos, scores_by_segment, signature_by_segment, [(k, v) for k, v in missing_signatures.items()]
 
@@ -151,7 +153,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
         for segment, m_scores in muts_by_segment.items():
             m_count = len(m_scores)
 
-            signature = signature_by_segment[segment][m_tissue]
+            signature = signature_by_segment[segment][m_tissue] if signature_by_segment is not None else None
             scores = scores_by_segment[segment]
             values = random_scores(m_count, sampling_size, scores, signature, geometric)
 
