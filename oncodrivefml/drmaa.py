@@ -24,14 +24,10 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
     # Save signature dict
     signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))
-    if signature_dict is None:
-        if not os.path.exists(signature_file):
-            raise RuntimeError("Signature file '{}' not found.".format(os.path.basename(signature_file)))
-    else:
-        logging.info("Store signature dictionary")
+    logging.info("Store signature dictionary")
 
-        with gzip.open(signature_file, 'wb') as fd:
-            pickle.dump(signature_dict, fd)
+    with gzip.open(signature_file, 'wb') as fd:
+        pickle.dump(signature_dict, fd)
 
     arguments = []
     partial_results = []
