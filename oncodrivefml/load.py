@@ -114,7 +114,7 @@ def build_regions_tree(regions):
             logging.info("[{} of {}]".format(i+1, len(regions)))
 
         for r in allr:
-            regions_tree[r['chrom']][r['start']:r['stop']] = (r['feature'], r['segment'])
+            regions_tree[r['chrom']][r['start']:(r['stop']+1)] = (r['feature'], r['segment'])
 
     logging.info("[{} of {}]".format(i+1, len(regions)))
     return regions_tree
