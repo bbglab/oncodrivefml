@@ -16,13 +16,14 @@ REGIONS_SCHEMA = {
         'segment': {'reader': 'str(x)', 'nullable': 'True'}
 }}
 
+
 MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
 MUTATIONS_SCHEMA = {
     'fields': {
         'CHROMOSOME': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
         'POSITION':   {'reader': 'int(x)', 'validator': 'x > 0'},
         'REF':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
-        'ALT':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
+        'ALT':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
         'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel"]'},
         'SAMPLE':     {'reader': 'str(x)'},
         'SIGNATURE':  {'reader': 'str(x)'}
