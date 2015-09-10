@@ -21,6 +21,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     # Optional arguments
     optional_args = " --cores {}".format(task.cores)
     optional_args += " --geometric" if task.geometric else ""
+    optional_args += " --signature-ratio {}".format(task.signature_ratio) if task.signature_ratio is not None else ""
 
     # Save signature dict
     signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))

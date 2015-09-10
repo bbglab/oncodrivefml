@@ -43,13 +43,23 @@ def read_score(row, score_conf, element):
     return value
 
 
-def load_scores(element, regions, signature_dict, score_conf):
+def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
     tb = tabix.open(score_conf['file'])
     scores_by_pos = defaultdict(list)
     scores_by_segment = defaultdict(list)
     signature_by_segment = defaultdict(lambda: defaultdict(list))
     missing_signatures = {}
 
+    # Load signature fold change
+    foldchange_vector = None
+    if signature_ratio is not None:
+        signature_foldchange_file = os.path.join(signature_ratio, element[-2:], "{}.bin".format(element))
+        if os.path.exists(signature_foldchange_file):
+            foldchange_vector = np.fromfile(signature_foldchange_file, dtype='float32')
+        else:
+            logging.warning("Missing signature fold change vector at '{}'".format(element))
+
+    current_base = 0
     for region in regions:
         for row in tb.query("{}{}".format(score_conf['chr_prefix'], region['chrom']), region['start'], region['stop']):
             value = read_score(row, score_conf, element)
@@ -82,14 +92,20 @@ def load_scores(element, regions, signature_dict, score_conf):
 
                 for a in alts:
                     alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+
+                    foldchange = foldchange_vector[int(current_base / 3)] if foldchange_vector is not None else 1
+                    current_base += 1
+
                     try:
                         for k in signature_dict.keys():
                             signature = signature_dict[k][(ref_triplet, alt_triplet)]
-                            signature_by_segment[region['segment']][k].append(signature)
+                            signature_by_segment[region['segment']][k].append(signature*foldchange)
                     except KeyError:
                         missing_signatures[ref_triplet] = alt_triplet
                         for k in signature_dict.keys():
                             signature_by_segment[region['segment']][k].append(0.0)
+
+
             else:
                 signature_by_segment = None
 
@@ -213,7 +229,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     return e, obs
 
 
-def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, input_data):
+def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, signature_ratio, input_data):
 
     element, muts, regions, trace = input_data
 
@@ -222,7 +238,8 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
         element,
         regions,
         signature_dict,
-        score_conf
+        score_conf,
+        signature_ratio
     )
 
     # Compute elements statistics

@@ -53,21 +53,30 @@ def check_exists(path):
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
-                 indels_file=None, indels_background=None, project_name=None, cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,
-                 max_jobs=100, debug=False, trace=None, geometric=False, score_conf=None, queues=[]):
+                 signature_ratio=None, indels_file=None, indels_background=None, project_name=None,
+                 cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,  max_jobs=100,
+                 debug=False, trace=None, geometric=False, score_conf=None, queues=[]):
 
-        # Configuration
-        self.cores = cores
-        self.queues = ['normal', 'long', 'short-high', 'short-low', 'bigmem'] if len(queues) == 0 else queues
-        self.debug = debug
-        self.trace = [] if trace is None else trace
-        self.max_jobs = max_jobs
-        self.min_samplings = min_samplings
-        self.max_samplings = max_samplings
+        # Input files
         self.variants_file = check_exists(expanduser(variants_file))
         self.regions_file = check_exists(expanduser(regions_file))
+        self.score_file = check_exists(expanduser(score_file))
+        self.score_conf = score_conf
+        self.score_conf['file'] = check_exists(expanduser(score_conf['file']))
+
+        # Execution details
+        self.cores = cores
+        self.queues = ['normal', 'long', 'short-high', 'short-low', 'bigmem'] if len(queues) == 0 else queues
+        self.max_jobs = max_jobs
+        self.debug = debug
+        self.trace = [] if trace is None else trace
+
+        # Sampling details
+        self.min_samplings = min_samplings
+        self.max_samplings = max_samplings
         self.geometric = geometric
 
+        # Signature details
         if signature_file in ['compute', 'none']:
             self.signature_type = signature_file
             self.signature_field = None
@@ -77,19 +86,18 @@ class OncodriveFML(object):
             signature_conf = signature_file.split(":")
             self.signature_field = signature_conf[0]
             self.signature_file = check_exists(expanduser(signature_conf[1]))
+        self.signature_name = file_name(signature_file)
+        self.signature_ratio = check_exists(expanduser(signature_ratio)) if signature_ratio is not None else None
 
+        # Indels
         self.indels_file = check_exists(expanduser(indels_file)) if indels_file is not None else None
         self.indels_background = check_exists(expanduser(indels_background)) if indels_background is not None else None
-        self.score_file = check_exists(expanduser(score_file))
-        self.score_conf = score_conf
-        self.score_conf['file'] = check_exists(expanduser(score_conf['file']))
+
+        # Output details
         self.output_folder = expanduser(output_folder)
         self.project_name = project_name if project_name is not None else file_name(variants_file)
-        self.signature_name = file_name(signature_file)
         self.results_file = os.path.join(output_folder, self.project_name + '-oncodrivefml.tsv')
         self.qqplot_file = os.path.join(output_folder, self.project_name + '-oncodrivefml')
-
-        # Some initializations
         silent_mkdir(output_folder)
 
     def run(self, drmaa=None, resume=False, figures=True):
@@ -144,7 +152,9 @@ class OncodriveFML(object):
         info_step = 6*self.cores
         pool = Pool(self.cores)
 
-        compute_element_partial = functools.partial(compute_element, signature_dict, self.min_samplings, self.max_samplings, self.geometric, self.score_conf, self.indels_background)
+        compute_element_partial = functools.partial(compute_element, signature_dict, self.min_samplings,
+                                                    self.max_samplings, self.geometric, self.score_conf,
+                                                    self.indels_background, self.signature_ratio)
 
         all_missing_signatures = {}
         for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
@@ -211,6 +221,7 @@ def cmdline():
     parser.add_argument('-s', '--score', dest='score_file', required=True, help='Substitutions scores file')
 
     # Optional
+    parser.add_argument('--signature-ratio', dest='signature_ratio', default=None, help='Folders with one fold change vector per element to multiply to the signature probability')
     parser.add_argument('-D', '--indels', dest='indels_file', default=None, help='Indels scores file')
     parser.add_argument('--indels-background', dest='indels_background', default=None, help="Indels random background scores")
     parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
@@ -260,6 +271,7 @@ def cmdline():
         args.output_folder,
         indels_file=args.indels_file,
         indels_background=args.indels_background,
+        signature_ratio=args.signature_ratio,
         project_name=args.project_name,
         cores=args.cores,
         min_samplings=args.min_samplings,
