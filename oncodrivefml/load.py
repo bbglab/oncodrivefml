@@ -43,7 +43,11 @@ INDELS_SCHEMA = {
 }
 
 
-def load_mutations(file, signature=None, show_warnings=True):
+def load_mutations(file, signature=None, show_warnings=True, blacklist=None):
+
+    # Set of samples to blacklist
+    samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
+
     reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
     all_errors = []
     for ix, (row, errors) in enumerate(reader, start=1):
@@ -52,6 +56,9 @@ def load_mutations(file, signature=None, show_warnings=True):
                 # Most probable this is a file with a header
                 continue
             all_errors += errors
+            continue
+
+        if row.get('SAMPLE', None) in samples_blacklisted:
             continue
 
         if row.get('TYPE', None) is None:
@@ -149,7 +156,7 @@ def load_indels_dict(indels_file):
     return indels
 
 
-def load_variants_dict(variants_file, regions, indels=None, signature_name='none'):
+def load_variants_dict(variants_file, regions, indels=None, signature_name='none', blacklist=None):
 
     if variants_file.endswith(".pickle.gz"):
         with gzip.open(variants_file, 'rb') as fd:
@@ -163,7 +170,7 @@ def load_variants_dict(variants_file, regions, indels=None, signature_name='none
 
     # Check the file format
     indels_skip = []
-    for r in load_mutations(variants_file, signature=signature_name):
+    for r in load_mutations(variants_file, signature=signature_name, blacklist=blacklist):
 
         if r['CHROMOSOME'] not in regions_tree:
             continue

@@ -34,8 +34,8 @@ def get_alternate_signature(line):
     return line['Signature_reference'][0] + line['ALT'] + line['Signature_reference'][2]
 
 
-def compute_signature(variants_file, signature_name):
-    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file, signature=signature_name, show_warnings=False) if r['TYPE'] == 'subs'])
+def compute_signature(variants_file, signature_name, blacklist):
+    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file, signature=signature_name, show_warnings=False, blacklist=blacklist) if r['TYPE'] == 'subs'])
     mutations = mutations.groupby(['CHROMOSOME', 'POSITION', 'REF', 'ALT', 'SIGNATURE']).count()
     mutations.reset_index(inplace=True)
     mutations['Signature_reference'] = mutations.apply(get_reference_signature, axis=1)
@@ -50,7 +50,7 @@ def compute_signature(variants_file, signature_name):
     return signature
 
 
-def load_signature(variants_file, signature_file, signature_field, signature_type, signature_name):
+def load_signature(variants_file, signature_file, signature_field, signature_type, signature_name, blacklist=None):
 
     if signature_file is not None and signature_file.endswith(".pickle.gz"):
         with gzip.open(signature_file, 'rb') as fd:
@@ -62,7 +62,7 @@ def load_signature(variants_file, signature_file, signature_field, signature_typ
         logging.warning("We are not using any signature")
     elif signature_type == "compute":
         logging.info("Computing signature")
-        signature_dict = compute_signature(variants_file, signature_name)
+        signature_dict = compute_signature(variants_file, signature_name, blacklist)
     else:
         if not os.path.exists(signature_file):
             logging.error("Signature file {} not found.".format(signature_file))

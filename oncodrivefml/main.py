@@ -49,16 +49,24 @@ def check_exists(path):
             sys.exit(-1)
     return path
 
+def check_file(path):
+    if path is None:
+        return None
+
+    return check_exists(expanduser(path))
+
 
 class OncodriveFML(object):
 
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
                  signature_ratio=None, indels_file=None, indels_background=None, project_name=None,
                  cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,  max_jobs=100,
-                 debug=False, trace=None, geometric=False, score_conf=None, queues=[]):
+                 debug=False, trace=None, geometric=False, score_conf=None, queues=[],
+                 samples_blacklist=None):
 
         # Input files
         self.variants_file = check_exists(expanduser(variants_file))
+        self.samples_blacklist = check_file(samples_blacklist)
         self.regions_file = check_exists(expanduser(regions_file))
         self.score_file = check_exists(expanduser(score_file))
         self.score_conf = score_conf
@@ -87,11 +95,11 @@ class OncodriveFML(object):
             self.signature_field = signature_conf[0]
             self.signature_file = check_exists(expanduser(signature_conf[1]))
         self.signature_name = file_name(signature_file)
-        self.signature_ratio = check_exists(expanduser(signature_ratio)) if signature_ratio is not None else None
+        self.signature_ratio = check_file(signature_ratio)
 
         # Indels
-        self.indels_file = check_exists(expanduser(indels_file)) if indels_file is not None else None
-        self.indels_background = check_exists(expanduser(indels_background)) if indels_background is not None else None
+        self.indels_file = check_file(indels_file)
+        self.indels_background = check_file(indels_background)
 
         # Output details
         self.output_folder = expanduser(output_folder)
@@ -121,10 +129,10 @@ class OncodriveFML(object):
         if not resume:
             # Load variants
             logging.info("Loading and mapping mutations")
-            variants_dict = load_variants_dict(self.variants_file, regions, indels=indels_dict, signature_name=self.signature_name)
+            variants_dict = load_variants_dict(self.variants_file, regions, indels=indels_dict, signature_name=self.signature_name, blacklist=self.samples_blacklist)
 
             # Signature
-            signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type, self.signature_name)
+            signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type, self.signature_name, blacklist=self.samples_blacklist)
         else:
             variants_dict = None
             signature_dict = None
@@ -221,6 +229,7 @@ def cmdline():
     parser.add_argument('-s', '--score', dest='score_file', required=True, help='Substitutions scores file')
 
     # Optional
+    parser.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
     parser.add_argument('--signature-ratio', dest='signature_ratio', default=None, help='Folders with one fold change vector per element to multiply to the signature probability')
     parser.add_argument('-D', '--indels', dest='indels_file', default=None, help='Indels scores file')
     parser.add_argument('--indels-background', dest='indels_background', default=None, help="Indels random background scores")
@@ -281,7 +290,8 @@ def cmdline():
         trace=args.trace,
         geometric=args.geometric,
         score_conf=score_conf,
-        queues=args.queues
+        queues=args.queues,
+        samples_blacklist=args.samples_blacklist
     )
 
     # Run
