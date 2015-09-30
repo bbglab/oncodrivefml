@@ -23,7 +23,7 @@ setup(
         'matplotlib >= 1.4.0',
         'intervaltree >= 2.1.0',
         'bgqmap >= 1.0.0',
-        'bgdata >= 0.4.0',
+        'bgdata >= 0.6.0',
         'itab >= 0.3.0'
     ],
 

@@ -18,6 +18,8 @@ from oncodrivefml.qqplot import add_symbol
 from oncodrivefml.compute import file_name, silent_mkdir, multiple_test_correction, compute_element
 from oncodrivefml.load import load_variants_dict, load_regions, load_indels_dict
 from oncodrivefml.signature import load_signature
+from bgdata.configobj import BgDataInterpolation
+interpolation_engines['bgdata'] = BgDataInterpolation
 
 
 SCORES = {
@@ -263,7 +265,7 @@ def cmdline():
         score_conf = ConfigObj(args.score_file, configspec={
             'file': 'string', 'chr': 'integer', 'chr_prefix': 'string', 'pos': 'integer', 'ref': 'integer',
             'alt': 'integer', 'score': 'integer', 'element': 'integer', 'extra': 'integer'
-        })
+        }, interpolation='bgdata')
         score_conf.validate(Validator(), preserve_errors=True)
     else:
         # TODO allow only one score format or move this to external configuration
