@@ -8,7 +8,7 @@ import os
 from multiprocessing.pool import Pool
 from os.path import expanduser
 import bgdata
-from configobj import ConfigObj
+from configobj import ConfigObj, interpolation_engines
 import sys
 from validate import Validator
 from oncodrivefml import signature
@@ -225,29 +225,32 @@ def cmdline():
     parser = argparse.ArgumentParser()
 
     # Mandatory
-    parser.add_argument('-i', '--input', dest='input_file', required=True, help='Variants file (maf, vcf or tab formated)')
+    parser.add_argument('-i', '--input', dest='input_file', required=True, help='Variants file')
     parser.add_argument('-r', '--regions', dest='regions_file', required=True, help='Genomic regions to analyse')
-    parser.add_argument('-t', '--signature', dest='signature_file', default="none", help='Trinucleotide signature file')
     parser.add_argument('-s', '--score', dest='score_file', required=True, help='Substitutions scores file')
+    parser.add_argument('-t', '--signature', dest='signature_file', default="none", help="Trinucleotide signature file. Use 'compute' to compute it from the whole file, use 'none' if you don't want to use signature.")
 
     # Optional
+    parser.add_argument('-o', '--output', dest='output_folder', default='output', help="Output folder. Default to 'output'")
+    parser.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
+    parser.add_argument('--geometric', dest='geometric', default=False, action='store_true', help="Use geometric mean instead of arithmetic mean")
+    parser.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations (default is 10k).")
+    parser.add_argument('-maxs', '--max-samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations (default is 100k).")
     parser.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
     parser.add_argument('--signature-ratio', dest='signature_ratio', default=None, help='Folders with one fold change vector per element to multiply to the signature probability')
+    parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true', help="Output only the tsv results file")
     parser.add_argument('-D', '--indels', dest='indels_file', default=None, help='Indels scores file')
     parser.add_argument('--indels-background', dest='indels_background', default=None, help="Indels random background scores")
-    parser.add_argument('-o', '--output', dest='output_folder', default='output', help='Output folder')
-    parser.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
-    parser.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations")
-    parser.add_argument('-maxs', '--max-samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations")
+
     parser.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
     parser.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
-    parser.add_argument('--no-figures', dest='no_figures', default=False, action='store_true', help="Output only the tsv results file")
+    parser.add_argument('--trace', dest='trace', nargs='+', type=str, default=None, help="Elements IDs to store files to trace and reproduce the execution")
+
     parser.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
     parser.add_argument('--drmaa-max-jobs', dest='drmaa_max_jobs', type=int, default=100, help="Maximum parallell concurrent jobs")
-    parser.add_argument('--trace', dest='trace', nargs='+', type=str, default=None, help="Elements IDs to store files to trace and reproduce the execution")
-    parser.add_argument('--geometric', dest='geometric', default=False, action='store_true', help="Use geometric mean instead of arithmetic mean")
     parser.add_argument('--resume', dest='resume', default=False, action='store_true', help="Resume a DRMAA execution")
     parser.add_argument('-q', action='append', default=[], dest="queues", help="DRMAA cluster queues")
+
     args = parser.parse_args()
 
     # Configure the logging

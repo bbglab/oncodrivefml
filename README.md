@@ -17,42 +17,92 @@ The first time that you run OncodriveFML it will download the genome reference f
 The following command will show you the command help:
 
 	$ oncodrivefml --help
-
-	usage: oncodrivefml [-h] [-i INPUT_FILE] [-r REGIONS_FILE] [-t SIGNATURE_FILE]
-                    [-s SCORE_FILE] [-o OUTPUT_FOLDER] [-n PROJECT_NAME]
-                    [-mins MIN_SAMPLINGS] [-maxs MAX_SAMPLINGS]
-                    [--cores CORES] [--debug] [--no-figures] [--drmaa DRMAA]
-                    [--drmaa-max-jobs DRMAA_MAX_JOBS]
-                    [--trace TRACE [TRACE ...]] [--geometric]
-
+    usage: oncodrivefml [-h] -i INPUT_FILE -r REGIONS_FILE -s SCORE_FILE
+                        [-t SIGNATURE_FILE] [-o OUTPUT_FOLDER] [-n PROJECT_NAME]
+                        [--geometric] [-mins MIN_SAMPLINGS] [-maxs MAX_SAMPLINGS]
+                        [--samples-blacklist SAMPLES_BLACKLIST]
+                        [--signature-ratio SIGNATURE_RATIO] [--no-figures]
+                        [-D INDELS_FILE] [--indels-background INDELS_BACKGROUND]
+                        [--cores CORES] [--debug] [--trace TRACE [TRACE ...]]
+                        [--drmaa DRMAA] [--drmaa-max-jobs DRMAA_MAX_JOBS]
+                        [--resume] [-q QUEUES]
+    
     optional arguments:
       -h, --help            show this help message and exit
       -i INPUT_FILE, --input INPUT_FILE
-                            Variants file (maf, vcf or tab formated)
+                            Variants file
       -r REGIONS_FILE, --regions REGIONS_FILE
                             Genomic regions to analyse
-      -t SIGNATURE_FILE, --signature SIGNATURE_FILE
-                            Trinucleotide signature file
       -s SCORE_FILE, --score SCORE_FILE
-                            Tabix score file
+                            Substitutions scores file
+      -t SIGNATURE_FILE, --signature SIGNATURE_FILE
+                            Trinucleotide signature file. Use 'compute' to compute
+                            it from the whole file, use 'none' if you don't want
+                            to use signature.
       -o OUTPUT_FOLDER, --output OUTPUT_FOLDER
-                            Output folder
+                            Output folder. Default to 'output'
       -n PROJECT_NAME, --name PROJECT_NAME
                             Project name
+      --geometric           Use geometric mean instead of arithmetic mean
       -mins MIN_SAMPLINGS, --min-samplings MIN_SAMPLINGS
-                            Minimum number of randomizations
+                            Minimum number of randomizations (default is 10k).
       -maxs MAX_SAMPLINGS, --max-samplings MAX_SAMPLINGS
-                            Maximum number of randomizations
+                            Maximum number of randomizations (default is 100k).
+      --samples-blacklist SAMPLES_BLACKLIST
+                            Remove this samples when loading the input file
+      --signature-ratio SIGNATURE_RATIO
+                            Folders with one fold change vector per element to
+                            multiply to the signature probability
+      --no-figures          Output only the tsv results file
+      -D INDELS_FILE, --indels INDELS_FILE
+                            Indels scores file
+      --indels-background INDELS_BACKGROUND
+                            Indels random background scores
       --cores CORES         Maximum CPU cores to use (default all available)
       --debug               Show more progress details
-      --no-figures          Output only the tsv results file
+      --trace TRACE [TRACE ...]
+                            Elements IDs to store files to trace and reproduce the
+                            execution
       --drmaa DRMAA         Run in a DRMAA cluster using this value as the number
                             of elements to compute per job.
       --drmaa-max-jobs DRMAA_MAX_JOBS
                             Maximum parallell concurrent jobs
-      --trace TRACE [TRACE ...]
-                            Elements IDs to store files to trace and reproduce the
-                            execution
-      --geometric           Use geometric mean instead of arithmetic mean
-      
+      --resume              Resume a DRMAA execution
+      -q QUEUES             DRMAA cluster queues
 
+      
+## File formats ##
+
+**TIP**:  All the files can be compressed using GZIP (extension ".gz"), BZIP2 (ext. ".bz2") or LZMA (ext. ".xz")
+
+### Input file format ###
+
+The variants file is a text file with 5 columns separated by a tab character (without any header or comment):
+
+* Column 1: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
+* Column 2: Mutation position. A positive integer.
+* Column 3: Reference allelle. A single letter: A, C, G or T (upper case)
+* Column 4: Alternate allelle. A single letter: A, C, G or T (upper case)
+* Column 5: Sample identifier. Any alphanumeric string.
+      
+### Regions file format ###
+
+The regions file is a text file with 4 columns separated by a tab character (without any header or comment):
+
+* Column 1: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
+* Column 2: Start position. A positive integer.
+* Column 3: End position. A positive integer.
+* Column 4: Element identifier.
+
+## Run an example ##
+
+Download and extract example files:
+
+    $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples.tar.gz
+    $ tar xvzf oncodrivefml-examples.tar.gz
+    
+Run OncodriveFML like this:
+
+    $ oncodrivefml -i gbm.txt.gz -r cds.regions.xz -t compute -s cadd.conf
+    
+Browse the results at the `output` folder.
