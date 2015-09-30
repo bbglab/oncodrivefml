@@ -1,6 +1,6 @@
 # OncodriveFML #
 
-Recent years saw the development of methods to detect signals of positive selection in the pattern of somatic mutations in genes across cohorts of tumors, and the discovery of hundreds of driver genes. The next major challenge in tumor genomics is the identification of non-coding regions which may also drive tumorigenesis. We present OncodriveFML, a method that estimates the accumulated functional impact bias of somatic mutations in any genomic region of interest based on a local simulation of the mutational process affecting it. It may be applied to all genomic elements to detect likely drivers amongst them. Here, we describe the results of its application to identify driver genes, promoters and UTRs in several malignancies, and compare it to current generation methods. Furthermore, we demonstrate that OncodriveFML can discover signals of positive selection when only a small fraction of the genome, like a panel of genes, has been sequenced.
+Recent years saw the development of methods to detect signals of positive selection in the pattern of somatic mutations in genes across cohorts of tumors, and the discovery of hundreds of driver genes. The next major challenge in tumor genomics is the identification of non-coding regions which may also drive tumorigenesis. We present OncodriveFML, a method that estimates the accumulated functional impact bias of somatic mutations in any genomic region of interest based on a local simulation of the mutational process affecting it. It may be applied to all genomic elements to detect likely drivers amongst them. OncodriveFML can discover signals of positive selection when only a small fraction of the genome, like a panel of genes, has been sequenced.
 
 ## License ##
 OncodriveFML is made available to the general public subject to certain conditions described in its [LICENSE](LICENSE). For the avoidance of doubt, you may use the software and any data accessed through UPF software for academic, non-commercial and personal use only, and you may not copy, distribute, transmit, duplicate, reduce or alter in any way for commercial purposes, or for the purpose of redistribution, without a license from the Universitat Pompeu Fabra (UPF). Requests for information regarding a license for commercial use or redistribution of OncodriveFML may be sent via e-mail to innovacio@upf.edu.
@@ -14,6 +14,7 @@ Then to get OncodriveFML installed run the following command:
 	$ pip install oncodrivefml
 
 The first time that you run OncodriveFML it will download the genome reference from our servers. By default the downloaded datasets go to ``~/.bgdata`` if you want to move this datasets to another folder you have to define the system environment variable BGDATA_LOCAL with an export command. 
+
 The following command will show you the command help:
 
 	$ oncodrivefml --help
@@ -157,4 +158,4 @@ Now run OncodriveFML like this:
     13:14:59 INFO: Creating figures
     13:15:08 INFO: Done
     
-Ignore this warning that is due to that we are using a small dataset for example purposes. You can browse the results at the `output` folder.
+Ignore this warning that is due to the fact that we are using a small example dataset. You can browse the results in the `output` folder.
