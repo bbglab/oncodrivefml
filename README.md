@@ -30,6 +30,8 @@ The following command will show you the command help:
     
     optional arguments:
       -h, --help            show this help message and exit
+    
+    Mandatory options:
       -i INPUT_FILE, --input INPUT_FILE
                             Variants file
       -r REGIONS_FILE, --regions REGIONS_FILE
@@ -40,6 +42,8 @@ The following command will show you the command help:
                             Trinucleotide signature file. Use 'compute' to compute
                             it from the whole file, use 'none' if you don't want
                             to use signature.
+    
+    General options:
       -o OUTPUT_FOLDER, --output OUTPUT_FOLDER
                             Output folder. Default to 'output'
       -n PROJECT_NAME, --name PROJECT_NAME
@@ -55,22 +59,27 @@ The following command will show you the command help:
                             Folders with one fold change vector per element to
                             multiply to the signature probability
       --no-figures          Output only the tsv results file
+    
+    Indels options:
       -D INDELS_FILE, --indels INDELS_FILE
                             Indels scores file
       --indels-background INDELS_BACKGROUND
                             Indels random background scores
+    
+    Execution options:
       --cores CORES         Maximum CPU cores to use (default all available)
       --debug               Show more progress details
       --trace TRACE [TRACE ...]
                             Elements IDs to store files to trace and reproduce the
                             execution
+    
+    Cluster options:
       --drmaa DRMAA         Run in a DRMAA cluster using this value as the number
                             of elements to compute per job.
       --drmaa-max-jobs DRMAA_MAX_JOBS
                             Maximum parallell concurrent jobs
       --resume              Resume a DRMAA execution
       -q QUEUES             DRMAA cluster queues
-
       
 ## File formats ##
 
