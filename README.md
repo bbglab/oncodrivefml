@@ -13,7 +13,7 @@ Then to get OncodriveFML installed run the following command:
 
 	$ pip install oncodrivefml
 
-The first time that you run OncodriveFML it will download the genome reference from our servers. By default the downloaded datasets go to ~/.bgdata if you want to move this datasets to another folder you have to define the system environment variable BGDATA_LOCAL with an export command. 
+The first time that you run OncodriveFML it will download the genome reference from our servers. By default the downloaded datasets go to ``~/.bgdata`` if you want to move this datasets to another folder you have to define the system environment variable BGDATA_LOCAL with an export command. 
 The following command will show you the command help:
 
 	$ oncodrivefml --help
@@ -102,12 +102,16 @@ Download and extract example files:
     $ tar xvzf oncodrivefml-examples.tar.gz
     
 To run this example OncodriveFML needs all precomputed CADD scores that is a 80Gb file. It will be 
-automatically download the first time that you run OncodriveFML, but if you want to speedup the download is better
+automatically download the first time that you run OncodriveFML, but if you want to speed up the download is better
 if you first download it using our data package managment tool that is also installed when you install OncodriveFML.
 
 Run this command to download the CADD scores file to the default bgdata folder `~/.bgdata`:
  
     $ bg-data -n 10 genomicscores cadd 1.3
+
+Also if you want to speed up the download of the genome reference that is also needed, run this command:
+
+    $ bg-data -n 10 datasets genomereference hg19
 
 Now run OncodriveFML like this:
 
