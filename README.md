@@ -7,7 +7,7 @@ OncodriveFML is made available to the general public subject to certain conditio
 
 ## Installation ##
 
-OncodriveFML depends on Python 3.4 and some external libraries. The easiest way to install all this software stack is using the well known [Anaconda Python distribution](http://continuum.io/downloads#34).
+OncodriveFML depends on Python 3.4 and some external libraries. The easiest way to install all this software stack is using the well known [Anaconda Python distribution](http://continuum.io/downloads).
 
 Then to get OncodriveFML installed run the following command:
 
@@ -101,8 +101,56 @@ Download and extract example files:
     $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples.tar.gz
     $ tar xvzf oncodrivefml-examples.tar.gz
     
-Run OncodriveFML like this:
+To run this example OncodriveFML needs all precomputed CADD scores that is a 80Gb file. It will be 
+automatically download the first time that you run OncodriveFML, but if you want to speedup the download is better
+if you first download it using our data package managment tool that is also installed when you install OncodriveFML.
 
-    $ oncodrivefml -i gbm.txt.gz -r cds.regions.xz -t compute -s cadd.conf
+Run this command to download the CADD scores file to the default bgdata folder `~/.bgdata`:
+ 
+    $ bg-data -n 10 genomicscores cadd 1.3
+
+Now run OncodriveFML like this:
+
+    $ oncodrivefml -i paad.txt.gz -r cds.regions.xz -t compute -s cadd.conf
     
-Browse the results at the `output` folder.
+    13:00:13 INFO: Loading regions
+    13:00:30 INFO: Loading and mapping mutations
+    13:00:30 INFO: [1 of 20763]
+    13:00:44 INFO: [7333 of 20763]
+    13:00:59 INFO: [14665 of 20763]
+    13:01:12 INFO: [20763 of 20763]
+    13:01:14 INFO: Computing signature
+    13:01:17 INFO: Computing statistics
+    13:01:19 INFO: [1 of 2560]
+    13:02:17 INFO: [145 of 2560]
+    13:02:41 INFO: [289 of 2560]
+    13:03:04 INFO: [433 of 2560]
+    13:04:11 INFO: [577 of 2560]
+    13:05:38 INFO: [721 of 2560]
+    13:05:38 INFO: [865 of 2560]
+    13:05:38 INFO: [1009 of 2560]
+    13:06:57 INFO: [1153 of 2560]
+    13:06:57 INFO: [1297 of 2560]
+    13:06:57 INFO: [1441 of 2560]
+    13:06:57 INFO: [1585 of 2560]
+    13:08:34 INFO: [1729 of 2560]
+    13:08:34 INFO: [1873 of 2560]
+    13:08:51 INFO: [2017 of 2560]
+    13:08:51 INFO: [2161 of 2560]
+    13:09:19 INFO: [2305 of 2560]
+    13:09:42 INFO: [2449 of 2560]
+    13:14:56 INFO: [2560 of 2560]
+    13:14:56 WARNING: There are background positions without signature probability. We are using a probability of zero at these positions.
+    13:14:56 WARNING: If you are computing the signature from the input file, most probable this means that you don't have enough mutations.
+    13:14:56 WARNING: Try using a precomputed signature of a similar cancer type to improve the results.
+    13:14:56 WARNING: The missing signatures are:
+    13:14:56 WARNING:       ref: 'TAT' alt: 'TCT'
+    13:14:56 WARNING:       ref: 'TAG' alt: 'TCG'
+    13:14:56 WARNING:       ref: 'ATT' alt: 'AGT'
+    13:14:56 WARNING:       ref: 'CAA' alt: 'CTA'
+    13:14:56 WARNING:       ref: 'TTA' alt: 'TAA'
+    13:14:56 INFO: Computing multiple test correction
+    13:14:59 INFO: Creating figures
+    13:15:08 INFO: Done
+    
+Ignore this warning that is due to that we are using a small dataset for example purposes. You can browse the results at the `output` folder.

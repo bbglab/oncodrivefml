@@ -182,9 +182,9 @@ class OncodriveFML(object):
         logging.info("[{} of {}]".format(i+1, len(elements)))
 
         if len(all_missing_signatures) > 0:
-            logging.warning("There are positions without signature probability. We are using a score of zero at these positions.")
+            logging.warning("There are background positions without signature probability. We are using a probability of zero at these positions.")
             logging.warning("If you are computing the signature from the input file, most probable this means that you don't have enough mutations.")
-            logging.warning("Try using a precomputed signature of a similar cancer type, or don't use signature.")
+            logging.warning("Try using a precomputed signature of a similar cancer type to improve the results.")
             logging.warning("The missing signatures are:")
             for ref_triplet, alt_triplet in all_missing_signatures.items():
                 logging.warning("\tref: '%s' alt: '%s'", ref_triplet, alt_triplet)
