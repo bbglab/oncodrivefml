@@ -11,7 +11,7 @@ OncodriveFML depends on Python 3.4 and some external libraries. The easiest way 
 
 Then to get OncodriveFML installed run the following command:
 
-	$ pip install -U oncodrivefml
+	$ pip install oncodrivefml
 
 The first time that you run OncodriveFML it will download the genome reference from our servers. By default the downloaded datasets go to ``~/.bgdata`` if you want to move this datasets to another folder you have to define the system environment variable BGDATA_LOCAL with an export command. 
 
