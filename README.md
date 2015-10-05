@@ -13,7 +13,7 @@ Then to get OncodriveFML installed first clone the repository and then install i
 
         $ git clone git@bitbucket.org:bbglab/oncodrivefml.git
         $ cd oncodrivefml
-	$ pip install .
+        $ pip install .
 
 The first time that you run OncodriveFML it will download the genome reference from our servers. By default the downloaded datasets go to ``~/.bgdata`` if you want to move this datasets to another folder you have to define the system environment variable BGDATA_LOCAL with an export command. 
 
