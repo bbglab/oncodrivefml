@@ -24,6 +24,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     optional_args += " --signature-ratio {}".format(task.signature_ratio) if task.signature_ratio is not None else ""
     optional_args += " --min-samplings {}".format(task.min_samplings)
     optional_args += " --max-samplings {}".format(task.max_samplings)
+    optional_args += " --trace {}".format(task.trace_file) if task.trace_file is not None else ""
 
     # Save signature dict
     signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))

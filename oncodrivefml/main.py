@@ -79,6 +79,7 @@ class OncodriveFML(object):
         self.queues = ['normal', 'long', 'short-high', 'short-low', 'bigmem'] if len(queues) == 0 else queues
         self.max_jobs = max_jobs
         self.debug = debug
+        self.trace_file = trace
         self.trace = [] if trace is None else [e.strip() for e in open(trace).readlines()]
 
         # Sampling details
