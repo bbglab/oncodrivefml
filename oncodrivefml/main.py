@@ -97,7 +97,7 @@ class OncodriveFML(object):
             signature_conf = signature_file.split(":")
             self.signature_field = signature_conf[0]
             self.signature_file = check_exists(expanduser(signature_conf[1]))
-        self.signature_name = file_name(signature_file)
+        self.signature_name = file_name(variants_file)
         self.signature_ratio = check_file(signature_ratio)
 
         # Indels

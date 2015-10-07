@@ -391,7 +391,7 @@ def multiple_test_correction(results, num_significant_samples=2):
 def file_name(file):
     if file is None:
         return None
-    return os.path.splitext(os.path.basename(file))[0]
+    return os.path.basename(file).split('.')[0]
 
 
 def silent_mkdir(folder):
