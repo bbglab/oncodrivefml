@@ -150,7 +150,7 @@ class OncodriveFML(object):
         for e, muts in variants_dict.items():
             if len(muts) > 0:
                 if e in self.trace:
-                    trace = os.path.join(self.output_folder, "{}.trace.gz".format(e))
+                    trace = os.path.join(self.output_folder, "{}-{}.trace.gz".format(self.project_name, e))
                 else:
                     trace = None
                 elements.append((e, muts, regions[e], trace))
