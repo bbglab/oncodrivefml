@@ -205,7 +205,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
 
             # Load random scores
             if m_count > 0:
-                indels_file = os.path.join(indels_background, e[-2:], e, "{}_{}.bin".format(e, m_tissue))
+                indels_file = os.path.join(indels_background, e[-2:], "{}_{}.bin".format(e, m_tissue))
                 if os.path.exists(indels_file):
                     values = np.fromfile(indels_file, dtype='float32')
 
