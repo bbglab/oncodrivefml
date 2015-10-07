@@ -157,10 +157,12 @@ def random_scores(num_samples, sampling_size, background, signature, geometric):
     return result[:sampling_size]
 
 
-def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geometric, indels_background):
+def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geometric, indels_background, trace=False):
 
     values_mean = None
     values_mean_count = 0
+
+    trace_dict = {}
 
     # Substitutions sampling
     for m_tissue, muts_by_segment in m['muts_by_tissue']['subs'].items():
@@ -172,6 +174,9 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
             signature = signature_by_segment[segment][m_tissue] if signature_by_segment is not None else None
             scores = scores_by_segment[segment]
             values = random_scores(m_count, sampling_size, scores, signature, geometric)
+
+            if trace:
+                trace_dict["subs-{}-{}-{}".format(m_tissue, segment, m_count)] = [s for s in values]
 
             if values is None:
                 logging.warning("There are no scores at {}-{}-{}".format(e, m_count, sampling_size))
@@ -214,24 +219,31 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                         values = np.concatenate((values, values_random))
 
                     # Add random scores to the mean
-                    elif geometric:
+                    if geometric:
                         values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
                     else:
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
+
+                    if trace:
+                        trace_dict["indel-{}-{}-{}".format(m_tissue, e, m_count)] = [s for s in values]
+
                 else:
                     logging.warning("Indels background file '{}' not found.".format(indels_file))
 
     if values_mean is None:
-        return e, None
+        return e, None, trace_dict
 
     obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
 
-    return e, obs
+    return e, obs, trace_dict
 
 
 def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, signature_ratio, input_data):
 
-    element, muts, regions, trace = input_data
+    element, muts, regions, trace_file = input_data
+
+    # Check if we need to trace this element
+    trace = trace_file is not None
 
     # Load all element scores
     scores_by_position, scores_by_segment, signature_by_segment, missing_signatures = load_scores(
@@ -250,16 +262,17 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
 
     obs = 0
     randomizations = min_randomizations
+    sampling_values = {}
     while obs <= 5:
-        element, obs = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric, indels_background)
+        element, obs, sampling_values = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric, indels_background, trace=trace)
         if randomizations >= max_randomizations or obs is None or obs > 5:
             break
         randomizations = min(max_randomizations, randomizations*2)
 
     item['pvalue'] = max(1, obs) / float(randomizations) if obs is not None else None
 
-    if trace is not None:
-        with gzip.open(trace, 'wb') as fd:
+    if trace:
+        with gzip.open(trace_file, 'wb') as fd:
 
             # Remove defaultdict lambdas
             item['muts_by_tissue'] = {k: dict(v) for k, v in item['muts_by_tissue'].items()}
@@ -268,7 +281,8 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
             trace_object = {
                 'item': item,
                 'scores_by_segment': scores_by_segment,
-                'signature_by_segment': signature_by_segment
+                'signature_by_segment': signature_by_segment,
+                'sampling': sampling_values
             }
 
             pickle.dump(trace_object, fd)
