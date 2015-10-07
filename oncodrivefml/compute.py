@@ -228,7 +228,8 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                         trace_dict["indel-{}-{}-{}".format(m_tissue, e, m_count)] = [s for s in values]
 
                 else:
-                    logging.warning("Indels background file '{}' not found.".format(indels_file))
+                    # logging.warning("Indels background file '{}' not found.".format(indels_file))
+                    raise RuntimeError("Indels background file '{}' not found.".format(indels_file))
 
     if values_mean is None:
         return e, None, trace_dict
