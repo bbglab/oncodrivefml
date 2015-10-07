@@ -79,7 +79,7 @@ class OncodriveFML(object):
         self.queues = ['normal', 'long', 'short-high', 'short-low', 'bigmem'] if len(queues) == 0 else queues
         self.max_jobs = max_jobs
         self.debug = debug
-        self.trace = [] if trace is None else trace
+        self.trace = [] if trace is None else [e.strip() for e in open(trace).readlines()]
 
         # Sampling details
         self.min_samplings = min_samplings
@@ -249,7 +249,7 @@ def cmdline():
     execution_group = parser.add_argument_group(title="Execution options")
     execution_group.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
     execution_group.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
-    execution_group.add_argument('--trace', dest='trace', nargs='+', type=str, default=None, help="Elements IDs to store files to trace and reproduce the execution")
+    execution_group.add_argument('--trace', dest='trace', default=None, help="File with a element ID list to trace the execution")
 
     cluster_group = parser.add_argument_group(title="Cluster options")
     cluster_group.add_argument('--drmaa', dest='drmaa', type=int, default=None, help="Run in a DRMAA cluster using this value as the number of elements to compute per job.")
