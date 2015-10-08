@@ -279,8 +279,8 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
         with gzip.open(trace_file, 'wb') as fd:
 
             # Remove defaultdict lambdas
-            item['muts_by_tissue'] = {k: dict(v) for k, v in item['muts_by_tissue'].items()}
-            signature_by_segment = {k: dict(v) for k, v in signature_by_segment.items()}
+            item['muts_by_tissue'] = None if item['muts_by_tissue'] is None else {k: dict(v) for k, v in item['muts_by_tissue'].items()}
+            signature_by_segment = None if signature_by_segment is None else {k: dict(v) for k, v in signature_by_segment.items()}
 
             trace_object = {
                 'item': item,
