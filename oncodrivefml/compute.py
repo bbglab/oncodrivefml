@@ -212,7 +212,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                     if m_count > 1:
                         values = np.array([mean(values[i:i+m_count]) for i in range(0, len(values), m_count)])
 
-                    remaining_values = len(values_mean) - len(values)
+                    remaining_values = 0 if values_mean is None else (len(values_mean) - len(values))
                     if remaining_values > 0:
                         # Select uniformly randomly the needed values
                         values_random = np.random.choice(values, size=remaining_values, replace=True)
@@ -228,7 +228,6 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                         trace_dict["indel-{}-{}-{}".format(m_tissue, e, m_count)] = [s for s in values]
 
                 else:
-                    # logging.warning("Indels background file '{}' not found.".format(indels_file))
                     raise RuntimeError("Indels background file '{}' not found.".format(indels_file))
 
     if values_mean is None:
