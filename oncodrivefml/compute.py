@@ -219,10 +219,14 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                         values = np.concatenate((values, values_random))
 
                     # Add random scores to the mean
-                    if geometric:
+                    if values_mean is None:
+                        values_mean = values
+                    elif geometric:
                         values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
                     else:
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
+
+                    values_mean_count += m_count
 
                     if trace:
                         trace_dict["indel-{}-{}-{}".format(m_tissue, e, m_count)] = [s for s in values]
