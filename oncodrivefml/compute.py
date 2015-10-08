@@ -209,6 +209,19 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                 if os.path.exists(indels_file):
                     values = np.fromfile(indels_file, dtype='float32')
 
+                    # Check indels NaNs scores
+                    nans = np.isnan(values)
+                    if nans.all():
+                        # Impossible to continue if all the values are NaNs
+                        logging.error("All the indels scores at the element {} are NaNs".format(e))
+                        continue
+
+                    if nans.any():
+                        # Remove NaNs and continue with the other scores (if there are many NaNs this is
+                        # a bad solution)
+                        logging.error("The element {} has {}/{} NaNs as indels background".format(e, len(values[nans]), len(values)))
+                        values = values[~nans]
+
                     if m_count > 1:
                         values = np.array([mean(values[i:i+m_count]) for i in range(0, len(values), m_count)])
 
