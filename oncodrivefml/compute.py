@@ -61,7 +61,7 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
 
     current_base = 0
     for region in regions:
-        for row in tb.query("{}{}".format(score_conf['chr_prefix'], region['chrom']), region['start'], region['stop']):
+        for row in tb.query("{}{}".format(score_conf['chr_prefix'], region['chrom']), region['start']-1, region['stop']):
             value = read_score(row, score_conf, element)
             ref = row[score_conf['ref']]
             alt = row[score_conf['alt']]
