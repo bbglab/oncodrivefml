@@ -43,7 +43,7 @@ def compute_signature(variants_file, signature_name, blacklist):
     groups = dict(list(mutations.groupby(['SIGNATURE'])))
     signature = {}
     for k, v in groups.items():
-        result = mutations.groupby(['Signature_reference', 'Signature_alternate']).agg({'SAMPLE': 'sum'})
+        result = v.groupby(['Signature_reference', 'Signature_alternate']).agg({'SAMPLE': 'sum'})
         result.columns = ['count']
         result['probability'] = result['count'] / result['count'].sum()
         signature[k] = result.to_dict()['probability']
