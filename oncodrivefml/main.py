@@ -134,6 +134,10 @@ class OncodriveFML(object):
             logging.info("Loading and mapping mutations")
             variants_dict = load_variants_dict(self.variants_file, regions, indels=indels_dict, signature_name=self.signature_name, blacklist=self.samples_blacklist)
 
+            if len(variants_dict) == 0:
+                logging.info("There are no variants in the given regions file.")
+                return
+
             # Signature
             signature_dict = load_signature(self.variants_file, self.signature_file, self.signature_field, self.signature_type, self.signature_name, blacklist=self.samples_blacklist)
         else:
