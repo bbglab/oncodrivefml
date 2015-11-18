@@ -63,15 +63,20 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
     for region in regions:
         for row in tb.query("{}{}".format(score_conf['chr_prefix'], region['chrom']), region['start']-1, region['stop']):
             value = read_score(row, score_conf, element)
-            ref = row[score_conf['ref']]
-            alt = row[score_conf['alt']]
+
+            ref = row[score_conf['ref']] if 'ref' in score_conf else None
+            alt = row[score_conf['alt']] if 'alt' in score_conf else None
             pos = row[score_conf['pos']]
+
+            if 'element' in score_conf:
+                if row[score_conf['element']] != element:
+                    continue
 
             scores_by_pos[pos].append({'ref': ref, 'alt': alt, 'value': value})
 
             # Signature
-            # Expand refseq2 dots
-            if alt == '.':
+            # Expand refseq2 dots and fitcons like scores (only one score per postion)
+            if alt is None or alt == '.':
                 scores_by_segment[region['segment']].append(value)
                 scores_by_segment[region['segment']].append(value)
                 scores_by_segment[region['segment']].append(value)
@@ -81,14 +86,14 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
             # Compute signature
             if signature_dict is not None:
                 ref_triplet = get_ref_triplet(row[score_conf['chr']].replace(score_conf['chr_prefix'], ''), int(row[score_conf['pos']]) - 1)
-                ref = row[score_conf['ref']]
-                alt = row[score_conf['alt']]
+                ref = row[score_conf['ref']] if 'ref' in score_conf else None
+                alt = row[score_conf['alt']] if 'alt' in score_conf else None
 
-                if ref_triplet[1] != ref:
+                if ref is not None and ref_triplet[1] != ref:
                     logging.warning("Background mismatch at position %d at '%s'", int(row[score_conf['pos']]), element)
 
                 # Expand funseq2 dots
-                alts = alt if alt != '.' else 'ACGT'.replace(ref, '')
+                alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
 
                 for a in alts:
                     alt_triplet = ref_triplet[0] + a + ref_triplet[2]
@@ -104,7 +109,6 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
                         missing_signatures[ref_triplet] = alt_triplet
                         for k in signature_dict.keys():
                             signature_by_segment[region['segment']][k].append(0.0)
-
 
             else:
                 signature_by_segment = None
