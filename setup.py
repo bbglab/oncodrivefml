@@ -1,5 +1,9 @@
+import sys
 from setuptools import setup, find_packages
 from oncodrivefml import __version__
+
+if sys.hexversion < 0x03000000:
+    raise RuntimeError('This package requires Python 3.0 or later.')
 
 setup(
     name='oncodrivefml',
