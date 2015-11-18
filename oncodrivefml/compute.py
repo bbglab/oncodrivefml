@@ -86,7 +86,7 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
             # Compute signature
             if signature_dict is not None:
                 ref_triplet = get_ref_triplet(row[score_conf['chr']].replace(score_conf['chr_prefix'], ''), int(row[score_conf['pos']]) - 1)
-                ref = row[score_conf['ref']] if 'ref' in score_conf else None
+                ref = row[score_conf['ref']] if 'ref' in score_conf else ref_triplet[1]
                 alt = row[score_conf['alt']] if 'alt' in score_conf else None
 
                 if ref is not None and ref_triplet[1] != ref:
