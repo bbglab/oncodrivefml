@@ -89,6 +89,8 @@ class QQPlot(object):
                     if ( searcher[index].toUpperCase().indexOf(search) > -1)
                         selected.push(index);
                 }
+                if (selected.length == 0)
+                    alert("Value not found: "+search)
                 source.trigger('change');"""
             self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
 
