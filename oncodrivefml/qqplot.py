@@ -80,7 +80,8 @@ class QQPlot(object):
     def add_search_fields(self, search_fields, position=0):
         for key, value in search_fields.items():
             code_text_box = """
-                search = cb_obj.get('value').toUpperCase();
+                origSearch = cb_obj.get('value');
+                search = origSearch.toUpperCase();
                 var selected = source.get('selected')['1d'].indices;
                 searcher = source.get('data')."""+value+"""
                 selected.length = 0
@@ -90,7 +91,7 @@ class QQPlot(object):
                         selected.push(index);
                 }
                 if (selected.length == 0)
-                    alert("Value not found: "+search)
+                    alert("Value not found: '"+origSearch+"'")
                 source.trigger('change');"""
             self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
 

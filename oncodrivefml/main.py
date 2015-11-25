@@ -112,7 +112,7 @@ class OncodriveFML(object):
         silent_mkdir(output_folder)
 
     def run(self, drmaa=None, resume=False, figures=True):
-
+        '''
         # Skip if done
         if os.path.exists(self.results_file):
             logging.info("Already calculated at '{}'".format(self.results_file))
@@ -214,7 +214,7 @@ class OncodriveFML(object):
         df = add_symbol(df)
         with open(self.results_file, 'wt') as fd:
             df.to_csv(fd, sep="\t", header=True, index=False)
-
+        '''
         if figures:
             logging.info("Creating figures")
             qqplot_png(self.results_file, self.qqplot_file + ".png")
