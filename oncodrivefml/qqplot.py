@@ -91,7 +91,8 @@ class QQPlot(object):
                         selected.push(index);
                 }
                 if (selected.length == 0)
-                    alert("Value not found: '"+origSearch+"'")
+                    /*alert("Value not found: '"+origSearch+"'")*/
+                    swal("Value not found: '"+origSearch+"'")
                 source.trigger('change');"""
             self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
 
@@ -202,7 +203,9 @@ class QQPlot(object):
             script, div = components(layout)
             html = """  <!DOCTYPE html>
                         <html>
-                        <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
+                        <script src="https://code.jquery.com/jquery-1.11.3.min.js">
+                        </script><script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
+                        <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
                         <link href="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.css" rel="stylesheet" type="text/css">
                         <script src="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.js"></script>\n"""+\
                         script+\
