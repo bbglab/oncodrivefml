@@ -128,7 +128,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
     # Sort and store results
     results_concat.sort('pvalue', 0, inplace=True)
-    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue']
+    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg']
     df = results_concat[fields].copy()
     df.reset_index(inplace=True)
     df = add_symbol(df)
