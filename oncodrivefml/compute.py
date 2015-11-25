@@ -255,8 +255,9 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
         return e, None, trace_dict
 
     obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
+    neg_obs = len(values_mean[values_mean <= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
 
-    return e, obs, trace_dict
+    return e, obs, neg_obs, trace_dict
 
 
 def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, signature_ratio, input_data):
@@ -282,15 +283,17 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
         return element, "The element {} has mutations but not scores.".format(element), []
 
     obs = 0
+    neg_obs = 0
     randomizations = min_randomizations
     sampling_values = {}
-    while obs <= 5:
-        element, obs, sampling_values = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric, indels_background, trace=trace)
-        if randomizations >= max_randomizations or obs is None or obs > 5:
+    while obs <= 5 or neg_obs <= 5:
+        element, obs, neg_obs, sampling_values = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric, indels_background, trace=trace)
+        if randomizations >= max_randomizations or obs is None or neg_obs is None or (obs > 5 and neg_obs > 5):
             break
         randomizations = min(max_randomizations, randomizations*2)
 
     item['pvalue'] = max(1, obs) / float(randomizations) if obs is not None else None
+    item['pvalue_neg'] = max(1, neg_obs) / float(randomizations) if neg_obs is not None else None
 
     if trace:
         with gzip.open(trace_file, 'wb') as fd:
@@ -401,8 +404,10 @@ def multiple_test_correction(results, num_significant_samples=2):
     # Multiple test correction
     if len(results_good) > 1:
         results_good['qvalue'] = mlpt(results_good['pvalue'], alpha=0.05, method='fdr_bh')[1]
+        results_good['qvalue_neg'] = mlpt(results_good['pvalue_neg'], alpha=0.05, method='fdr_bh')[1]
     else:
         results_good['qvalue'] = np.nan
+        results_good['qvalue_neg'] = np.nan
 
     # Concat results
     results_concat = pd.concat([results_good, results_masked])
