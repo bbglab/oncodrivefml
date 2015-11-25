@@ -20,6 +20,7 @@ from oncodrivefml.load import load_variants_dict, load_regions, load_indels_dict
 from oncodrivefml.signature import load_signature
 from bgdata.configobj import BgDataInterpolation
 interpolation_engines['bgdata'] = BgDataInterpolation
+from oncodrivefml.qqplot_POO import QQPlot
 
 
 SCORES = {
@@ -112,7 +113,7 @@ class OncodriveFML(object):
         silent_mkdir(output_folder)
 
     def run(self, drmaa=None, resume=False, figures=True):
-
+        '''
         # Skip if done
         if os.path.exists(self.results_file):
             logging.info("Already calculated at '{}'".format(self.results_file))
@@ -214,11 +215,32 @@ class OncodriveFML(object):
         df = add_symbol(df)
         with open(self.results_file, 'wt') as fd:
             df.to_csv(fd, sep="\t", header=True, index=False)
-
+        '''
         if figures:
             logging.info("Creating figures")
             qqplot_png(self.results_file, self.qqplot_file + ".png")
-            qqplot_html(self.results_file, self.qqplot_file + ".html")
+            #qqplot_html(self.results_file, self.qqplot_file + ".html")
+
+            qqp = QQPlot()
+            qqp.load(input_file = self.results_file, basic_fields = {'num_samples': 'samples_mut', 'pvalue': 'pvalue', 'qvalue': 'qvalue' },
+                    extra_fields = {'HugoID': 'symbol', 'EnsblID': 'index'})
+            qqp.add_basic_plot()
+            qqp.add_cutoff()
+            qqp.add_search_fields( {'Hugo ID': 'HugoID', 'Ensembl ID': 'EnsblID'}, position = 0)
+            qqp.add_tooltips(""" "<div>\\
+                                     <span style='font-size: 17px; font-weight: bold;'>\" + s.HugoID[index] + \"</span> \\
+                                     <span style='font-size: 15px; color: #966;'>[\" + s.EnsblID[index] + \"]</span> \\
+                                  </div> \\
+                                  <div> \\
+                                     <span style='font-size: 15px;'>p/q-value</span> \\
+                                     <span style='font-size: 10px; color: #696;'>(\" + s.pvalue[index] + \", \" + s.qvalue[index] + \")</span> \\
+                                  </div> \\
+                                  </br>" """)
+            qqp.show(output_path = self.qqplot_file + "_oop.html", notebook = False, showit=False)
+
+
+
+
 
         logging.info("Done")
         return 0
