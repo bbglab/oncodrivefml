@@ -8,7 +8,6 @@ import tempfile
 from bgqmap import QMapExecutor
 from oncodrivefml.compute import multiple_test_correction
 from oncodrivefml.qqplot import qqplot_png, qqplot_html, add_symbol
-from oncodrivefml.qqplot_POO import QQPlot
 
 
 def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
@@ -139,24 +138,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     if figures:
         logging.info("Creating figures")
         qqplot_png(task.results_file, task.qqplot_file + ".png")
-        #qqplot_html(task.results_file, task.qqplot_file + ".html")
-
-        qqp = QQPlot()
-        qqp.load(input_file = task.results_file, basic_fields = {'num_samples': 'samples_mut', 'pvalue': 'pvalue', 'qvalue': 'qvalue' },
-                extra_fields = {'HugoID': 'symbol', 'EnsblID': 'index'})
-        qqp.add_basic_plot()
-        qqp.add_cutoff()
-        qqp.add_search_fields( {'Hugo ID': 'HugoID', 'Ensembl ID': 'EnsblID'}, position = 0)
-        qqp.add_tooltips(""" "<div>\\
-                                 <span style='font-size: 17px; font-weight: bold;'>\" + s.HugoID[index] + \"</span> \\
-                                 <span style='font-size: 15px; color: #966;'>[\" + s.EnsblID[index] + \"]</span> \\
-                              </div> \\
-                              <div> \\
-                                 <span style='font-size: 15px;'>p/q-value</span> \\
-                                 <span style='font-size: 10px; color: #696;'>(\" + s.pvalue[index] + \", \" + s.qvalue[index] + \")</span> \\
-                              </div> \\
-                              </br>" """)
-        qqp.show(output_path = task.qqplot_file + "_oop.html", notebook = False, showit=False)
+        qqplot_html(task.results_file, task.qqplot_file + ".html")
 
     logging.info("Done")
     return 0

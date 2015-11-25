@@ -9,6 +9,7 @@ import logging
 from collections import OrderedDict
 from bokeh.plotting import figure, output_file, show, gridplot, ColumnDataSource, save
 from bokeh.models import HoverTool, PrintfTickFormatter
+from oncodrivefml.qqplot_POO import QQPlot
 
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
@@ -197,7 +198,8 @@ def qqplot_png(input_file, output_file, showit=False):
     # Close the figure
     plt.close()
 
-
+'''
+# old qqplot_html
 def qqplot_html(input_file, output_path, showit=False):
 
     pvalue = 'pvalue'
@@ -341,3 +343,24 @@ def qqplot_html(input_file, output_path, showit=False):
         show(fig)
     else:
         save(fig)
+'''
+
+
+def qqplot_html(input_file, output_path, showit=False):
+
+    qqp = QQPlot()
+    qqp.load(input_file = input_file, basic_fields = {'num_samples': 'samples_mut', 'pvalue': 'pvalue', 'qvalue': 'qvalue' },
+            extra_fields = {'HugoID': 'symbol', 'EnsblID': 'index'})
+    qqp.add_basic_plot()
+    qqp.add_cutoff()
+    qqp.add_search_fields( {'Hugo ID': 'HugoID', 'Ensembl ID': 'EnsblID'}, position = 0)
+    qqp.add_tooltips(""" "<div>\\
+                             <span style='font-size: 17px; font-weight: bold;'>\" + s.HugoID[index] + \"</span> \\
+                             <span style='font-size: 15px; color: #966;'>[\" + s.EnsblID[index] + \"]</span> \\
+                          </div> \\
+                          <div> \\
+                             <span style='font-size: 15px;'>p/q-value</span> \\
+                             <span style='font-size: 10px; color: #696;'>(\" + s.pvalue[index] + \", \" + s.qvalue[index] + \")</span> \\
+                          </div> \\
+                          </br>" """)
+    qqp.show(output_path = output_path, notebook = False, showit=showit)
