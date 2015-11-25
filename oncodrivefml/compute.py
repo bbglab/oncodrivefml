@@ -68,7 +68,7 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
             alt = row[score_conf['alt']] if 'alt' in score_conf else None
             pos = row[score_conf['pos']]
 
-            if 'element' in score_conf:
+            if score_conf.get('element', None) is not None:
                 if row[score_conf['element']] != element:
                     continue
 
