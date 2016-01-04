@@ -61,57 +61,61 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
 
     current_base = 0
     for region in regions:
-        for row in tb.query("{}{}".format(score_conf['chr_prefix'], region['chrom']), region['start']-1, region['stop']):
-            value = read_score(row, score_conf, element)
+        try:
+            for row in tb.query("{}{}".format(score_conf['chr_prefix'], region['chrom']), region['start']-1, region['stop']):
+                value = read_score(row, score_conf, element)
 
-            ref = row[score_conf['ref']] if 'ref' in score_conf else None
-            alt = row[score_conf['alt']] if 'alt' in score_conf else None
-            pos = row[score_conf['pos']]
-
-            if score_conf.get('element', None) is not None:
-                if row[score_conf['element']] != element:
-                    continue
-
-            scores_by_pos[pos].append({'ref': ref, 'alt': alt, 'value': value})
-
-            # Signature
-            # Expand refseq2 dots and fitcons like scores (only one score per postion)
-            if alt is None or alt == '.':
-                scores_by_segment[region['segment']].append(value)
-                scores_by_segment[region['segment']].append(value)
-                scores_by_segment[region['segment']].append(value)
-            else:
-                scores_by_segment[region['segment']].append(value)
-
-            # Compute signature
-            if signature_dict is not None:
-                ref_triplet = get_ref_triplet(row[score_conf['chr']].replace(score_conf['chr_prefix'], ''), int(row[score_conf['pos']]) - 1)
-                ref = row[score_conf['ref']] if 'ref' in score_conf else ref_triplet[1]
+                ref = row[score_conf['ref']] if 'ref' in score_conf else None
                 alt = row[score_conf['alt']] if 'alt' in score_conf else None
+                pos = row[score_conf['pos']]
 
-                if ref is not None and ref_triplet[1] != ref:
-                    logging.warning("Background mismatch at position %d at '%s'", int(row[score_conf['pos']]), element)
+                if score_conf.get('element', None) is not None:
+                    if row[score_conf['element']] != element:
+                        continue
 
-                # Expand funseq2 dots
-                alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
+                scores_by_pos[pos].append({'ref': ref, 'alt': alt, 'value': value})
 
-                for a in alts:
-                    alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+                # Signature
+                # Expand refseq2 dots and fitcons like scores (only one score per postion)
+                if alt is None or alt == '.':
+                    scores_by_segment[region['segment']].append(value)
+                    scores_by_segment[region['segment']].append(value)
+                    scores_by_segment[region['segment']].append(value)
+                else:
+                    scores_by_segment[region['segment']].append(value)
 
-                    foldchange = foldchange_vector[int(current_base / 3)] if foldchange_vector is not None else 1
-                    current_base += 1
+                # Compute signature
+                if signature_dict is not None:
+                    ref_triplet = get_ref_triplet(row[score_conf['chr']].replace(score_conf['chr_prefix'], ''), int(row[score_conf['pos']]) - 1)
+                    ref = row[score_conf['ref']] if 'ref' in score_conf else ref_triplet[1]
+                    alt = row[score_conf['alt']] if 'alt' in score_conf else None
 
-                    try:
-                        for k in signature_dict.keys():
-                            signature = signature_dict[k][(ref_triplet, alt_triplet)]
-                            signature_by_segment[region['segment']][k].append(signature*foldchange)
-                    except KeyError:
-                        missing_signatures[ref_triplet] = alt_triplet
-                        for k in signature_dict.keys():
-                            signature_by_segment[region['segment']][k].append(0.0)
+                    if ref is not None and ref_triplet[1] != ref:
+                        logging.warning("Background mismatch at position %d at '%s'", int(row[score_conf['pos']]), element)
 
-            else:
-                signature_by_segment = None
+                    # Expand funseq2 dots
+                    alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
+
+                    for a in alts:
+                        alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+
+                        foldchange = foldchange_vector[int(current_base / 3)] if foldchange_vector is not None else 1
+                        current_base += 1
+
+                        try:
+                            for k in signature_dict.keys():
+                                signature = signature_dict[k][(ref_triplet, alt_triplet)]
+                                signature_by_segment[region['segment']][k].append(signature*foldchange)
+                        except KeyError:
+                            missing_signatures[ref_triplet] = alt_triplet
+                            for k in signature_dict.keys():
+                                signature_by_segment[region['segment']][k].append(0.0)
+
+                else:
+                    signature_by_segment = None
+        except tabix.TabixError:
+            logging.warning("Tabix error at {}='{}{}:{}-{}'".format(element, score_conf['chr_prefix'], region['chrom'], region['start']-1, region['stop']))
+            continue
 
     return scores_by_pos, scores_by_segment, signature_by_segment, [(k, v) for k, v in missing_signatures.items()]
 
