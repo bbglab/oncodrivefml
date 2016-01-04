@@ -67,11 +67,14 @@ def load_mutations(file, signature=None, show_warnings=True, blacklist=None):
             else:
                 row['TYPE'] = 'subs'
 
-        if row.get('SIGNATURE', None) is None:
-            row['SIGNATURE'] = signature
+        if signature == 'bysample':
+            row['SIGNATURE'] = row['SAMPLE']
+        else:
+            if row.get('SIGNATURE', None) is None:
+                row['SIGNATURE'] = signature
 
-        if row.get('CANCER_TYPE', None) is not None:
-            row['SIGNATURE'] = row['CANCER_TYPE']
+            if row.get('CANCER_TYPE', None) is not None:
+                row['SIGNATURE'] = row['CANCER_TYPE']
 
         yield row
 

@@ -88,7 +88,7 @@ class OncodriveFML(object):
         self.geometric = geometric
 
         # Signature details
-        if signature_file in ['compute', 'none']:
+        if signature_file in ['compute', 'none', 'bysample']:
             self.signature_type = signature_file
             self.signature_field = None
             self.signature_file = None
@@ -97,7 +97,12 @@ class OncodriveFML(object):
             signature_conf = signature_file.split(":")
             self.signature_field = signature_conf[0]
             self.signature_file = check_exists(expanduser(signature_conf[1]))
-        self.signature_name = file_name(variants_file)
+
+        if signature_file == 'bysample' or self.signature_field == 'bysample':
+            self.signature_name = 'bysample'
+        else:
+            self.signature_name = file_name(variants_file)
+
         self.signature_ratio = check_file(signature_ratio)
 
         # Indels

@@ -104,7 +104,7 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
 
                         try:
                             for k in signature_dict.keys():
-                                signature = signature_dict[k][(ref_triplet, alt_triplet)]
+                                signature = signature_dict[k].get((ref_triplet, alt_triplet), 0.0)
                                 signature_by_segment[region['segment']][k].append(signature*foldchange)
                         except KeyError:
                             missing_signatures[ref_triplet] = alt_triplet

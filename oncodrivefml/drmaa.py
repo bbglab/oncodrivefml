@@ -1,4 +1,3 @@
-import glob
 import gzip
 import logging
 import os
@@ -29,6 +28,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
     # Save signature dict
     signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))
+    signature_type = 'bysample' if task.signature_name == 'bysample' else 'none'
     logging.info("Store signature dictionary")
 
     with gzip.open(signature_file, 'wb') as fd:
@@ -44,7 +44,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
         while os.path.exists(split_file):
             split_out = "{}-split_out_{}.pickle.gz".format(task.project_name, i)
             if not os.path.exists(os.path.join(task.output_folder, split_out)):
-                arguments.append("-s {} -i {} -t none:{} -r {} -n {}-split_out_{} -o {} {}".format(task.score_file, split_file, signature_file, task.regions_file, task.project_name, i, task.output_folder, optional_args))
+                arguments.append("-s {} -i {} -t {}:{} -r {} -n {}-split_out_{} -o {} {}".format(task.score_file, split_file, signature_type, signature_file, task.regions_file, task.project_name, i, task.output_folder, optional_args))
             partial_results.append(split_out)
             partial_inputs.append(split_file)
             i += 1
