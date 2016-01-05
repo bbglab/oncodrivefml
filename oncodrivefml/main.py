@@ -64,7 +64,7 @@ class OncodriveFML(object):
                  signature_ratio=None, indels_file=None, indels_background=None, project_name=None,
                  cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,  max_jobs=100,
                  debug=False, trace=None, geometric=False, score_conf=None, queues=[],
-                 samples_blacklist=None):
+                 samples_blacklist=None, recurrence=True):
 
         # Input files
         self.variants_file = check_exists(expanduser(variants_file))
@@ -81,6 +81,7 @@ class OncodriveFML(object):
         self.debug = debug
         self.trace_file = trace
         self.trace = [] if trace is None else [e.strip() for e in open(trace).readlines()]
+        self.recurrence = recurrence
 
         # Sampling details
         self.min_samplings = min_samplings
@@ -174,7 +175,7 @@ class OncodriveFML(object):
 
         compute_element_partial = functools.partial(compute_element, signature_dict, self.min_samplings,
                                                     self.max_samplings, self.geometric, self.score_conf,
-                                                    self.indels_background, self.signature_ratio)
+                                                    self.indels_background, self.signature_ratio, self.recurrence)
 
         all_missing_signatures = {}
         for i, (element, item, missing_signatures) in enumerate(pool.imap(compute_element_partial, elements)):
@@ -246,6 +247,7 @@ def cmdline():
     general_group.add_argument('-o', '--output', dest='output_folder', default='output', help="Output folder. Default to 'output'")
     general_group.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
     general_group.add_argument('--geometric', dest='geometric', default=False, action='store_true', help="Use geometric mean instead of arithmetic mean")
+    general_group.add_argument('--no-recurrence', dest='no_recurrence', default=False, action='store_true', help="Use reccurent positions only ones")
     general_group.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations (default is 10k).")
     general_group.add_argument('-maxs', '--max-samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations (default is 100k).")
     general_group.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
@@ -312,7 +314,8 @@ def cmdline():
         geometric=args.geometric,
         score_conf=score_conf,
         queues=args.queues,
-        samples_blacklist=args.samples_blacklist
+        samples_blacklist=args.samples_blacklist,
+        recurrence=not args.no_recurrence
     )
 
     # Run

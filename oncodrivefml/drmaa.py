@@ -25,6 +25,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
     optional_args += " --max-samplings {}".format(task.max_samplings)
     optional_args += " --trace {}".format(task.trace_file) if task.trace_file is not None else ""
     optional_args += " --indels-background {}".format(task.indels_background) if task.indels_background is not None else ""
+    optional_args += " --no-recurrence" if not task.recurrence else ""
 
     # Save signature dict
     signature_file = os.path.join(task.output_folder, "{}-signature.pickle.gz".format(task.project_name))

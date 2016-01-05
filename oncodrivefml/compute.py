@@ -264,7 +264,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     return e, obs, neg_obs, trace_dict
 
 
-def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, signature_ratio, input_data):
+def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, signature_ratio, recurrence, input_data):
 
     element, muts, regions, trace_file = input_data
 
@@ -281,7 +281,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
     )
 
     # Compute elements statistics
-    item = compute_muts_statistics(muts, scores_by_position, geometric)
+    item = compute_muts_statistics(muts, scores_by_position, geometric, recurrence)
 
     if item is None:
         return element, "The element {} has mutations but not scores.".format(element), []
@@ -321,7 +321,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
     return element, item, missing_signatures
 
 
-def compute_muts_statistics(muts, scores, geometric):
+def compute_muts_statistics(muts, scores, geometric, recurrence):
 
     # Skip features without mutations
     if len(muts) == 0:
@@ -359,12 +359,13 @@ def compute_muts_statistics(muts, scores, geometric):
             scores_by_sample[sample].append(m['SCORE'])
             scores_list.append(m['SCORE'])
 
-            if m['TYPE'] == "subs":
-                scores_subs_list.append(m['SCORE'])
-                muts_by_tissue['subs'][m['SIGNATURE']][m['SEGMENT']].append(m['SCORE'])
-            elif m['TYPE'] == "indel":
-                scores_indels_list.append(m['SCORE'])
-                muts_by_tissue['indel'][m['SIGNATURE']][m['SEGMENT']].append(m['SCORE'])
+            if recurrence or m['POSITION'] not in positions:
+                if m['TYPE'] == "subs":
+                    scores_subs_list.append(m['SCORE'])
+                    muts_by_tissue['subs'][m['SIGNATURE']][m['SEGMENT']].append(m['SCORE'])
+                elif m['TYPE'] == "indel":
+                    scores_indels_list.append(m['SCORE'])
+                    muts_by_tissue['indel'][m['SIGNATURE']][m['SEGMENT']].append(m['SCORE'])
 
             positions.append(m['POSITION'])
             mutations.append(m)
