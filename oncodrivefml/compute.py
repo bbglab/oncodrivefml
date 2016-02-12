@@ -120,7 +120,7 @@ def load_scores(element, regions, signature_dict, score_conf, signature_ratio):
     return scores_by_pos, scores_by_segment, signature_by_segment, [(k, v) for k, v in missing_signatures.items()]
 
 
-def random_scores(num_samples, sampling_size, background, signature, geometric):
+def random_scores(num_samples, sampling_size, background, signature, statistic_name):
 
     values = None
 
@@ -148,7 +148,12 @@ def random_scores(num_samples, sampling_size, background, signature, geometric):
             else:
 
                 # Select mean
-                mean = gmean if geometric else np.mean
+                if statistic_name == 'gmean':
+                    mean = gmean
+                elif statistic_name == 'max':
+                    mean = np.max
+                else:
+                    mean = np.mean
 
                 result = np.array(
                     [mean(np.random.choice(background, size=num_samples, p=p_normalized, replace=False)) for a in range(to_pick)],
@@ -165,7 +170,7 @@ def random_scores(num_samples, sampling_size, background, signature, geometric):
     return result[:sampling_size]
 
 
-def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geometric, indels_background, trace=False):
+def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, statistic_name, indels_background, trace=False):
 
     values_mean = None
     values_mean_count = 0
@@ -181,7 +186,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
 
             signature = signature_by_segment[segment][m_tissue] if signature_by_segment is not None else None
             scores = scores_by_segment[segment]
-            values = random_scores(m_count, sampling_size, scores, signature, geometric)
+            values = random_scores(m_count, sampling_size, scores, signature, statistic_name)
 
             if trace:
                 trace_dict["subs-{}-{}-{}".format(m_tissue, segment, m_count)] = [s for s in values]
@@ -192,15 +197,22 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
 
             if values_mean is None:
                 values_mean = values
-            elif geometric:
+            elif statistic_name == 'gmean':
                 values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
+            elif statistic_name == 'max':
+                values_mean = np.maximum(values_mean, values)
             else:
                 values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
 
             values_mean_count += m_count
 
     # Select mean
-    mean = gmean if geometric else np.mean
+    if statistic_name == 'gmean':
+        mean = gmean
+    elif statistic_name == 'max':
+        mean = np.max
+    else:
+        mean = np.mean
 
     # Indels sampling
     if indels_background is not None:
@@ -242,8 +254,10 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
                     # Add random scores to the mean
                     if values_mean is None:
                         values_mean = values
-                    elif geometric:
+                    elif statistic_name == 'gmean':
                         values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
+                    elif statistic_name == 'max':
+                        values_mean = np.maximum(values_mean, values)
                     else:
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
 
@@ -264,7 +278,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, geome
     return e, obs, neg_obs, trace_dict
 
 
-def compute_element(signature_dict, min_randomizations, max_randomizations, geometric, score_conf, indels_background, signature_ratio, recurrence, input_data):
+def compute_element(signature_dict, min_randomizations, max_randomizations, statistic_name, score_conf, indels_background, signature_ratio, recurrence, input_data):
 
     element, muts, regions, trace_file = input_data
 
@@ -281,7 +295,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
     )
 
     # Compute elements statistics
-    item = compute_muts_statistics(muts, scores_by_position, geometric, recurrence)
+    item = compute_muts_statistics(muts, scores_by_position, statistic_name, recurrence)
 
     if item is None:
         return element, "The element {} has mutations but not scores.".format(element), []
@@ -291,7 +305,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
     randomizations = min_randomizations
     sampling_values = {}
     while obs <= 5 or neg_obs <= 5:
-        element, obs, neg_obs, sampling_values = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, geometric, indels_background, trace=trace)
+        element, obs, neg_obs, sampling_values = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, statistic_name, indels_background, trace=trace)
         if randomizations >= max_randomizations or obs is None or neg_obs is None or (obs > 5 and neg_obs > 5):
             break
         randomizations = min(max_randomizations, randomizations*2)
@@ -321,7 +335,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, geom
     return element, item, missing_signatures
 
 
-def compute_muts_statistics(muts, scores, geometric, recurrence):
+def compute_muts_statistics(muts, scores, statistic_name, recurrence):
 
     # Skip features without mutations
     if len(muts) == 0:
@@ -377,7 +391,12 @@ def compute_muts_statistics(muts, scores, geometric, recurrence):
     num_samples = len(scores_by_sample)
 
     # Select mean
-    mean = gmean if geometric else np.mean
+    if statistic_name == 'gmean':
+        mean = gmean
+    elif statistic_name == 'max':
+        mean = np.max
+    else:
+        mean = np.mean
 
     item = {
         'samples_mut': num_samples,

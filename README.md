@@ -22,7 +22,7 @@ The following command will show you the command help:
 	$ oncodrivefml --help
     usage: oncodrivefml [-h] -i INPUT_FILE -r REGIONS_FILE -s SCORE_FILE
                         [-t SIGNATURE_FILE] [-o OUTPUT_FOLDER] [-n PROJECT_NAME]
-                        [--geometric] [-mins MIN_SAMPLINGS] [-maxs MAX_SAMPLINGS]
+                        [--statistic] [-mins MIN_SAMPLINGS] [-maxs MAX_SAMPLINGS]
                         [--samples-blacklist SAMPLES_BLACKLIST]
                         [--signature-ratio SIGNATURE_RATIO] [--no-figures]
                         [-D INDELS_FILE] [--indels-background INDELS_BACKGROUND]
@@ -50,7 +50,7 @@ The following command will show you the command help:
                             Output folder. Default to 'output'
       -n PROJECT_NAME, --name PROJECT_NAME
                             Project name
-      --geometric           Use geometric mean instead of arithmetic mean
+      --statistic           Statistic to use: amean, gmean, max
       -mins MIN_SAMPLINGS, --min-samplings MIN_SAMPLINGS
                             Minimum number of randomizations (default is 10k).
       -maxs MAX_SAMPLINGS, --max-samplings MAX_SAMPLINGS

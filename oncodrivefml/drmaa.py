@@ -19,7 +19,7 @@ def drmaa_run(variants_dict, signature_dict, task, size, figures=True):
 
     # Optional arguments
     optional_args = " --cores {}".format(task.cores)
-    optional_args += " --geometric" if task.geometric else ""
+    optional_args += " --statistic {}".format(task.statistic_name) if task.statistic_name != "amean" else ""
     optional_args += " --signature-ratio {}".format(task.signature_ratio) if task.signature_ratio is not None else ""
     optional_args += " --min-samplings {}".format(task.min_samplings)
     optional_args += " --max-samplings {}".format(task.max_samplings)

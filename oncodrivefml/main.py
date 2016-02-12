@@ -63,7 +63,7 @@ class OncodriveFML(object):
     def __init__(self, variants_file, regions_file, signature_file, score_file, output_folder,
                  signature_ratio=None, indels_file=None, indels_background=None, project_name=None,
                  cores=os.cpu_count(), min_samplings=10000, max_samplings=1000000,  max_jobs=100,
-                 debug=False, trace=None, geometric=False, score_conf=None, queues=[],
+                 debug=False, trace=None, statistic_name="amean", score_conf=None, queues=[],
                  samples_blacklist=None, recurrence=True):
 
         # Input files
@@ -86,7 +86,7 @@ class OncodriveFML(object):
         # Sampling details
         self.min_samplings = min_samplings
         self.max_samplings = max_samplings
-        self.geometric = geometric
+        self.statistic_name = statistic_name
 
         # Signature details
         if signature_file in ['compute', 'none', 'bysample']:
@@ -174,7 +174,7 @@ class OncodriveFML(object):
         pool = Pool(self.cores)
 
         compute_element_partial = functools.partial(compute_element, signature_dict, self.min_samplings,
-                                                    self.max_samplings, self.geometric, self.score_conf,
+                                                    self.max_samplings, self.statistic_name, self.score_conf,
                                                     self.indels_background, self.signature_ratio, self.recurrence)
 
         all_missing_signatures = {}
@@ -246,7 +246,7 @@ def cmdline():
     general_group = parser.add_argument_group(title="General options")
     general_group.add_argument('-o', '--output', dest='output_folder', default='output', help="Output folder. Default to 'output'")
     general_group.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
-    general_group.add_argument('--geometric', dest='geometric', default=False, action='store_true', help="Use geometric mean instead of arithmetic mean")
+    general_group.add_argument('--statistic', dest='statistic_name', default='amean', help="Statistic to use: amean, gmean, max")
     general_group.add_argument('--no-recurrence', dest='no_recurrence', default=False, action='store_true', help="Use reccurent positions only ones")
     general_group.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations (default is 10k).")
     general_group.add_argument('-maxs', '--max-samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations (default is 100k).")
@@ -311,7 +311,7 @@ def cmdline():
         max_jobs=args.drmaa_max_jobs,
         debug=args.debug,
         trace=args.trace,
-        geometric=args.geometric,
+        statistic_name=args.statistic_name,
         score_conf=score_conf,
         queues=args.queues,
         samples_blacklist=args.samples_blacklist,
