@@ -26,8 +26,7 @@ def gmean_weighted(vectors, weights):
 
 def rmean(a):
     n_a = np.array(a)
-    n_a = np.round(n_a * 0.3)
-    return stats.gmean(n_a + 1.0) - 1.0
+    return np.mean(n_a) - 0.37687190270063464
 
 
 def read_score(row, score_conf, element):
@@ -155,16 +154,16 @@ def random_scores(num_samples, sampling_size, background, signature, statistic_n
 
                 # Select mean
                 if statistic_name == 'gmean':
-                    mean = gmean
+                    statistic_test = gmean
                 elif statistic_name == 'rmean':
-                    mean = rmean
+                    statistic_test = rmean
                 elif statistic_name == 'max':
-                    mean = np.max
+                    statistic_test = np.max
                 else:
-                    mean = np.mean
+                    statistic_test = np.mean
 
                 result = np.array(
-                    [mean(np.random.choice(background, size=num_samples, p=p_normalized, replace=False)) for a in range(to_pick)],
+                    [statistic_test(np.random.choice(background, size=num_samples, p=p_normalized, replace=False)) for a in range(to_pick)],
                     dtype='float32'
                 )
 
@@ -205,8 +204,10 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
 
             if values_mean is None:
                 values_mean = values
-            elif statistic_name == 'gmean' or statistic_name == 'rmean':
+            elif statistic_name == 'gmean':
                 values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
+            elif statistic_name == 'rmean':
+                values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
             elif statistic_name == 'max':
                 values_mean = np.maximum(values_mean, values)
             else:
@@ -216,13 +217,13 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
 
     # Select mean
     if statistic_name == 'gmean':
-        mean = gmean
+        statistic_test = gmean
     elif statistic_name == 'rmean':
-        mean = rmean
+        statistic_test = np.mean
     elif statistic_name == 'max':
-        mean = np.max
+        statistic_test = np.max
     else:
-        mean = np.mean
+        statistic_test = np.mean
 
     # Indels sampling
     if indels_background is not None:
@@ -253,7 +254,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
                         values = values[~nans]
 
                     if m_count > 1:
-                        values = np.array([mean(values[i:i+m_count]) for i in range(0, len(values), m_count)])
+                        values = np.array([statistic_test(values[i:i+m_count]) for i in range(0, len(values), m_count)])
 
                     remaining_values = 0 if values_mean is None else (len(values_mean) - len(values))
                     if remaining_values > 0:
@@ -264,8 +265,10 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
                     # Add random scores to the mean
                     if values_mean is None:
                         values_mean = values
-                    elif statistic_name == 'gmean' or statistic_name == 'rmean':
+                    elif statistic_name == 'gmean':
                         values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
+                    elif statistic_name == 'rmean':
+                        values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
                     elif statistic_name == 'max':
                         values_mean = np.maximum(values_mean, values)
                     else:
@@ -282,8 +285,8 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
     if values_mean is None:
         return e, None, trace_dict
 
-    obs = len(values_mean[values_mean >= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
-    neg_obs = len(values_mean[values_mean <= mean(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
+    obs = len(values_mean[values_mean >= statistic_test(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
+    neg_obs = len(values_mean[values_mean <= statistic_test(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
 
     return e, obs, neg_obs, trace_dict
 
@@ -400,19 +403,8 @@ def compute_muts_statistics(muts, scores, statistic_name, recurrence):
     # Aggregate scores
     num_samples = len(scores_by_sample)
 
-    # Select mean
-    if statistic_name == 'gmean':
-        mean = gmean
-    elif statistic_name == 'rmean':
-        mean = rmean
-    elif statistic_name == 'max':
-        mean = np.max
-    else:
-        mean = np.mean
-
     item = {
         'samples_mut': num_samples,
-        'all_mean': mean(scores_list),
         'muts': len(scores_list),
         'muts_recurrence': len(set(positions)),
         'samples_max_recurrence': max(Counter(positions).values()),
