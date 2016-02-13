@@ -24,6 +24,12 @@ def gmean_weighted(vectors, weights):
     return np.array(v_c)
 
 
+def rmean(a):
+    n_a = np.array(a)
+    n_a = np.round(n_a * 0.3)
+    return stats.gmean(n_a + 1.0) - 1.0
+
+
 def read_score(row, score_conf, element):
     value_str = row[score_conf['score']]
     if value_str is None or value_str == '':
@@ -150,6 +156,8 @@ def random_scores(num_samples, sampling_size, background, signature, statistic_n
                 # Select mean
                 if statistic_name == 'gmean':
                     mean = gmean
+                elif statistic_name == 'rmean':
+                    mean = rmean
                 elif statistic_name == 'max':
                     mean = np.max
                 else:
@@ -197,7 +205,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
 
             if values_mean is None:
                 values_mean = values
-            elif statistic_name == 'gmean':
+            elif statistic_name == 'gmean' or statistic_name == 'rmean':
                 values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
             elif statistic_name == 'max':
                 values_mean = np.maximum(values_mean, values)
@@ -209,6 +217,8 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
     # Select mean
     if statistic_name == 'gmean':
         mean = gmean
+    elif statistic_name == 'rmean':
+        mean = rmean
     elif statistic_name == 'max':
         mean = np.max
     else:
@@ -254,7 +264,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
                     # Add random scores to the mean
                     if values_mean is None:
                         values_mean = values
-                    elif statistic_name == 'gmean':
+                    elif statistic_name == 'gmean' or statistic_name == 'rmean':
                         values_mean = gmean_weighted([values_mean, values], [values_mean_count, m_count])
                     elif statistic_name == 'max':
                         values_mean = np.maximum(values_mean, values)
@@ -393,6 +403,8 @@ def compute_muts_statistics(muts, scores, statistic_name, recurrence):
     # Select mean
     if statistic_name == 'gmean':
         mean = gmean
+    elif statistic_name == 'rmean':
+        mean = rmean
     elif statistic_name == 'max':
         mean = np.max
     else:
