@@ -209,7 +209,8 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
             elif statistic_name == 'rmean':
                 values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
             elif statistic_name == 'max':
-                values_mean = np.maximum(values_mean, values)
+                # values_mean = np.maximum(values_mean, values)
+                values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
             else:
                 values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
 
@@ -221,7 +222,7 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
     elif statistic_name == 'rmean':
         statistic_test = np.mean
     elif statistic_name == 'max':
-        statistic_test = np.max
+        statistic_test = np.mean
     else:
         statistic_test = np.mean
 
@@ -270,7 +271,8 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
                     elif statistic_name == 'rmean':
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
                     elif statistic_name == 'max':
-                        values_mean = np.maximum(values_mean, values)
+                        # values_mean = np.maximum(values_mean, values)
+                        values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
                     else:
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
 
