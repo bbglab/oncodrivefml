@@ -293,7 +293,6 @@ def cmdline():
         score_conf = SCORES.get(os.path.basename(args.score_file), SCORES['whole_genome_SNVs.tsv.gz'])
         score_conf['file'] = args.score_file
 
-
     # Initialize OncodriveFM2
     ofm2 = OncodriveFML(
         args.input_file,

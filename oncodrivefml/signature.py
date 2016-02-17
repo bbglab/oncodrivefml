@@ -55,36 +55,41 @@ def signature_probability(signature_counts):
 
 
 def compute_signature(variants_file, signature_name, blacklist):
-    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file, signature=signature_name, show_warnings=False, blacklist=blacklist) if r['TYPE'] == 'subs'])
-    mutations = mutations.groupby(['CHROMOSOME', 'POSITION', 'REF', 'ALT', 'SIGNATURE']).count()
-    mutations.reset_index(inplace=True)
-    mutations['Signature_reference'] = mutations.apply(get_reference_signature, axis=1)
-    mutations['Signature_alternate'] = mutations.apply(get_alternate_signature, axis=1)
-    groups = dict(list(mutations.groupby(['SIGNATURE'])))
+    signature_count = defaultdict(lambda: defaultdict(int))
+    for mut in load_mutations(variants_file, signature=signature_name, show_warnings=False, blacklist=blacklist):
+        if mut['TYPE'] != 'subs':
+            continue
+
+        signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
+        signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
+
+        signature_count[mut['SIGNATURE']][(signature_ref, signature_alt)] += 1
+
     signature = {}
-    for k, v in groups.items():
-        result = v.groupby(['Signature_reference', 'Signature_alternate']).agg({'SAMPLE': 'sum'})
-        result.columns = ['count']
-        result['probability'] = result['count'] / result['count'].sum()
-        signature[k] = result.to_dict()['probability']
+    for k, v in signature_count.items():
+        signature[k] = signature_probability(v)
+
     return signature
 
 
 def compute_signature_by_sample(variants_file, blacklist, collapse=True):
-    mutations = pd.DataFrame.from_dict([r for r in load_mutations(variants_file, show_warnings=False, blacklist=blacklist) if r['TYPE'] == 'subs'])
-    mutations = mutations.groupby(['CHROMOSOME', 'POSITION', 'REF', 'ALT', 'SAMPLE']).count()
-    mutations.reset_index(inplace=True)
-    mutations['Signature_reference'] = mutations.apply(get_reference_signature, axis=1)
-    mutations['Signature_alternate'] = mutations.apply(get_alternate_signature, axis=1)
-    groups = dict(list(mutations.groupby(['SAMPLE'])))
+    signature_count = defaultdict(lambda: defaultdict(int))
+    for mut in load_mutations(variants_file, show_warnings=False, blacklist=blacklist):
+        if mut['TYPE'] != 'subs':
+            continue
+
+        signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
+        signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
+
+        signature_count[mut['SAMPLE']][(signature_ref, signature_alt)] += 1
+
     signature = {}
-    for k, v in groups.items():
-        result = v.groupby(['Signature_reference', 'Signature_alternate']).agg({'TYPE': 'sum'})
-        result.columns = ['count']
+    for k, v in signature_count.items():
         if collapse:
-            signature[k] = signature_probability(collapse_complementaries(result.to_dict()['count']))
+            signature[k] = signature_probability(collapse_complementaries(v))
         else:
-            signature[k] = signature_probability(result.to_dict()['count'])
+            signature[k] = signature_probability(v)
+
     return signature
 
 
