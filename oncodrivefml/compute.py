@@ -141,7 +141,7 @@ def random_scores(num_samples, sampling_size, background, signature, statistic_n
 
         else:
             # Subs sampling with signature
-            p_normalized = signature / sum(signature)
+            p_normalized = np.array(signature) / sum(signature)
 
         to_pick = sampling_size - len(values) if values is not None else sampling_size
         if to_pick > 0:
