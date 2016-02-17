@@ -163,7 +163,7 @@ def random_scores(num_samples, sampling_size, background, signature, statistic_n
                     statistic_test = np.mean
 
                 result = np.array(
-                    [statistic_test(np.random.choice(background, size=num_samples, p=p_normalized, replace=False)) for a in range(to_pick)],
+                    [statistic_test(np.random.choice(background, size=num_samples, p=p_normalized, replace=True)) for a in range(to_pick)],
                     dtype='float32'
                 )
 
