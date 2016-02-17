@@ -209,7 +209,6 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
             elif statistic_name == 'rmean':
                 values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
             elif statistic_name == 'max':
-                # values_mean = np.maximum(values_mean, values)
                 values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
             else:
                 values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
@@ -271,7 +270,6 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
                     elif statistic_name == 'rmean':
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
                     elif statistic_name == 'max':
-                        # values_mean = np.maximum(values_mean, values)
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
                     else:
                         values_mean = np.average([values_mean, values], weights=[values_mean_count, m_count], axis=0)
@@ -287,8 +285,15 @@ def sampling(sampling_size, scores_by_segment, signature_by_segment, e, m, stati
     if values_mean is None:
         return e, None, trace_dict
 
-    obs = len(values_mean[values_mean >= statistic_test(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
-    neg_obs = len(values_mean[values_mean <= statistic_test(m['scores'])]) if len(m['scores']) > 0 else float(sampling_size)
+    if statistic_name == 'max':
+        max_by_sample = [max(sum(v.values(), [])) for v in m['muts_by_tissue']['subs'].values()]
+        weight_by_sample = [len(sum(v.values(), [])) for v in m['muts_by_tissue']['subs'].values()]
+        obs_mean = np.average(max_by_sample, weights=weight_by_sample, axis=0)
+    else:
+        obs_mean = statistic_test(m['scores'])
+
+    obs = len(values_mean[values_mean >= obs_mean]) if len(m['scores']) > 0 else float(sampling_size)
+    neg_obs = len(values_mean[values_mean <= obs_mean]) if len(m['scores']) > 0 else float(sampling_size)
 
     return e, obs, neg_obs, trace_dict
 
