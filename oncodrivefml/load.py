@@ -166,6 +166,7 @@ def load_variants_dict(variants_file, regions, indels=None, signature_name='none
             return pickle.load(fd)
 
     # Build regions tree
+    logging.info("Building regions tree")
     regions_tree = build_regions_tree(regions)
 
     # Load mutations
@@ -173,10 +174,20 @@ def load_variants_dict(variants_file, regions, indels=None, signature_name='none
 
     # Check the file format
     indels_skip = []
-    for r in load_mutations(variants_file, signature=signature_name, blacklist=blacklist):
+    logging.info("Mapping mutations")
+    i = 0
+    show_small_progress_at = 100000
+    show_big_progress_at = 1000000
+    for i, r in enumerate(load_mutations(variants_file, signature=signature_name, blacklist=blacklist), start=1):
 
         if r['CHROMOSOME'] not in regions_tree:
             continue
+
+        if i % show_small_progress_at == 0:
+            print('*', end='', flush=True)
+
+        if i % show_big_progress_at == 0:
+            print(' [{} muts]'.format(i), flush=True)
 
         position = int(r['POSITION'])
         intervals = regions_tree[r['CHROMOSOME']][position]
@@ -207,6 +218,9 @@ def load_variants_dict(variants_file, regions, indels=None, signature_name='none
                 'SIGNATURE': r['SIGNATURE'],
                 'SEGMENT': segment
             })
+
+    if i > show_small_progress_at:
+        print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)
 
     if len(indels_skip) > 0:
         logging.warning("There are {} indels without score. {}".format(

@@ -137,7 +137,6 @@ class OncodriveFML(object):
 
         if not resume:
             # Load variants
-            logging.info("Loading and mapping mutations")
             variants_dict = load_variants_dict(self.variants_file, regions, indels=indels_dict, signature_name=self.signature_name, blacklist=self.samples_blacklist)
 
             if len(variants_dict) == 0:
