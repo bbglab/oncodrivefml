@@ -390,10 +390,11 @@ def compute_muts_statistics(muts, scores, statistic_name, recurrence):
             if sample not in scores_by_sample:
                 scores_by_sample[sample] = []
 
-            scores_by_sample[sample].append(m['SCORE'])
-            scores_list.append(m['SCORE'])
-
             if recurrence or m['POSITION'] not in positions:
+
+                scores_by_sample[sample].append(m['SCORE'])
+                scores_list.append(m['SCORE'])
+
                 if m['TYPE'] == "subs":
                     scores_subs_list.append(m['SCORE'])
                     muts_by_tissue['subs'][m['SIGNATURE']][m['SEGMENT']].append(m['SCORE'])
