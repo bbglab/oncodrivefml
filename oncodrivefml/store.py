@@ -120,9 +120,9 @@ class QQPlot(object):
         self._dict_for_df ['color'] = self._df['num_samples'].map(lambda x: colors[1] if x >= min_samples else colors[0])
         self._dict_for_df ['alpha'] = self._df['num_samples'].map(lambda x: 0.7 if x >= min_samples else 0.3)
 
-        self._data = pd.DataFrame( self._dict_for_df)
+        self._data = pd.DataFrame(self._dict_for_df)
 
-        self._data.sort(columns=['observed'], inplace=True)
+        self._data.sort_values(by=['observed'], inplace=True)
         exp_pvalues = -np.log10(np.arange(1, len(self._data) + 1) / float(len(self._data)))
         exp_pvalues.sort()
         self._data['expected'] = exp_pvalues
@@ -232,14 +232,14 @@ def eliminate_duplicates(df):
 
 
 def add_symbol(df):
-    ensemble_file = os.path.join(__location__, "ensemble_genes_75.txt.gz")
+    ensemble_file = os.path.join(__location__, "ensembl_genes_75.txt.gz")
     gene_conversion = {line.split("\t")[0]: line.strip().split("\t")[-1]
                        for line in gzip.open(ensemble_file, 'rt').readlines()}
     df.loc[:, 'symbol'] = df[df.columns[0]].apply(lambda e: gene_conversion.get(e, e))
     return df
 
 
-def qqplot_png(input_file, output_file, showit=False):
+def store_png(input_file, output_file, showit=False):
     pvalue='pvalue'
     qvalue='qvalue'
     min_samples=2
@@ -277,7 +277,7 @@ def qqplot_png(input_file, output_file, showit=False):
                          'fdr': df[qvalue] if qvalue is not None else 1
                          })
 
-    data.sort(columns=['observed'], inplace=True)
+    data.sort_values(by=['observed'], inplace=True)
     exp_pvalues = -np.log10(np.arange(1, len(data) + 1) / float(len(data)))
     exp_pvalues.sort()
     data['expected'] = exp_pvalues
@@ -340,7 +340,7 @@ def qqplot_png(input_file, output_file, showit=False):
                                 'x': [x[0] for x in grouped],
                                 'y': [y[1] for y in grouped],
                                 'color': [c[2] for c in grouped]})
-        grouped.sort(columns=['y', 'x'], inplace=True, ascending=[False, False])
+        grouped.sort_values(by=['y', 'x'], inplace=True, ascending=[False, False])
 
         x_text = max_x * 1.1 if dx_side is True else min_x - (max_x * 0.2)
         y_text = np.floor(max_y)
@@ -398,7 +398,7 @@ def qqplot_png(input_file, output_file, showit=False):
     plt.close()
 
 
-def qqplot_html(input_file, output_path, showit=False):
+def store_html(input_file, output_path, showit=False):
 
     qqp = QQPlot()
     qqp.load(input_file = input_file, basic_fields = {'num_samples': 'samples_mut', 'pvalue': 'pvalue', 'qvalue': 'qvalue' },
@@ -416,3 +416,15 @@ def qqplot_html(input_file, output_path, showit=False):
                           </div> \\
                           </br>" """)
     qqp.show(output_path = output_path, notebook = False, showit=showit)
+
+
+def store_tsv(results, result_file):
+
+    results.sort_values(by='pvalue', inplace=True)
+    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg']
+    df = results[fields].copy()
+    df.reset_index(inplace=True)
+    df = add_symbol(df)
+
+    with open(result_file, 'wt') as fd:
+        df.to_csv(fd, sep="\t", header=True, index=False)

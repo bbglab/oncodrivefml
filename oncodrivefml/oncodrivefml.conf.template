@@ -1,0 +1,88 @@
+
+[signature]
+
+# Choose the method to calculate the trinuclotide singature:
+
+# "full" : Use a 192 matrix with all the possible signatures
+method = full
+
+# "complemented" : Use a 96 matrix with the signatures complemented
+# method = complement
+
+# "none": Don't use signature
+# method = none
+
+# "bysample": Compute a 96 matrix signature for each sample
+# method = bysample
+
+# "file": Provide a file with the signature to use
+# The format is a tab separated file with header, and you have to set the columns to use.
+# method = file
+# path = [path to the file that contains the signature]
+# column_ref = [column that contains the reference signature]
+# column_alt = [column that contains the alternate signature]
+# column_probability = [column that contaions the probability]
+
+[score]
+# Path to score tab separated file compress with bgzip and next to a Tabix .tbi index file
+file = "%(bgdata://genomicscores/cadd/1.3)"
+
+# WARNING: The %(bgdata:...) will download (the first time that you use it) a score file from
+# our servers and install it into the ~/.bgdata folder.
+
+# WARNING: CADD 1.3 scores are original from http://cadd.gs.washington.edu/ and are freely
+# available for all non-commercial applications. If you are planning on using them in a
+# commercial application, please contact them at http://cadd.gs.washington.edu/contact.
+
+# Column that has the chromosome
+chr = 0
+
+# If the chromosome has a prefix like 'chr'. Example: chrX chr1 ...
+chr_prefix = ''
+
+# Column that has the position
+pos = 1
+
+# Column that has the reference allele
+ref = 2
+
+# Column that has the alternative allele
+alt = 3
+
+# Column that has the score value
+score = 5
+
+# If you have different scores at the same position, and each score applies to a
+# different region element, then uncomment this line and set the value to the column
+# that has the element id to match.
+# element = 6
+
+[background]
+# Size of the sampling
+sampling = 100000
+
+# If true all the recurrent mutations will be use, if false only one mutation per position will be use.
+recurrence = True
+
+[statistic]
+
+# Mathematical method to use
+# Arithmetic mean
+method = amean
+
+# Gemoetric mean
+# method = gmean
+
+[settings]
+
+# Maximum number of cores to use (default to all available)
+# cores = [cores to use]
+
+# If using a DRMAA cluster, this parameter defines how many elements do you want to calculate per job
+# drmma = 100
+
+# If using a DRMAA cluster, this parameter defines the maximum number of jobs to submit to the queue at the same time (if none all the jobs are submited)
+# drmaa_maximum = 100
+
+# If using a DRMAA cluster, this parameters defines the queues to use
+# queues = normal, long

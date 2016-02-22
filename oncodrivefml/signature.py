@@ -3,7 +3,10 @@ import logging
 import os
 import mmap
 import pickle
+
+import bgdata
 import pandas as pd
+from os.path import join, exists
 from oncodrivefml.load import load_mutations
 from collections import defaultdict
 
@@ -12,9 +15,18 @@ HG19_MMAP_FILES = {}
 __CB = {"A": "T", "T": "A", "G": "C", "C": "G"}
 
 
+def get_hg19_dataset():
+    global HG19
+
+    if HG19 is None:
+        HG19 = bgdata.get_path('datasets', 'genomereference', 'hg19')
+
+    return HG19
+
+
 def get_hg19_mmap(chromosome):
     if chromosome not in HG19_MMAP_FILES:
-        fd = open(os.path.join(HG19, "chr{0}.txt".format(chromosome)), 'rb')
+        fd = open(join(get_hg19_dataset(), "chr{0}.txt".format(chromosome)), 'rb')
         HG19_MMAP_FILES[chromosome] = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
     return HG19_MMAP_FILES[chromosome]
 
@@ -93,29 +105,66 @@ def compute_signature_by_sample(variants_file, blacklist, collapse=True):
     return signature
 
 
-def load_signature(variants_file, signature_file, signature_field, signature_type, signature_name, blacklist=None):
+def load_signature(variants_file, signature_config, blacklist=None, signature_name="none"):
 
-    if signature_file is not None and signature_file.endswith(".pickle.gz"):
-        with gzip.open(signature_file, 'rb') as fd:
+    method = signature_config['method']
+    path = signature_config.get('path', None)
+    column_ref = signature_config.get('column_ref', None)
+    column_alt = signature_config.get('column_alt', None)
+    column_probability = signature_config.get('column_probability', None)
+
+    if path is not None and path.endswith(".pickle.gz"):
+        with gzip.open(path, 'rb') as fd:
             return pickle.load(fd)
 
     signature_dict = None
-    if signature_type == "none":
+    if method == "none":
         # We don't use signature
         logging.warning("We are not using any signature")
-    elif signature_type == "compute":
-        logging.info("Computing global signature")
-        signature_dict = compute_signature(variants_file, signature_name, blacklist)
-    elif signature_type == "bysample":
-        logging.info("Computing signature per sample")
-        signature_dict = compute_signature_by_sample(variants_file, blacklist)
-    else:
-        if not os.path.exists(signature_file):
-            logging.error("Signature file {} not found.".format(signature_file))
+
+    elif method == "full" or method == "complement":
+
+        signature_dict_precomputed = variants_file + "_signature_full.pickle.gz"
+        if exists(signature_dict_precomputed):
+            logging.info("Using precomputed signature")
+            with gzip.open(signature_dict_precomputed, 'rb') as fd:
+                signature_dict = pickle.load(fd)
+        else:
+            logging.info("Computing full global signature")
+            signature_dict = compute_signature(variants_file, signature_name, blacklist)
+            try:
+                # Try to store as precomputed
+                with gzip.open(signature_dict_precomputed, 'wb') as fd:
+                    pickle.dump(signature_dict, fd)
+            except OSError:
+                logging.debug("Imposible to write precomputed full signature here: {}".format(signature_dict_precomputed))
+
+        if method == "complement":
+            signature_dict = collapse_complementaries(signature_dict)
+
+    elif method == "bysample":
+        signature_dict_precomputed = variants_file + "_signature_bysample.pickle.gz"
+        if exists(signature_dict_precomputed):
+            logging.info("Using precomputed per sample signature")
+            with gzip.open(signature_dict_precomputed, 'rb') as fd:
+                signature_dict = pickle.load(fd)
+        else:
+            logging.info("Computing signature per sample")
+            signature_dict = compute_signature_by_sample(variants_file, blacklist)
+            try:
+                # Try to store as precomputed
+                with gzip.open(signature_dict_precomputed, 'wb') as fd:
+                    pickle.dump(signature_dict, fd)
+            except OSError:
+                logging.debug("Imposible to write precomputed bysample signature here: {}".format(signature_dict_precomputed))
+
+    elif method == "file":
+        if not os.path.exists(path):
+            logging.error("Signature file {} not found.".format(path))
             return -1
         else:
             logging.info("Loading signature")
-            signature_probabilities = pd.read_csv(signature_file, sep='\t')
-            signature_probabilities.set_index(['Signature_reference', 'Signature_alternate'], inplace=True)
-            signature_dict = {signature_name: signature_probabilities.to_dict()[signature_field]}
+            signature_probabilities = pd.read_csv(path, sep='\t')
+            signature_probabilities.set_index([column_ref, column_alt], inplace=True)
+            signature_dict = {signature_name: signature_probabilities.to_dict()[column_probability]}
     return signature_dict

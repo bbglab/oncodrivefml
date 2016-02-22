@@ -22,3 +22,5 @@ example/output
 *.pyc
 *.egg-info/
 dist/
+
+*.pickle.gz
