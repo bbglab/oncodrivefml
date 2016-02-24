@@ -7,13 +7,15 @@ import pickle
 from os.path import join, exists
 
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
-from oncodrivefml.executors import ElementExecutor, run_executor
+from oncodrivefml.executors import ElementExecutor
 from oncodrivefml.load import load_and_map_variants
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature
 
 from multiprocessing.pool import Pool
+
+from oncodrivefml.utils import run_executor
 
 
 class OncodriveFML(object):

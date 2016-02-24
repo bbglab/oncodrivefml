@@ -23,7 +23,7 @@ CONFIG_SPECS = {
         'alt': 'integer', 'score': 'integer', 'element': 'integer(default=None)', 'extra': 'integer(default=None)'
     },
     'background': {
-        'sampling': 'integer', 'recurrence': 'boolean'
+        'sampling': 'integer', 'recurrence': 'boolean', 'range': 'integer(default=1000)'
     },
     'statistic': {
         'method': "option('amean', 'gmean')"

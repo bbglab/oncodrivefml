@@ -61,6 +61,9 @@ score = 5
 # Size of the sampling
 sampling = 100000
 
+# Randomization range. Maximum distance where do you want to simulate a mutation
+range = 1000
+
 # If true all the recurrent mutations will be use, if false only one mutation per position will be use.
 recurrence = True
 
