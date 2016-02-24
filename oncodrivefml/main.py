@@ -80,7 +80,8 @@ class OncodriveFML(object):
 
         # Sort and store results
         logging.info("Storing results")
-        os.makedirs(self.output_folder)
+        if not exists(self.output_folder):
+            os.makedirs(self.output_folder)
         result_file = self.output_file_prefix + '.tsv'
         store_tsv(results_mtc, result_file)
 
