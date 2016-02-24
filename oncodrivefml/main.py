@@ -68,6 +68,9 @@ class OncodriveFML(object):
 
         logging.info("[{} of {}]".format(i+1, len(element_executors)))
 
+        if cores > 1:
+            pool.close()
+
         # Results
         results = {e.name: e.result for e in element_executors_computed.values()}
 
