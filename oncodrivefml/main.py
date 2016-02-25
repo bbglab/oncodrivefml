@@ -61,6 +61,7 @@ class OncodriveFML(object):
         element_executors_computed = {}
         element_executors = [ElementExecutor(element, muts, elements[element], signature, self.config) for element, muts in variants.items()]
         logging.info("Computing OncodriveFML")
+        i = 0
         for i, executor in enumerate(map_func(run_executor, element_executors)):
             if i % info_step == 0:
                 logging.info("[{} of {}]".format(i+1, len(element_executors)))
