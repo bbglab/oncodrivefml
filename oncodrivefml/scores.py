@@ -23,8 +23,19 @@ class Scores(object):
         self.element = element
         self.segments = segments
         self.signature = signature
-        self.config = config
 
+        # Score configuration
+        self.conf_file = config['file']
+        self.conf_score = config['score']
+        self.conf_chr = config['chr']
+        self.conf_chr_prefix = config['chr_prefix']
+        self.conf_ref = config['ref']
+        self.conf_alt = config['alt']
+        self.conf_pos = config['pos']
+        self.conf_element = config.get('element', None)
+        self.conf_extra = config.get('extra', None)
+
+        # Scores to load
         self.scores_by_pos = defaultdict(list)
         self.missing_signatures = {}
 
@@ -40,6 +51,14 @@ class Scores(object):
         """
         return self.scores_by_pos.get(position, [])
 
+    def get_all_positions(self) -> List[int]:
+        """
+        Get all possible score positions in the element
+
+        :return: All the
+        """
+        return self.scores_by_pos.keys()
+
     def _read_score(self, row: list) -> float:
         """
         Parses one score line and returns the score value
@@ -47,10 +66,10 @@ class Scores(object):
         :param row: A row from the score file
         :return: The score parsed
         """
-        value_str = row[self.config['score']]
+        value_str = row[self.conf_score]
         if value_str is None or value_str == '':
-            if 'extra' in self.config:
-                value_str = row[self.config['extra']].split(',')
+            if self.conf_extra is not None:
+                value_str = row[self.conf_extra].split(',')
                 value = 0
                 for val in value_str:
                     elm, vals = val.split(':')
@@ -66,28 +85,28 @@ class Scores(object):
 
     def _load_scores(self):
 
-        tb = tabix.open(self.config['file'])
+        tb = tabix.open(self.conf_file)
 
         for region in self.segments:
             try:
-                for row in tb.query("{}{}".format(self.config['chr_prefix'], region['chrom']), region['start']-1, region['stop']):
+                for row in tb.query("{}{}".format(self.conf_chr_prefix, region['chrom']), region['start']-1, region['stop']):
                     value = self._read_score(row)
 
-                    ref = row[self.config['ref']] if 'ref' in self.config else None
-                    alt = row[self.config['alt']] if 'alt' in self.config else None
-                    pos = int(row[self.config['pos']])
+                    ref = row[self.conf_ref]
+                    alt = row[self.conf_alt]
+                    pos = int(row[self.conf_pos])
 
-                    if self.config.get('element', None) is not None:
-                        if row[self.config['element']] != self.element:
+                    if self.conf_element is not None:
+                        if row[self.conf_element] != self.element:
                             continue
 
                     if self.signature is not None:
-                        ref_triplet = get_ref_triplet(row[self.config['chr']].replace(self.config['chr_prefix'], ''), int(row[self.config['pos']]) - 1)
-                        ref = row[self.config['ref']] if 'ref' in self.config else ref_triplet[1]
-                        alt = row[self.config['alt']] if 'alt' in self.config else None
+                        ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
+                        ref = row[self.conf_ref]
+                        alt = row[self.conf_alt]
 
                         if ref is not None and ref_triplet[1] != ref:
-                            logging.warning("Background mismatch at position %d at '%s'", int(row[self.config['pos']]), self.element)
+                            logging.warning("Background mismatch at position %d at '%s'", int(row[self.conf_pos]), self.element)
 
                     # Expand funseq2 dots
                     alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
@@ -107,5 +126,5 @@ class Scores(object):
                         self.scores_by_pos[pos].append(ScoreValue(ref, a, value, pos_signature))
 
             except tabix.TabixError:
-                logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.config['chr_prefix'], region['chrom'], region['start']-1, region['stop']))
+                logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.conf_chr_prefix, region['chrom'], region['start']-1, region['stop']))
                 continue

@@ -1,7 +1,9 @@
 from collections import defaultdict
 
+from oncodrivefml.executors import ElementExecutor
 
-def run_executor(executor):
+
+def executor_run(executor: ElementExecutor):
     return executor.run()
 
 

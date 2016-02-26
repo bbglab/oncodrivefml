@@ -1,6 +1,6 @@
 import numpy as np
 from oncodrivefml.scores import Scores
-from oncodrivefml.statistics import STATISTIC_TESTS
+from oncodrivefml.stats import STATISTIC_TESTS
 
 
 class ElementExecutor(object):
@@ -9,74 +9,67 @@ class ElementExecutor(object):
 
         # Input attributes
         self.name = name
-        self.muts = muts
+        self.muts = [m for m in muts if m['TYPE'] == 'subs']
         self.signature = signature
         self.segments = segments
-        self.config = config
+
+        # Configuration parameters
+        self.score_config = config['score']
+        self.sampling_size = config['background'].get('sampling', 100000)
+        self.statistic_name = config['statistic'].get('method', 'amean')
+        self.simulation_range = config['background'].get('range', None)
 
         # Output attributes
+        self.obs = 0
+        self.neg_obs = 0
         self.result = None
         self.scores = None
 
     def run(self):
 
-        self.scores = Scores(self.name, self.segments, self.signature, self.config['score'])
+        # Load element scores
+        self.scores = Scores(self.name, self.segments, self.signature, self.score_config)
 
-        # Compute elements statistics
+        # Compute observed mutations statistics and scores
         self.result = self.compute_muts_statistics()
 
-        # Run only if there are valid mutations
-        if self.result['muts'] > 0:
+        if len(self.result['mutations']) > 0:
+            statistic_test = STATISTIC_TESTS.get(self.statistic_name)
+            observed = []
+            background = []
 
-            sampling_size = self.config['background'].get('sampling', 100000)
-            obs, neg_obs = self.sampling(sampling_size)
+            for mut in self.result['mutations']:
 
-            self.result['pvalue'] = max(1, obs) / float(sampling_size) if obs is not None else None
-            self.result['pvalue_neg'] = max(1, neg_obs) / float(sampling_size) if neg_obs is not None else None
+                simulation_scores = []
+                simulation_signature = []
+
+                if self.simulation_range is not None:
+                    positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
+                else:
+                    positions = self.scores.get_all_positions()
+
+                for pos in positions:
+                    for s in self.scores.get_score_by_position(pos):
+                        simulation_scores.append(s.value)
+                        simulation_signature.append(s.signature.get(mut['SIGNATURE']))
+
+                simulation_scores = np.array(simulation_scores)
+                simulation_signature = np.array(simulation_signature)
+                simulation_signature = simulation_signature / simulation_signature.sum()
+
+                observed.append(mut['SCORE'])
+                background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
+
+            observed_test = statistic_test.calc(observed)
+            self.obs, self.neg_obs = statistic_test.calc_observed(zip(*background), observed_test)
+
+        # Calculate p-values
+        self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
+        self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
 
         return self
 
-    def sampling(self, sampling_size):
-
-        statistic_test = STATISTIC_TESTS.get(self.config['statistic'].get('method', 'amean'), STATISTIC_TESTS['amean'])
-        simulation_range = self.config['background'].get('range', 1000)
-
-        observed = []
-        background = []
-        for mut in self.result['mutations']:
-            if mut['TYPE'] != 'subs':
-                continue
-
-            simulation_scores = []
-            simulation_signature = []
-            for pos in range(mut['POSITION'] - simulation_range, mut['POSITION'] + simulation_range):
-                for s in self.scores.get_score_by_position(pos):
-                    simulation_scores.append(s.value)
-                    simulation_signature.append(s.signature.get(mut['SIGNATURE']))
-
-            simulation_scores = np.array(simulation_scores)
-            simulation_signature = np.array(simulation_signature)
-            simulation_signature = simulation_signature / simulation_signature.sum()
-
-            observed.append(mut['SCORE'])
-            background.append(np.random.choice(simulation_scores, size=sampling_size, p=simulation_signature, replace=True))
-
-        observed_test = statistic_test.calc(observed)
-        obs, neg_obs = 0.0, 0.0
-        for values in zip(*background):
-            background_test = statistic_test.calc(values)
-            if background_test >= observed_test:
-                obs += 1
-            if background_test <= observed_test:
-                neg_obs += 1
-
-        return obs, neg_obs
-
     def compute_muts_statistics(self):
-
-        # Skip features without mutations
-        if len(self.muts) == 0:
-            return None
 
         # Add scores to the element mutations
         scores_by_sample = {}

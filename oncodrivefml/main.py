@@ -1,10 +1,14 @@
 import argparse
+
 import gzip
 import logging
 import os
 import pickle
 
 from os.path import join, exists
+
+from ago import human
+from datetime import datetime
 
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors import ElementExecutor
@@ -15,7 +19,7 @@ from oncodrivefml.signature import load_signature
 
 from multiprocessing.pool import Pool
 
-from oncodrivefml.utils import run_executor
+from oncodrivefml.utils import executor_run
 
 
 class OncodriveFML(object):
@@ -58,22 +62,27 @@ class OncodriveFML(object):
             map_func = map
 
         # Run the executors
-        element_executors_computed = {}
+        results = {}
         element_executors = [ElementExecutor(element, muts, elements[element], signature, self.config) for element, muts in variants.items()]
-        logging.info("Computing OncodriveFML")
+        element_executors = [e for e in element_executors if len(e.muts) > 0]
+        element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
+
         i = 0
-        for i, executor in enumerate(map_func(run_executor, element_executors)):
+        start_time = datetime.now()
+        logging.info("Computing OncodriveFML")
+
+        logging.info("Run executors")
+        for i, executor in enumerate(map_func(executor_run, element_executors)):
             if i % info_step == 0:
                 logging.info("[{} of {}]".format(i+1, len(element_executors)))
-            element_executors_computed[executor.name] = executor
-
+            if len(executor.result['mutations']) > 0:
+                results[executor.name] = executor.result
         logging.info("[{} of {}]".format(i+1, len(element_executors)))
+
+        logging.debug("Computation time: {}".format(human(start_time)))
 
         if cores > 1:
             pool.close()
-
-        # Results
-        results = {e.name: e.result for e in element_executors_computed.values()}
 
         # Run multiple test correction
         logging.info("Computing multiple test correction")
@@ -89,11 +98,6 @@ class OncodriveFML(object):
         logging.info("Creating figures")
         store_png(result_file, self.output_file_prefix + ".png")
         store_html(result_file, self.output_file_prefix + ".html")
-
-        if debug:
-            element_executors_file = self.output_file_prefix + "_executors.pickle.gz"
-            with gzip.open(element_executors_file, 'wb') as fd:
-                pickle.dump(element_executors_computed, fd)
 
         logging.info("Done")
         return 0
@@ -117,7 +121,8 @@ def cmdline():
     args = parser.parse_args()
 
     # Configure the logging
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S', level=logging.DEBUG if args.debug else logging.INFO)
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+    logging.getLogger().setLevel(logging.DEBUG if args.debug else logging.INFO)
     logging.debug(args)
 
     # Parse configuration file
