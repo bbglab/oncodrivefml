@@ -328,7 +328,7 @@ def compute_element(signature_dict, min_randomizations, max_randomizations, stat
         element, obs, neg_obs, sampling_values = sampling(randomizations, scores_by_segment, signature_by_segment, element, item, statistic_name, indels_background, trace=trace)
         if randomizations >= max_randomizations or obs is None or neg_obs is None or (obs > 5 and neg_obs > 5):
             break
-        randomizations = min(max_randomizations, randomizations*2)
+        randomizations = max_randomizations
 
     item['pvalue'] = max(1, obs) / float(randomizations) if obs is not None else None
     item['pvalue_neg'] = max(1, neg_obs) / float(randomizations) if neg_obs is not None else None

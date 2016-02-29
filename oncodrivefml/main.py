@@ -247,7 +247,7 @@ def cmdline():
     general_group.add_argument('-n', '--name', dest='project_name', default=None, help='Project name')
     general_group.add_argument('--statistic', dest='statistic_name', default='amean', help="Statistic to use: amean, gmean, max")
     general_group.add_argument('--no-recurrence', dest='no_recurrence', default=False, action='store_true', help="Use reccurent positions only ones")
-    general_group.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=10000, help="Minimum number of randomizations (default is 10k).")
+    general_group.add_argument('-mins', '--min-samplings', dest='min_samplings', type=int, default=100000, help="Minimum number of randomizations (default is 100k).")
     general_group.add_argument('-maxs', '--max-samplings', dest='max_samplings', type=int, default=100000, help="Maximum number of randomizations (default is 100k).")
     general_group.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
     general_group.add_argument('--signature-ratio', dest='signature_ratio', default=None, help='Folders with one fold change vector per element to multiply to the signature probability')
