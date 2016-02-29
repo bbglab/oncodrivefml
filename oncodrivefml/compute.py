@@ -162,10 +162,14 @@ def random_scores(num_samples, sampling_size, background, signature, statistic_n
                 else:
                     statistic_test = np.mean
 
-                result = np.array(
-                    [statistic_test(np.random.choice(background, size=num_samples, p=p_normalized, replace=True)) for a in range(to_pick)],
-                    dtype='float32'
-                )
+                if statistic_name == 'amean':
+                    result = np.mean(np.random.choice(background, size=(to_pick, num_samples), p=p_normalized, replace=True), axis=1, dtype='float32')
+                else:
+                    # SLOW version
+                    result = np.array(
+                        [statistic_test(np.random.choice(background, size=num_samples, p=p_normalized, replace=True)) for a in range(to_pick)],
+                        dtype='float32'
+                    )
 
         # Concat results with previous sampling
         if values is not None:
