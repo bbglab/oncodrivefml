@@ -18,6 +18,7 @@ class ElementExecutor(object):
         self.sampling_size = config['background'].get('sampling', 100000)
         self.statistic_name = config['statistic'].get('method', 'amean')
         self.simulation_range = config['background'].get('range', None)
+        self.signature_column = 'SAMPLE' if config['signature'].get('method', 'full') == 'bysample' else 'SIGNATURE'
 
         # Output attributes
         self.obs = 0
@@ -51,7 +52,7 @@ class ElementExecutor(object):
                 for pos in positions:
                     for s in self.scores.get_score_by_position(pos):
                         simulation_scores.append(s.value)
-                        simulation_signature.append(s.signature.get(mut['SIGNATURE']))
+                        simulation_signature.append(s.signature.get(mut[self.signature_column]))
 
                 simulation_scores = np.array(simulation_scores)
                 simulation_signature = np.array(simulation_signature)
