@@ -46,7 +46,7 @@ class GroupBySampleExecutor(ElementExecutor):
             observed = []
             background = []
 
-            for sample, scores in self.result['scores_by_sample']:
+            for sample, scores in self.result['scores_by_sample'].items():
 
                 simulation_scores = []
                 simulation_signature = []
