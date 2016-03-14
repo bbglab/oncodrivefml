@@ -68,7 +68,7 @@ class OncodriveFML(object):
         self.variants, self.elements = load_and_map_variants(self.input_file, self.elements_file, blacklist=self.blacklist)
 
         # Load signature
-        signature = load_signature(self.input_file, self.config['signature'], blacklist=self.blacklist)
+        self.signature = load_signature(self.input_file, self.config['signature'], blacklist=self.blacklist)
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element, muts) for element, muts in self.variants.items()]

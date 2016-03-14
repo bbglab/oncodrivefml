@@ -61,9 +61,6 @@ class GroupBySampleExecutor(ElementExecutor):
 
                 for pos in positions:
                     for s in self.scores.get_score_by_position(pos):
-                        if sample not in s.signature:
-                            logging.warning("Missing signature '{}' at {}".format(sample, s))
-                            continue
                         simulation_scores.append(s.value)
                         simulation_signature.append(s.signature.get(sample))
 
