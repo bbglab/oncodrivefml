@@ -1,3 +1,4 @@
+from collections import defaultdict
 
 import numpy as np
 
@@ -46,7 +47,11 @@ class GroupBySampleExecutor(ElementExecutor):
             observed = []
             background = []
 
-            for sample, scores in self.result['scores_by_sample'].items():
+            scores_by_signature = defaultdict(list)
+            for mut in self.result['mutations']:
+                scores_by_signature[mut[self.signature_column]].append(mut['SCORE'])
+
+            for sample, scores in scores_by_signature.items():
 
                 simulation_scores = []
                 simulation_signature = []

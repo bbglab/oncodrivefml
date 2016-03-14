@@ -60,7 +60,6 @@ class ElementExecutor(object):
             'scores': scores_list,
             'scores_subs': scores_subs_list,
             'scores_indels': scores_indels_list,
-            'scores_by_sample': scores_by_sample,
             'positions': positions,
             'mutations': mutations
         }
