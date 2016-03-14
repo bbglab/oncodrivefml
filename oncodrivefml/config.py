@@ -26,7 +26,7 @@ CONFIG_SPECS = {
         'sampling': 'integer', 'recurrence': 'boolean', 'range': 'integer(default=None)'
     },
     'statistic': {
-        'method': "option('amean', 'gmean')"
+        'method': "option('amean', 'gmean', 'maxmean')"
     },
     'settings': {
         'cores': 'integer(default=None)', 'drmaa': 'integer(default=None)', 'drmaa_maximum': 'integer(default=100)', 'queues': 'list(default=None)'
