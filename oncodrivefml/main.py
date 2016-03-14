@@ -1,42 +1,63 @@
 import argparse
 
-import gzip
 import logging
 import os
-import pickle
 
 from os.path import join, exists
-
-from ago import human
-from datetime import datetime
-
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
-from oncodrivefml.executors import ElementExecutor
+from oncodrivefml.executors.bymutation import GroupByMutationExecutor
+from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.load import load_and_map_variants
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature
-
 from multiprocessing.pool import Pool
-
-from oncodrivefml.utils import executor_run
+from oncodrivefml.utils import executor_run, loop_logging
 
 
 class OncodriveFML(object):
 
     def __init__(self, input_file, elements_file, output_folder, config_file, blacklist):
+        """
+        Initialize OncodriveFML analysis
+
+        :param input_file: Mutations input file
+        :param elements_file: Genomic element input file
+        :param output_folder: Folder where the results will be store
+        :param config_file: Configuration file
+        :param blacklist: File with sample ids (one per line) to remove when loading the input file
+        """
 
         # Required parameters
         self.input_file = file_exists_or_die(input_file)
         self.elements_file= file_exists_or_die(elements_file)
         self.config = load_configuration(config_file)
         self.blacklist = blacklist
+        self.cores = self.config['settings']['cores']
+        if self.cores is None:
+            self.cores = os.cpu_count()
+        self.statistic_method = self.config['statistic']['method']
 
         # Optional parameters
         self.output_folder = file_name(self.elements_file) if output_folder is None else output_folder
         self.output_file_prefix = join(self.output_folder, file_name(self.input_file) + '-oncodrivefml')
 
-    def run(self, debug=False):
+        # Output parameters
+        self.variants = None
+        self.elements = None
+        self.signature = None
+
+    def create_element_executor(self, element, muts):
+
+        if self.statistic_method == 'maxmean':
+            return GroupBySampleExecutor(element, muts, self.elements[element], self.signature, self.config)
+
+        return GroupByMutationExecutor(element, muts, self.elements[element], self.signature, self.config)
+
+    def run(self):
+        """
+        Run the OncodriveFML analysis
+        """
 
         # Skip if done
         if exists(self.output_file_prefix + '.tsv'):
@@ -44,45 +65,27 @@ class OncodriveFML(object):
             return
 
         # Load variants mapping
-        variants, elements = load_and_map_variants(self.input_file, self.elements_file, blacklist=self.blacklist)
+        self.variants, self.elements = load_and_map_variants(self.input_file, self.elements_file, blacklist=self.blacklist)
 
         # Load signature
         signature = load_signature(self.input_file, self.config['signature'], blacklist=self.blacklist)
 
-        # Run in parallel
-        cores = self.config['settings'].get('cores')
-        if cores is None:
-            cores = os.cpu_count()
-        info_step = 6*cores
+        # Create one executor per element
+        element_executors = [self.create_element_executor(element, muts) for element, muts in self.variants.items()]
 
-        if cores > 1:
-            pool = Pool(cores)
-            map_func = pool.imap
-        else:
-            map_func = map
-
-        # Run the executors
-        results = {}
-        element_executors = [ElementExecutor(element, muts, elements[element], signature, self.config) for element, muts in variants.items()]
+        # Remove elements that don't have mutations to compute
         element_executors = [e for e in element_executors if len(e.muts) > 0]
+
+        # Sort executors to compute first the ones that have more mutations
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
 
-        i = 0
-        start_time = datetime.now()
-        logging.info("Computing OncodriveFML")
-
-        logging.info("Run executors")
-        for i, executor in enumerate(map_func(executor_run, element_executors)):
-            if i % info_step == 0:
-                logging.info("[{} of {}]".format(i+1, len(element_executors)))
-            if len(executor.result['mutations']) > 0:
-                results[executor.name] = executor.result
-        logging.info("[{} of {}]".format(i+1, len(element_executors)))
-
-        logging.debug("Computation time: {}".format(human(start_time)))
-
-        if cores > 1:
-            pool.close()
+        # Run the executors
+        with Pool(self.cores) as pool:
+            results = {}
+            logging.info("Computing OncodriveFML")
+            for executor in loop_logging(pool.imap(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
+                if len(executor.result['mutations']) > 0:
+                    results[executor.name] = executor.result
 
         # Run multiple test correction
         logging.info("Computing multiple test correction")
@@ -100,11 +103,11 @@ class OncodriveFML(object):
         store_html(result_file, self.output_file_prefix + ".html")
 
         logging.info("Done")
-        return 0
 
 
 def cmdline():
 
+    # Command line arguments parser
     parser = argparse.ArgumentParser()
 
     # Required arguments
@@ -125,12 +128,12 @@ def cmdline():
     logging.getLogger().setLevel(logging.DEBUG if args.debug else logging.INFO)
     logging.debug(args)
 
-    # Parse configuration file
+    # Load configuration file and prepare analysis
     logging.info("Loading configuration")
     analysis = OncodriveFML(args.input_file, args.elements_file, args.output_folder, args.config_file, args.samples_blacklist)
 
     # Run the analysis
-    analysis.run(debug=args.debug)
+    analysis.run()
 
 if __name__ == "__main__":
     cmdline()
