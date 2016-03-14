@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 
 import numpy as np
@@ -52,6 +53,10 @@ class GroupBySampleExecutor(ElementExecutor):
                 scores_by_signature[mut[self.signature_column]].append(mut['SCORE'])
 
             for sample, scores in scores_by_signature.items():
+
+                if sample not in self.signature:
+                    logging.warning("Missing signature '{}'")
+                    continue
 
                 simulation_scores = []
                 simulation_signature = []
