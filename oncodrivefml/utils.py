@@ -4,10 +4,10 @@ from datetime import datetime
 
 from ago import human
 
-from oncodrivefml.executors import ByMutationExecutor
+from oncodrivefml.executors.bymutation import ElementExecutor
 
 
-def executor_run(executor: ByMutationExecutor):
+def executor_run(executor: ElementExecutor):
     return executor.run()
 
 

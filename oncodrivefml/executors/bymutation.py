@@ -67,6 +67,12 @@ class ElementExecutor(object):
 
         return item
 
+    def run(self):
+        """
+        Computes the element p-value
+        """
+        raise RuntimeError("The classes that extend ElementExecutor must override the run() method")
+
 
 class GroupByMutationExecutor(ElementExecutor):
     """
