@@ -125,12 +125,18 @@ def build_regions_tree(regions):
 def load_and_map_variants(variants_file, elements_file, signature_name='none', blacklist=None):
 
     # Load elements file
+    elements = None
     elements_precomputed = elements_file + "_dict.pickle.gz"
     if exists(elements_precomputed):
-        logging.info("Using precomputed elements map")
-        with gzip.open(elements_precomputed, 'rb') as fd:
-            elements = pickle.load(fd)
-    else:
+        try:
+            logging.info("Using precomputed elements map")
+            with gzip.open(elements_precomputed, 'rb') as fd:
+                elements = pickle.load(fd)
+        except EOFError:
+            logging.error("Loading file {}".format(elements_precomputed))
+            elements = None
+
+    if elements is None:
         logging.info("Loading elements")
         elements = load_regions(elements_file)
         # Try to store as precomputed
@@ -148,17 +154,26 @@ def load_and_map_variants(variants_file, elements_file, signature_name='none', b
     # Check if it's already done
     variants_dict_precomputed = variants_file + "_mapping_" + file_name(elements_file) + '.pickle.gz'
     if exists(variants_dict_precomputed):
-        logging.info("Using precomputed variants mapping")
-        with gzip.open(variants_dict_precomputed, 'rb') as fd:
-            return pickle.load(fd), elements
+        try:
+            logging.info("Using precomputed variants mapping")
+            with gzip.open(variants_dict_precomputed, 'rb') as fd:
+                return pickle.load(fd), elements
+        except EOFError:
+            logging.error("Loading file {}".format(variants_dict_precomputed))
 
     # Loading elements tree
+    elements_tree = None
     elements_tree_precomputed = elements_file + "_tree.pickle.gz"
     if exists(elements_tree_precomputed):
-        logging.info("Using precomputed genomic elements tree")
-        with gzip.open(elements_tree_precomputed, 'rb') as fd:
-            elements_tree = pickle.load(fd)
-    else:
+        try:
+            logging.info("Using precomputed genomic elements tree")
+            with gzip.open(elements_tree_precomputed, 'rb') as fd:
+                elements_tree = pickle.load(fd)
+        except EOFError:
+            logging.error("Loading file {}".format(elements_tree_precomputed))
+            elements_tree = None
+
+    if elements_tree is None:
         logging.info("Loading genomic elements tree")
         elements_tree = build_regions_tree(elements)
 
