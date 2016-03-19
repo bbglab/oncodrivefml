@@ -79,7 +79,7 @@ def get_oncodrivefml_config_file():
 
     # Otherwise, create the configuration file from the template
     if not exists(bbglab_home):
-        os.makedirs(bbglab_home)
+        os.makedirs(bbglab_home, exist_ok=True)
     config_template = os.path.join(os.path.dirname(__file__), "oncodrivefml.conf.template")
     copyfile(config_template, file_path)
 
