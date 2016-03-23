@@ -17,7 +17,7 @@ setup(
     author_email='nuria.lopez@upf.edu',
     description='',
     install_requires=[
-        'configobj >= 5.0.6',
+        'bgconfig >= 0.1.0',
         'numpy >= 1.9.0',
         'scipy >= 0.14.0',
         'statsmodels >= 0.6.1',
