@@ -40,6 +40,15 @@ def get_ref_triplet(chromosome, start):
     return mm_file.read(3).decode().upper()
 
 
+def get_ref(chromosome, start, size=1):
+    mm_file = get_hg19_mmap(chromosome)
+    try:
+        mm_file.seek(start - 1)
+    except ValueError:
+        return "ERR"
+    return mm_file.read(size).decode().upper()
+
+
 def get_reference_signature(line):
     return get_ref_triplet(line['CHROMOSOME'], line['POSITION'] - 1)
 

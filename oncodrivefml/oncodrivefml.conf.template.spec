@@ -23,6 +23,8 @@ range = integer(default=None)
 
 [statistic]
 method = option('amean', 'gmean', 'maxmean')
+indels = option('max', 'none')
+indels_max_repeats = integer(default=3)
 
 [settings]
 cores = integer(default=None)

@@ -1,12 +1,13 @@
 import numpy as np
 from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
+from oncodrivefml.signature import get_ref
 
 
 class ElementExecutor(object):
 
     @staticmethod
-    def compute_muts_statistics(muts, scores):
+    def compute_muts_statistics(muts, scores, indels=False):
 
         # Add scores to the element mutations
         scores_by_sample = {}
@@ -29,6 +30,16 @@ class ElementExecutor(object):
                         m['SCORE'] = v.value
                         total_subs_score += 1
                         break
+
+            if indels and m['TYPE'] == "indel":
+                m['POSITION'] = int(m['POSITION'])
+                indel_size = max(len(m['REF']), len(m['ALT']))
+
+                indel_scores = []
+                for pos in range(m['POSITION'], m['POSITION'] + indel_size):
+                    indel_scores += [s.value for s in scores.get_score_by_position(pos)]
+
+                m['SCORE'] = max(indel_scores)
 
             # Update scores
             if m.get('SCORE', None) is not None:
@@ -73,6 +84,15 @@ class ElementExecutor(object):
         raise RuntimeError("The classes that extend ElementExecutor must override the run() method")
 
 
+def detect_repeatitive_seq(chrom, seq, pos):
+    size = len(seq)
+    repeats = 0
+    while seq == get_ref(chrom, pos, size=size):
+        pos += size
+        repeats += 1
+    return repeats
+
+
 class GroupByMutationExecutor(ElementExecutor):
     """
     This executor simulates each mutation independently following the signature probability
@@ -83,7 +103,29 @@ class GroupByMutationExecutor(ElementExecutor):
 
         # Input attributes
         self.name = name
+        self.indels = config['statistic']['indels'] != 'none'
         self.muts = [m for m in muts if m['TYPE'] == 'subs']
+
+        # Add only indels if there is at least one substitution
+        if self.indels:
+            indels_max_repeats = config['statistic']['indels_max_repeats']
+            indels_set = set()
+            for m in [m for m in muts if m['TYPE'] == 'indel']:
+                chrom = m['CHROMOSOME']
+                ref = m['REF']
+                alt = m['ALT']
+                pos = m['POSITION']
+
+                # Skip recurrent indels
+                if (chrom, pos, ref, alt) not in indels_set:
+                    indels_set.add((chrom, pos, ref, alt))
+
+                    # Check if it's repeated
+                    seq = alt if '-' in ref else ref
+                    repeats = detect_repeatitive_seq(chrom, seq, pos)
+                    if repeats <= indels_max_repeats:
+                        self.muts.append(m)
+
         self.signature = signature
         self.segments = segments
 
@@ -106,7 +148,7 @@ class GroupByMutationExecutor(ElementExecutor):
         self.scores = Scores(self.name, self.segments, self.signature, self.score_config)
 
         # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores)
+        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels)
 
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
