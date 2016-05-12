@@ -7,6 +7,7 @@ import logging
 import pandas as pd
 import numpy as np
 from math import pi
+from bokeh import __version__ as bokeh_version
 from bokeh.io import vform
 from bokeh.plotting import output_notebook
 from bokeh.embed import components
@@ -94,7 +95,7 @@ class QQPlot(object):
                     /*alert("Value not found: '"+origSearch+"'")*/
                     swal("Value not found: '"+origSearch+"'")
                 source.trigger('change');"""
-            self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
+            #self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
 
     def load(self, input_file, fields=None, basic_fields=None, extra_fields=None):
 
@@ -206,8 +207,8 @@ class QQPlot(object):
                         <script src="https://code.jquery.com/jquery-1.11.3.min.js">
                         </script><script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
                         <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
-                        <link href="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.css" rel="stylesheet" type="text/css">
-                        <script src="http://cdn.pydata.org/bokeh/release/bokeh-0.10.0.min.js"></script>\n"""+\
+                        <link href="http://cdn.pydata.org/bokeh/release/bokeh-"""+bokeh_version+""".min.css" rel="stylesheet" type="text/css">
+                        <script src="http://cdn.pydata.org/bokeh/release/bokeh-"""+bokeh_version+""".min.js"></script>\n"""+\
                         script+\
                         """<body>\n"""+\
                         div+"""
