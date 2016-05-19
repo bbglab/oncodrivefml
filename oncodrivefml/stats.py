@@ -11,6 +11,12 @@ class ArithmeticMean(object):
 
     @staticmethod
     def calc_observed(values, observed):
+        """
+
+        :param values:
+        :param observed: [ scores of observed mutations ]
+        :return:
+        """
         observed_value = np.mean(observed)
         values = np.mean(np.array(list(values)), axis=1)
         obs = len(values[values >= observed_value])

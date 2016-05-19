@@ -25,7 +25,7 @@ class Scores(object):
         self.signature = signature
 
         # Score configuration
-        self.conf_file = config['file']
+        self.conf_file = config['file']#TODO rename as score config file
         self.conf_score = config['score']
         self.conf_chr = config['chr']
         self.conf_chr_prefix = config['chr_prefix']
@@ -57,7 +57,7 @@ class Scores(object):
 
         :return: All the
         """
-        return self.scores_by_pos.keys()
+        return self.scores_by_pos.keconf_fileys()
 
     def _read_score(self, row: list) -> float:
         """
@@ -84,11 +84,23 @@ class Scores(object):
         return value
 
     def _load_scores(self):
+        """
+        For each mutation in certain element:
+        Looks in the scores file, for the scores associated with that element,
+        chromosome, start position and end position.
+        Fills scores_by_pos:
+        { position : [ (ref, alt, score, { signature :  probability } ]
+        compute_muts_statistics
+        :return:
+        """
 
-        tb = tabix.open(self.conf_file)
+        tb = tabix.open(self.conf_file)#conf_file is the file with the scores
 
+        #Loop through a list of dictionaries from the elements dictionary
         for region in self.segments:
             try:
+                #get all rows with certain chromosome and startcompute_muts_statistics and stop
+                # between the element start -1 and stop
                 for row in tb.query("{}{}".format(self.conf_chr_prefix, region['chrom']), region['start']-1, region['stop']):
                     value = self._read_score(row)
 
@@ -97,6 +109,8 @@ class Scores(object):
                     pos = int(row[self.conf_pos])
 
                     if self.conf_element is not None:
+                        #Check that is the element we want
+                        #TODO move up to reduce time
                         if row[self.conf_element] != self.element:
                             continue
 

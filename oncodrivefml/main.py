@@ -26,7 +26,14 @@ class OncodriveFML(object):
         :param output_folder: Folder where the results will be store
         :param config_file: Configuration file
         :param blacklist: File with sample ids (one per line) to remove when loading the input file
+
+        Mutations file format: (see :ref: oncodrivefml.load.MUTATIONS_HEADER)
+        ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
+
+        Elements file format: (see :ref: oncodrivefml.load.REGIONS_HEADER)
+        ['chrom', 'start', 'stop', 'feature', 'segment']
         """
+        #TODO set defaults for output_folder, config_file and blacklist
 
         # Required parameters
         self.input_file = file_exists_or_die(input_file)
@@ -48,6 +55,12 @@ class OncodriveFML(object):
         self.signature = None
 
     def create_element_executor(self, element, muts):
+        """
+
+        :param element: element_id
+        :param muts: mutations associated with that id (from the variants_dict)
+        :return:
+        """
 
         if self.statistic_method == 'maxmean':
             return GroupBySampleExecutor(element, muts, self.elements[element], self.signature, self.config)
@@ -86,6 +99,7 @@ class OncodriveFML(object):
             for executor in loop_logging(pool.imap(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
                 if len(executor.result['mutations']) > 0:
                     results[executor.name] = executor.result
+        #For each element, you get the p values and more info
 
         # Run multiple test correction
         logging.info("Computing multiple test correction")
@@ -106,6 +120,20 @@ class OncodriveFML(object):
 
 
 def cmdline():
+    """
+    Parses the command and runs the analysis. See :ref: OncodriveFML.run
+
+    :return:
+
+    Required:
+    - input: dataset
+    - elements: genomic elements to analyse
+    Optional:
+    - output: output folder
+    - config: configuration file
+    - sample-blacklist: samples not considered from the input file
+    - debug:
+    """
 
     # Command line arguments parser
     parser = argparse.ArgumentParser()

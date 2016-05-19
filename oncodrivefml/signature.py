@@ -76,6 +76,16 @@ def signature_probability(signature_counts):
 
 
 def compute_signature(variants_file, signature_name, blacklist):
+    """
+    Gets the probability for each mutation (if it is a substitution)
+
+    :param variants_file: mutations file
+    :param signature_name: passed to :ref: load_mutations
+    :param blacklist: passed to :ref: load_mutations
+    :return: { signature*: { (reference_triplet, altered_tripled) :
+    probability }  }
+    *: comes from the mutations file (can be altered by signature_name)
+    """
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in load_mutations(variants_file, signature=signature_name, show_warnings=False, blacklist=blacklist):
         if mut['TYPE'] != 'subs':
@@ -94,6 +104,17 @@ def compute_signature(variants_file, signature_name, blacklist):
 
 
 def compute_signature_by_sample(variants_file, blacklist, collapse=True):
+    """
+    Gets the probability for each mutation (if it is a substitution)
+
+    :param variants_file:
+    :param blacklist:
+    :param collapse: flag indicating if a triplet and its complementary are
+    considered the same
+    :return: { sample*: { (reference_triplet, altered_tripled) :
+    probability }  }
+    *: comes from the mutations file
+    """
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in load_mutations(variants_file, show_warnings=False, blacklist=blacklist):
         if mut['TYPE'] != 'subs':
@@ -115,6 +136,18 @@ def compute_signature_by_sample(variants_file, blacklist, collapse=True):
 
 
 def load_signature(variants_file, signature_config, blacklist=None, signature_name="none"):
+    """
+
+    :param variants_file:
+    :param signature_config: { method: , path:  ,column_ref: , column_alt: ,
+    column_probability: }
+    :param blacklist:
+    :param signature_name:
+    :return: { signature: { (reference_triplet, altered_tripled) :
+    probability }  }
+
+    First check if the file is a pickle
+    """
 
     method = signature_config['method']
     path = signature_config.get('path', None)

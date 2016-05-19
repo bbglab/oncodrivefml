@@ -8,14 +8,24 @@ class ElementExecutor(object):
 
     @staticmethod
     def compute_muts_statistics(muts, scores, indels=False):
+        """
+        For each mutation in muts, get the score for that position and that
+        mutation
+
+        :param muts: list of mutations corresponding to the element in the
+        variants_dict
+        :param scores: { pos : [ ( ref, alt, scoreValue,  {signature:prob} ) ] }
+        :param indels:
+        :return:
+        """
 
         # Add scores to the element mutations
         scores_by_sample = {}
         scores_list = []
         scores_subs_list = []
         scores_indels_list = []
-        total_subs = 0
-        total_subs_score = 0
+        total_subs = 0 #counts how many are type substition
+        total_subs_score = 0 #counts how many substitutons have a score value
         positions = []
         mutations = []
         for m in muts:
@@ -27,6 +37,7 @@ class ElementExecutor(object):
                 values = scores.get_score_by_position(m['POSITION'])
                 for v in values:
                     if v.ref == m['REF'] and v.alt == m['ALT']:
+                        #ASK why signature independent
                         m['SCORE'] = v.value
                         total_subs_score += 1
                         break
@@ -100,11 +111,21 @@ class GroupByMutationExecutor(ElementExecutor):
     """
 
     def __init__(self, name, muts, segments, signature, config):
+        """
+
+        :param name: element name
+        :param muts: list of mutations corresponding to the element in the
+        variants_dict
+        :param segments: list of values from the elements dict
+        :param signature: dict with all signatures
+        :param config: dict with the configuration
+        """
 
         # Input attributes
         self.name = name
         self.indels = config['statistic']['indels'] != 'none'
         self.muts = [m for m in muts if m['TYPE'] == 'subs']
+        #ASK won't this avoid getting indels below??
 
         # Add only indels if there is at least one substitution
         if self.indels:
@@ -143,6 +164,13 @@ class GroupByMutationExecutor(ElementExecutor):
         self.scores = None
 
     def run(self):
+        """
+        Loads the scores and compute the statistics for the observed mutations.
+        For all positions around the mutation position
+
+
+        :return: GroupByMutationExecutor
+        """
 
         # Load element scores
         self.scores = Scores(self.name, self.segments, self.signature, self.score_config)
@@ -155,7 +183,8 @@ class GroupByMutationExecutor(ElementExecutor):
             observed = []
             background = []
 
-            for mut in self.result['mutations']:
+            for mut in self.result['mutations']:#ASK acts only as a counter
+                # if no simulation rate is set?
 
                 simulation_scores = []
                 simulation_signature = []
@@ -169,6 +198,8 @@ class GroupByMutationExecutor(ElementExecutor):
                     for s in self.scores.get_score_by_position(pos):
                         simulation_scores.append(s.value)
                         simulation_signature.append(s.signature.get(mut[self.signature_column]))
+                        #ASK what if the signatrue of the mut is different
+                        # than the signature of in ts
 
                 simulation_scores = np.array(simulation_scores)
                 simulation_signature = np.array(simulation_signature)
