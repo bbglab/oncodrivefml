@@ -57,7 +57,7 @@ class Scores(object):
 
         :return: All the
         """
-        return self.scores_by_pos.keconf_fileys()
+        return self.scores_by_pos.keys()
 
     def _read_score(self, row: list) -> float:
         """
