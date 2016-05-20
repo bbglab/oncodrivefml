@@ -62,12 +62,6 @@ The following command will show you the command help:
                             multiply to the signature probability
       --no-figures          Output only the tsv results file
     
-    Indels options:
-      -D INDELS_FILE, --indels INDELS_FILE
-                            Indels scores file
-      --indels-background INDELS_BACKGROUND
-                            Indels random background scores
-    
     Execution options:
       --cores CORES         Maximum CPU cores to use (default all available)
       --debug               Show more progress details
@@ -120,6 +114,10 @@ if you first download it using our data package managment tool that is also inst
 Run this command to download the CADD scores file to the default bgdata folder `~/.bgdata`:
  
     $ bg-data -n 10 genomicscores cadd 1.3
+    
+**WARNING**:  CADD scores are original from http://cadd.gs.washington.edu/ and are freely available 
+for all non-commercial applications. If you are planning on using them in a commercial application, please 
+contact them at http://cadd.gs.washington.edu/contact. 
 
 Also if you want to speed up the download of the genome reference that is also needed, run this command:
 
