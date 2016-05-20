@@ -14,7 +14,7 @@ class ElementExecutor(object):
 
         :param muts: list of mutations corresponding to the element in the
         variants_dict
-        :param scores: { pos : [ ( ref, alt, scoreValue,  {signature:prob} ) ] }
+        :param scores: { pos : [ ( ref, alt, scoreValue,  {signatures:prob} ) ] }
         :param indels:
         :return:
         """
@@ -24,7 +24,7 @@ class ElementExecutor(object):
         scores_list = []
         scores_subs_list = []
         scores_indels_list = []
-        total_subs = 0 #counts how many are type substition
+        subs_counter = 0 #counts how many are type substition
         total_subs_score = 0 #counts how many substitutons have a score value
         positions = []
         mutations = []
@@ -32,12 +32,11 @@ class ElementExecutor(object):
 
             # Get substitutions scores
             if m['TYPE'] == "subs":
-                total_subs += 1
+                subs_counter += 1
                 m['POSITION'] = int(m['POSITION'])
                 values = scores.get_score_by_position(m['POSITION'])
                 for v in values:
                     if v.ref == m['REF'] and v.alt == m['ALT']:
-                        #ASK why signature independent
                         m['SCORE'] = v.value
                         total_subs_score += 1
                         break
@@ -77,7 +76,7 @@ class ElementExecutor(object):
             'samples_mut': num_samples,
             'muts': len(scores_list),
             'muts_recurrence': len(set(positions)),
-            'subs': total_subs,
+            'subs': subs_counter,
             'subs_score': total_subs_score,
             'scores': scores_list,
             'scores_subs': scores_subs_list,
@@ -106,14 +105,14 @@ def detect_repeatitive_seq(chrom, seq, pos):
 
 class GroupByMutationExecutor(ElementExecutor):
     """
-    This executor simulates each mutation independently following the signature probability
+    This executor simulates each mutation independently following the signatures probability
     and within a range if it's provided.
     """
 
-    def __init__(self, name, muts, segments, signature, config):
+    def __init__(self, element_id, muts, segments, signature, config):
         """
 
-        :param name: element name
+        :param element_id: element id
         :param muts: list of mutations corresponding to the element in the
         variants_dict
         :param segments: list of values from the elements dict
@@ -122,10 +121,9 @@ class GroupByMutationExecutor(ElementExecutor):
         """
 
         # Input attributes
-        self.name = name
+        self.name = element_id
         self.indels = config['statistic']['indels'] != 'none'
         self.muts = [m for m in muts if m['TYPE'] == 'subs']
-        #ASK won't this avoid getting indels below??
 
         # Add only indels if there is at least one substitution
         if self.indels:
@@ -166,10 +164,17 @@ class GroupByMutationExecutor(ElementExecutor):
     def run(self):
         """
         Loads the scores and compute the statistics for the observed mutations.
-        For all positions around the mutation position
+        For all positions around the mutation position, gets the scores and
+        probabilities of mutations in those positions.
+        Generates a random set of mutations (for each mutations, randomizes
+        certain amount).
+        Combining those random values (make the transpose to get a matrix
+        number_of_real_amount_of_mutation x randomization_amount) computes
+        how many are above and how many below the value of the current
+        mutation (statistical value of all mutations).
+        Computes the p-values.
 
-
-        :return: GroupByMutationExecutor
+        :return: p values
         """
 
         # Load element scores
@@ -183,8 +188,7 @@ class GroupByMutationExecutor(ElementExecutor):
             observed = []
             background = []
 
-            for mut in self.result['mutations']:#ASK acts only as a counter
-                # if no simulation rate is set?
+            for mut in self.result['mutations']:
 
                 simulation_scores = []
                 simulation_signature = []
@@ -198,8 +202,6 @@ class GroupByMutationExecutor(ElementExecutor):
                     for s in self.scores.get_score_by_position(pos):
                         simulation_scores.append(s.value)
                         simulation_signature.append(s.signature.get(mut[self.signature_column]))
-                        #ASK what if the signatrue of the mut is different
-                        # than the signature of in ts
 
                 simulation_scores = np.array(simulation_scores)
                 simulation_signature = np.array(simulation_signature)

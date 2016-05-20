@@ -75,19 +75,19 @@ def signature_probability(signature_counts):
     return {k: v/total for k, v in signature_counts.items()}
 
 
-def compute_signature(variants_file, signature_name, blacklist):
+def compute_signature(mutations_file, signature_name, blacklist):
     """
     Gets the probability for each mutation (if it is a substitution)
 
-    :param variants_file: mutations file
+    :param mutations_file: mutations file
     :param signature_name: passed to :ref: load_mutations
     :param blacklist: passed to :ref: load_mutations
-    :return: { signature*: { (reference_triplet, altered_tripled) :
+    :return: { signatures*: { (reference_triplet, altered_tripled) :
     probability }  }
     *: comes from the mutations file (can be altered by signature_name)
     """
     signature_count = defaultdict(lambda: defaultdict(int))
-    for mut in load_mutations(variants_file, signature=signature_name, show_warnings=False, blacklist=blacklist):
+    for mut in load_mutations(mutations_file, signature=signature_name, show_warnings=False, blacklist=blacklist):
         if mut['TYPE'] != 'subs':
             continue
 
@@ -103,11 +103,11 @@ def compute_signature(variants_file, signature_name, blacklist):
     return signature
 
 
-def compute_signature_by_sample(variants_file, blacklist, collapse=True):
+def compute_signature_by_sample(mutations_file, blacklist, collapse=True):
     """
     Gets the probability for each mutation (if it is a substitution)
 
-    :param variants_file:
+    :param mutations_file:
     :param blacklist:
     :param collapse: flag indicating if a triplet and its complementary are
     considered the same
@@ -116,7 +116,7 @@ def compute_signature_by_sample(variants_file, blacklist, collapse=True):
     *: comes from the mutations file
     """
     signature_count = defaultdict(lambda: defaultdict(int))
-    for mut in load_mutations(variants_file, show_warnings=False, blacklist=blacklist):
+    for mut in load_mutations(mutations_file, show_warnings=False, blacklist=blacklist):
         if mut['TYPE'] != 'subs':
             continue
 
@@ -135,15 +135,15 @@ def compute_signature_by_sample(variants_file, blacklist, collapse=True):
     return signature
 
 
-def load_signature(variants_file, signature_config, blacklist=None, signature_name="none"):
+def load_signature(mutations_file, signature_config, blacklist=None, signature_name="none"):
     """
 
-    :param variants_file:
+    :param mutations_file:
     :param signature_config: { method: , path:  ,column_ref: , column_alt: ,
     column_probability: }
     :param blacklist:
     :param signature_name:
-    :return: { signature: { (reference_triplet, altered_tripled) :
+    :return: { signatures: { (reference_triplet, altered_tripled) :
     probability }  }
 
     First check if the file is a pickle
@@ -166,14 +166,14 @@ def load_signature(variants_file, signature_config, blacklist=None, signature_na
 
     elif method == "full" or method == "complement":
 
-        signature_dict_precomputed = variants_file + "_signature_full.pickle.gz"
+        signature_dict_precomputed = mutations_file + "_signature_full.pickle.gz"
         if exists(signature_dict_precomputed):
-            logging.info("Using precomputed signature")
+            logging.info("Using precomputed signatures")
             with gzip.open(signature_dict_precomputed, 'rb') as fd:
                 signature_dict = pickle.load(fd)
         else:
-            logging.info("Computing full global signature")
-            signature_dict = compute_signature(variants_file, signature_name, blacklist)
+            logging.info("Computing full global signatures")
+            signature_dict = compute_signature(mutations_file, signature_name, blacklist)
             try:
                 # Try to store as precomputed
                 with gzip.open(signature_dict_precomputed, 'wb') as fd:
@@ -185,27 +185,27 @@ def load_signature(variants_file, signature_config, blacklist=None, signature_na
             signature_dict = collapse_complementaries(signature_dict)
 
     elif method == "bysample":
-        signature_dict_precomputed = variants_file + "_signature_bysample.pickle.gz"
+        signature_dict_precomputed = mutations_file + "_signature_bysample.pickle.gz"
         if exists(signature_dict_precomputed):
-            logging.info("Using precomputed per sample signature")
+            logging.info("Using precomputed per sample signatures")
             with gzip.open(signature_dict_precomputed, 'rb') as fd:
                 signature_dict = pickle.load(fd)
         else:
-            logging.info("Computing signature per sample")
-            signature_dict = compute_signature_by_sample(variants_file, blacklist)
+            logging.info("Computing signatures per sample")
+            signature_dict = compute_signature_by_sample(mutations_file, blacklist)
             try:
                 # Try to store as precomputed
                 with gzip.open(signature_dict_precomputed, 'wb') as fd:
                     pickle.dump(signature_dict, fd)
             except OSError:
-                logging.debug("Imposible to write precomputed bysample signature here: {}".format(signature_dict_precomputed))
+                logging.debug("Imposible to write precomputed bysample signatures here: {}".format(signature_dict_precomputed))
 
     elif method == "file":
         if not os.path.exists(path):
             logging.error("Signature file {} not found.".format(path))
             return -1
         else:
-            logging.info("Loading signature")
+            logging.info("Loading signatures")
             signature_probabilities = pd.read_csv(path, sep='\t')
             signature_probabilities.set_index([column_ref, column_alt], inplace=True)
             signature_dict = {signature_name: signature_probabilities.to_dict()[column_probability]}

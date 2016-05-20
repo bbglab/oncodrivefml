@@ -15,7 +15,7 @@ class Scores(object):
 
         :param element: The element id
         :param segments: A list with the element segments definition
-        :param signature: A dict with the signature probability {'signature_key' : { (ref, alt): probability }}
+        :param signature: A dict with the signatures probability {'signature_key' : { (ref, alt): probability }}
         :param config: Dictionary with the score configuration
         :return:
         """
@@ -25,7 +25,7 @@ class Scores(object):
         self.signature = signature
 
         # Score configuration
-        self.conf_file = config['file']#TODO rename as score config file
+        self.conf_file = config['file']#TODO rename as score configuration file
         self.conf_score = config['score']
         self.conf_chr = config['chr']
         self.conf_chr_prefix = config['chr_prefix']
@@ -39,7 +39,7 @@ class Scores(object):
         self.scores_by_pos = defaultdict(list)
         self.missing_signatures = {}
 
-        # Initialize background scores and signature
+        # Initialize background scores and signatures
         self._load_scores()
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
@@ -47,7 +47,7 @@ class Scores(object):
         Get all the posible scores at the given position
 
         :param position: Genomic position in the gene
-        :return: A list of dicts like this {'ref': 'A', 'alt': 'T', 'value': 3.23, 'signature': {'sample1': 0.1, 'sample2': 0.4}}
+        :return: A list of dicts like this {'ref': 'A', 'alt': 'T', 'value': 3.23, 'signatures': {'sample1': 0.1, 'sample2': 0.4}}
         """
         return self.scores_by_pos.get(position, [])
 
@@ -89,7 +89,7 @@ class Scores(object):
         Looks in the scores file, for the scores associated with that element,
         chromosome, start position and end position.
         Fills scores_by_pos:
-        { position : [ (ref, alt, score, { signature :  probability } ]
+        { position : [ (ref, alt, score, { signatures :  probability } ]
         compute_muts_statistics
         :return:
         """
