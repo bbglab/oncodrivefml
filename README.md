@@ -79,7 +79,7 @@ The following command will show you the command help:
       
 ## File formats ##
 
-**TIP**:  All the files can be compressed using GZIP (extension ".gz"), BZIP2 (ext. ".bz2") or LZMA (ext. ".xz")
+> **TIP**:  All the files can be compressed using GZIP (extension ".gz"), BZIP2 (ext. ".bz2") or LZMA (ext. ".xz")
 
 ### Input file format ###
 
@@ -115,9 +115,7 @@ Run this command to download the CADD scores file to the default bgdata folder `
  
     $ bg-data -n 10 genomicscores cadd 1.3
     
-**WARNING**:  CADD scores are original from http://cadd.gs.washington.edu/ and are freely available 
-for all non-commercial applications. If you are planning on using them in a commercial application, please 
-contact them at http://cadd.gs.washington.edu/contact. 
+> **WARNING**:  CADD scores are original from http://cadd.gs.washington.edu/ and are freely available for all non-commercial applications. If you are planning on using them in a commercial application, please contact them at http://cadd.gs.washington.edu/contact. 
 
 Also if you want to speed up the download of the genome reference that is also needed, run this command:
 
