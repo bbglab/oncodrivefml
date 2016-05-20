@@ -253,10 +253,6 @@ def cmdline():
     general_group.add_argument('--signature-ratio', dest='signature_ratio', default=None, help='Folders with one fold change vector per element to multiply to the signature probability')
     general_group.add_argument('--no-figures', dest='no_figures', default=False, action='store_true', help="Output only the tsv results file")
 
-    indels_group = parser.add_argument_group(title="Indels options")
-    indels_group.add_argument('-D', '--indels', dest='indels_file', default=None, help='Indels scores file')
-    indels_group.add_argument('--indels-background', dest='indels_background', default=None, help="Indels random background scores")
-
     execution_group = parser.add_argument_group(title="Execution options")
     execution_group.add_argument('--cores', dest='cores', type=int, default=os.cpu_count(), help="Maximum CPU cores to use (default all available)")
     execution_group.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
@@ -299,8 +295,6 @@ def cmdline():
         args.signature_file,
         args.score_file,
         args.output_folder,
-        indels_file=args.indels_file,
-        indels_background=args.indels_background,
         signature_ratio=args.signature_ratio,
         project_name=args.project_name,
         cores=args.cores,
