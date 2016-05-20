@@ -36,6 +36,17 @@ MUTATIONS_SCHEMA = {
 
 
 def load_mutations(file, signature=None, show_warnings=True, blacklist=None):
+    """
+    Yields one line from the mutations file as a dictionary
+    :param file: mutations file with format: ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
+    :param signature: only affects if it is bysample (in this case the
+    signatures of the sample [local] if modified to be the sample itself) or if
+    the signatures of the sample [local] is not present (in this case,
+    this value is used)
+    :param show_warnings:
+    :param blacklist: mutations that are omitted from the list
+    :return:
+    """
 
     # Set of samples to blacklist
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
@@ -82,6 +93,14 @@ def load_mutations(file, signature=None, show_warnings=True, blacklist=None):
 
 
 def load_regions(file):
+    """
+
+    :param file: mutation file with format ['chrom', 'start', 'stop', 'feature', 'segment']
+    (see :ref: REGIONS_HEADER)
+    :return: {feature: [ {chromosome: , start: , stop: , feature:, segment*:
+    } ] }
+    *: if the field is not present, feature is used for it
+    """
 
     regions = defaultdict(list)
     with itab.DictReader(file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
@@ -109,6 +128,15 @@ def load_regions(file):
 
 
 def build_regions_tree(regions):
+    """
+
+    :param regions:
+    :return: { chromosome: IntrevalTree }
+    IntervalTree: binary tree with an interval [low limit, high limit) and a
+    value for that interval (can be anything). E.g. [5:(10)]='a string as value'
+    In our case [start : (stop+1)] = (feature, segment)
+
+    """
     regions_tree = defaultdict(IntervalTree)
     for i, (k, allr) in enumerate(regions.items()):
 
@@ -123,6 +151,27 @@ def build_regions_tree(regions):
 
 
 def load_and_map_variants(variants_file, elements_file, signature_name='none', blacklist=None):
+    """
+
+    :param variants_file:
+    :param elements_file:
+    :param signature_name:
+    :param blacklist:
+    :return: variants_dict, elements
+    variants_dict:
+    { element* : [ {chromosome: , positon: , sample: , type: , ref: ,
+    alt: , signatures: , segment*: } ] }
+    *: this value comes from the elements file
+    elements:
+    {feature: [ {chromosome: , start: , stop: , feature: , segment: } ] }
+
+    Checks if the pickle.gz already exists for mutations and elements files,
+    and uses those if possible.
+    If not, it loads the elements (see :ref: load_regions), generates the
+    elements-tree (see :ref: build_regions_tree) and combines it with the
+    variants_file (see :ref: load_mutations) to generate the variants_dict.
+    Blacklist and signatures are used when loading the mutations file.
+    """
 
     # Load elements file
     elements = None
@@ -155,7 +204,7 @@ def load_and_map_variants(variants_file, elements_file, signature_name='none', b
     variants_dict_precomputed = variants_file + "_mapping_" + file_name(elements_file) + '.pickle.gz'
     if exists(variants_dict_precomputed):
         try:
-            logging.info("Using precomputed variants mapping")
+            logging.info("Using precomputed mutations mapping")
             with gzip.open(variants_dict_precomputed, 'rb') as fd:
                 return pickle.load(fd), elements
         except EOFError:
@@ -202,6 +251,7 @@ def load_and_map_variants(variants_file, elements_file, signature_name='none', b
             print(' [{} muts]'.format(i), flush=True)
 
         position = int(r['POSITION'])
+        #Get all intervals that include that position in the same chromosome
         intervals = elements_tree[r['CHROMOSOME']][position]
 
         for interval in intervals:
@@ -225,6 +275,6 @@ def load_and_map_variants(variants_file, elements_file, signature_name='none', b
         with gzip.open(variants_dict_precomputed, 'wb') as fd:
             pickle.dump(variants_dict, fd)
     except OSError:
-        logging.debug("Imposible to write precomputed variants mapping here: {}".format(variants_dict_precomputed))
+        logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
 
     return variants_dict, elements

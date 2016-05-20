@@ -17,46 +17,61 @@ from oncodrivefml.utils import executor_run, loop_logging
 
 class OncodriveFML(object):
 
-    def __init__(self, input_file, elements_file, output_folder, config_file, blacklist):
+    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist):
         """
         Initialize OncodriveFML analysis
 
-        :param input_file: Mutations input file
+        :param mutations_file: Mutations input file
         :param elements_file: Genomic element input file
         :param output_folder: Folder where the results will be store
-        :param config_file: Configuration file
+        :param configuration_file: Configuration file
         :param blacklist: File with sample ids (one per line) to remove when loading the input file
+
+        Mutations file format: (see :ref: oncodrivefml.load.MUTATIONS_HEADER)
+        ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
+
+        Elements file format: (see :ref: oncodrivefml.load.REGIONS_HEADER)
+        ['chrom', 'start', 'stop', 'feature', 'segment']
         """
+        #TODO set defaults for output_folder, configuration_file and blacklist
 
         # Required parameters
-        self.input_file = file_exists_or_die(input_file)
-        self.elements_file= file_exists_or_die(elements_file)
-        self.config = load_configuration(config_file)
+        self.mutations_file = file_exists_or_die(mutations_file)
+        self.elements_file = file_exists_or_die(elements_file)
+        self.configuration = load_configuration(configuration_file)
         self.blacklist = blacklist
-        self.cores = self.config['settings']['cores']
+        self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
-        self.statistic_method = self.config['statistic']['method']
+        self.statistic_method = self.configuration['statistic']['method']
 
         # Optional parameters
         self.output_folder = file_name(self.elements_file) if output_folder is None else output_folder
-        self.output_file_prefix = join(self.output_folder, file_name(self.input_file) + '-oncodrivefml')
+        self.output_file_prefix = join(self.output_folder, file_name(self.mutations_file) + '-oncodrivefml')
 
         # Output parameters
-        self.variants = None
+        self.mutations = None
         self.elements = None
-        self.signature = None
+        self.signatures = None
 
-    def create_element_executor(self, element, muts):
+    def create_element_executor(self, element_id, muts_for_an_element):
+        """
+
+        :param element_id: element_id
+        :param muts_for_an_element: mutations associated with that id
+        :return:
+        """
 
         if self.statistic_method == 'maxmean':
-            return GroupBySampleExecutor(element, muts, self.elements[element], self.signature, self.config)
+            return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
 
-        return GroupByMutationExecutor(element, muts, self.elements[element], self.signature, self.config)
+        return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
 
     def run(self):
         """
-        Run the OncodriveFML analysis
+        Run the OncodriveFML analysis.
+        Reads the elements and mutations from the corresponding files.
+        Loads the signatures
         """
 
         # Skip if done
@@ -64,14 +79,15 @@ class OncodriveFML(object):
             logging.warning("Already calculated at '{}'".format(self.output_file_prefix + '.tsv'))
             return
 
-        # Load variants mapping
-        self.variants, self.elements = load_and_map_variants(self.input_file, self.elements_file, blacklist=self.blacklist)
+        # Load mutations mapping
+        self.mutations, self.elements = load_and_map_variants(self.mutations_file, self.elements_file, blacklist=self.blacklist)
 
-        # Load signature
-        self.signature = load_signature(self.input_file, self.config['signature'], blacklist=self.blacklist)
+        # Load signatures
+        self.signatures = load_signature(self.mutations_file, self.configuration['signature'], blacklist=self.blacklist)
 
         # Create one executor per element
-        element_executors = [self.create_element_executor(element, muts) for element, muts in self.variants.items()]
+        element_executors = [self.create_element_executor(element_id, muts) for
+                             element_id, muts in self.mutations.items()]
 
         # Remove elements that don't have mutations to compute
         element_executors = [e for e in element_executors if len(e.muts) > 0]
@@ -86,6 +102,7 @@ class OncodriveFML(object):
             for executor in loop_logging(pool.imap(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
                 if len(executor.result['mutations']) > 0:
                     results[executor.name] = executor.result
+        #For each element, you get the p values and more info
 
         # Run multiple test correction
         logging.info("Computing multiple test correction")
@@ -106,17 +123,31 @@ class OncodriveFML(object):
 
 
 def cmdline():
+    """
+    Parses the command and runs the analysis. See :ref: OncodriveFML.run
+
+    :return:
+
+    Required:
+    - input: dataset/mutations_file/variants_file
+    - elements: genomic elements to analyse
+    Optional:
+    - output: output folder
+    - configuration: configuration file
+    - sample-blacklist: samples not considered from the input file
+    - debug:
+    """
 
     # Command line arguments parser
     parser = argparse.ArgumentParser()
 
     # Required arguments
-    parser.add_argument('-i', '--input', dest='input_file', required=True, help='Variants file')
+    parser.add_argument('-i', '--input', dest='mutations_file', required=True, help='Variants file')
     parser.add_argument('-e', '--elements', dest='elements_file', required=True, help='Genomic elements to analyse')
 
     # Optional arguments
     parser.add_argument('-o', '--output', dest='output_folder', default=None, help="Output folder. Default to regions file name without extensions.")
-    parser.add_argument('-c', '--config', dest='config_file', default=None, help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
+    parser.add_argument('-c', '--configuration', dest='config_file', default=None, help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
     parser.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
     parser.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
 
@@ -130,7 +161,7 @@ def cmdline():
 
     # Load configuration file and prepare analysis
     logging.info("Loading configuration")
-    analysis = OncodriveFML(args.input_file, args.elements_file, args.output_folder, args.config_file, args.samples_blacklist)
+    analysis = OncodriveFML(args.mutations_file, args.elements_file, args.output_folder, args.config_file, args.samples_blacklist)
 
     # Run the analysis
     analysis.run()

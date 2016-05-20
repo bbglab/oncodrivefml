@@ -8,21 +8,31 @@ class ElementExecutor(object):
 
     @staticmethod
     def compute_muts_statistics(muts, scores, indels=False):
+        """
+        For each mutation in muts, get the score for that position and that
+        mutation
+
+        :param muts: list of mutations corresponding to the element in the
+        variants_dict
+        :param scores: { pos : [ ( ref, alt, scoreValue,  {signatures:prob} ) ] }
+        :param indels:
+        :return:
+        """
 
         # Add scores to the element mutations
         scores_by_sample = {}
         scores_list = []
         scores_subs_list = []
         scores_indels_list = []
-        total_subs = 0
-        total_subs_score = 0
+        subs_counter = 0 #counts how many are type substition
+        total_subs_score = 0 #counts how many substitutons have a score value
         positions = []
         mutations = []
         for m in muts:
 
             # Get substitutions scores
             if m['TYPE'] == "subs":
-                total_subs += 1
+                subs_counter += 1
                 m['POSITION'] = int(m['POSITION'])
                 values = scores.get_score_by_position(m['POSITION'])
                 for v in values:
@@ -66,7 +76,7 @@ class ElementExecutor(object):
             'samples_mut': num_samples,
             'muts': len(scores_list),
             'muts_recurrence': len(set(positions)),
-            'subs': total_subs,
+            'subs': subs_counter,
             'subs_score': total_subs_score,
             'scores': scores_list,
             'scores_subs': scores_subs_list,
@@ -95,14 +105,23 @@ def detect_repeatitive_seq(chrom, seq, pos):
 
 class GroupByMutationExecutor(ElementExecutor):
     """
-    This executor simulates each mutation independently following the signature probability
+    This executor simulates each mutation independently following the signatures probability
     and within a range if it's provided.
     """
 
-    def __init__(self, name, muts, segments, signature, config):
+    def __init__(self, element_id, muts, segments, signature, config):
+        """
+
+        :param element_id: element id
+        :param muts: list of mutations corresponding to the element in the
+        variants_dict
+        :param segments: list of values from the elements dict
+        :param signature: dict with all signatures
+        :param config: dict with the configuration
+        """
 
         # Input attributes
-        self.name = name
+        self.name = element_id
         self.indels = config['statistic']['indels'] != 'none'
         self.muts = [m for m in muts if m['TYPE'] == 'subs']
 
@@ -143,6 +162,20 @@ class GroupByMutationExecutor(ElementExecutor):
         self.scores = None
 
     def run(self):
+        """
+        Loads the scores and compute the statistics for the observed mutations.
+        For all positions around the mutation position, gets the scores and
+        probabilities of mutations in those positions.
+        Generates a random set of mutations (for each mutations, randomizes
+        certain amount).
+        Combining those random values (make the transpose to get a matrix
+        number_of_real_amount_of_mutation x randomization_amount) computes
+        how many are above and how many below the value of the current
+        mutation (statistical value of all mutations).
+        Computes the p-values.
+
+        :return: p values
+        """
 
         # Load element scores
         self.scores = Scores(self.name, self.segments, self.signature, self.score_config)

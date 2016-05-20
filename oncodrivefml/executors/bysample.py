@@ -14,6 +14,14 @@ class GroupBySampleExecutor(ElementExecutor):
     """
 
     def __init__(self, name, muts, segments, signature, config):
+        """
+
+        :param name: element name
+        :param muts: mutation corr
+        :param segments:
+        :param signature:
+        :param config: dict with the configuration
+        """
 
         # Input attributes
         self.name = name
