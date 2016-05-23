@@ -12,7 +12,7 @@ setup(
     package_data={'oncodrivefml': ['*.txt.gz']},
     url="https://bitbucket.org/bbglab/oncodrivefml",
     download_url="https://bitbucket.org/bbglab/oncodrivefml/get/"+__version__+".tar.gz",
-    license='UPF Free Source Code',
+    license='AGPL',
     author='Biomedical Genomics Group',
     author_email='nuria.lopez@upf.edu',
     description='',
