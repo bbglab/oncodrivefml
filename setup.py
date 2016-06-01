@@ -22,7 +22,7 @@ setup(
         'scipy >= 0.14.0',
         'statsmodels >= 0.6.1',
         'pytabix >= 0.1',
-        'bokeh >= 0.9.2',
+        'bokeh == 0.10',
         'pandas >= 0.15.2',
         'matplotlib >= 1.4.0',
         'intervaltree >= 2.1.0',
