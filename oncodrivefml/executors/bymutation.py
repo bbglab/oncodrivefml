@@ -204,8 +204,12 @@ class GroupByMutationExecutor(ElementExecutor):
                         simulation_signature.append(s.signature.get(mut[self.signature_column]))
 
                 simulation_scores = np.array(simulation_scores)
-                simulation_signature = np.array(simulation_signature)
-                simulation_signature = None if simulation_signature is None else (simulation_signature / simulation_signature.sum())
+
+                if self.signature is not None:
+                    simulation_signature = np.array(simulation_signature)
+                    simulation_signature = simulation_signature / simulation_signature.sum()
+                else:
+                    simulation_signature = None
 
                 observed.append(mut['SCORE'])
                 background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
