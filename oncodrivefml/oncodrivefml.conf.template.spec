@@ -1,5 +1,5 @@
 [signature]
-method = option('full', 'complement', 'bysample', 'file')
+method = option('none', 'full', 'complement', 'bysample', 'file')
 path = string(default=None)
 column_ref = string(default=None)
 column_alt = string(default=None)
