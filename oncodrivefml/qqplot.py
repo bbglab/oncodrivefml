@@ -95,7 +95,7 @@ class QQPlot(object):
                     /*alert("Value not found: '"+origSearch+"'")*/
                     swal("Value not found: '"+origSearch+"'")
                 source.trigger('change');"""
-            #self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
+            self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
 
     def load(self, input_file, fields=None, basic_fields=None, extra_fields=None):
 
