@@ -125,7 +125,7 @@ class GroupByMutationExecutor(ElementExecutor):
         self.indels = config['statistic']['indels'] != 'none'
         self.muts = [m for m in muts if m['TYPE'] == 'subs']
 
-        # Add only indels if there is at least one substitution
+        # Add only indels that are not in a repeatitive sequence
         if self.indels:
             indels_max_repeats = config['statistic']['indels_max_repeats']
             indels_set = set()
