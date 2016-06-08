@@ -32,20 +32,12 @@ def get_hg19_mmap(chromosome):
 
 
 def get_ref_triplet(chromosome, start):
-    mm_file = get_hg19_mmap(chromosome)
-    try:
-        mm_file.seek(start-1)
-    except ValueError:
-        return "ERR"
-    return mm_file.read(3).decode().upper()
+    return get_ref(chromosome, start, size=3)
 
 
 def get_ref(chromosome, start, size=1):
     mm_file = get_hg19_mmap(chromosome)
-    try:
-        mm_file.seek(start - 1)
-    except ValueError:
-        return "ERR"
+    mm_file.seek(start - 1)
     return mm_file.read(size).decode().upper()
 
 
