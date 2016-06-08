@@ -19,63 +19,28 @@ The first time that you run OncodriveFML it will download the genome reference f
 
 The following command will show you the command help:
 
-	$ oncodrivefml --help
-    usage: oncodrivefml [-h] -i INPUT_FILE -r REGIONS_FILE -s SCORE_FILE
-                        [-t SIGNATURE_FILE] [-o OUTPUT_FOLDER] [-n PROJECT_NAME]
-                        [--statistic] [-mins MIN_SAMPLINGS] [-maxs MAX_SAMPLINGS]
-                        [--samples-blacklist SAMPLES_BLACKLIST]
-                        [--signature-ratio SIGNATURE_RATIO] [--no-figures]
-                        [-D INDELS_FILE] [--indels-background INDELS_BACKGROUND]
-                        [--cores CORES] [--debug] [--trace TRACE [TRACE ...]]
-                        [--drmaa DRMAA] [--drmaa-max-jobs DRMAA_MAX_JOBS]
-                        [--resume] [-q QUEUES]
-    
+	$ oncodrivefml --help 
+    usage: oncodrivefml [-h] -i MUTATIONS_FILE -e ELEMENTS_FILE [-o OUTPUT_FOLDER]
+                    [-c CONFIG_FILE] [--samples-blacklist SAMPLES_BLACKLIST]
+                    [--debug]
+
     optional arguments:
-      -h, --help            show this help message and exit
-    
-    Mandatory options:
-      -i INPUT_FILE, --input INPUT_FILE
-                            Variants file
-      -r REGIONS_FILE, --regions REGIONS_FILE
-                            Genomic regions to analyse
-      -s SCORE_FILE, --score SCORE_FILE
-                            Substitutions scores file
-      -t SIGNATURE_FILE, --signature SIGNATURE_FILE
-                            Trinucleotide signature file. Use 'compute' to compute
-                            it from the whole file, use 'none' if you don't want
-                            to use signature.
-    
-    General options:
-      -o OUTPUT_FOLDER, --output OUTPUT_FOLDER
-                            Output folder. Default to 'output'
-      -n PROJECT_NAME, --name PROJECT_NAME
-                            Project name
-      --statistic           Statistic to use: amean, gmean, max
-      -mins MIN_SAMPLINGS, --min-samplings MIN_SAMPLINGS
-                            Minimum number of randomizations (default is 10k).
-      -maxs MAX_SAMPLINGS, --max-samplings MAX_SAMPLINGS
-                            Maximum number of randomizations (default is 100k).
-      --samples-blacklist SAMPLES_BLACKLIST
-                            Remove this samples when loading the input file
-      --signature-ratio SIGNATURE_RATIO
-                            Folders with one fold change vector per element to
-                            multiply to the signature probability
-      --no-figures          Output only the tsv results file
-    
-    Execution options:
-      --cores CORES         Maximum CPU cores to use (default all available)
-      --debug               Show more progress details
-      --trace TRACE [TRACE ...]
-                            Elements IDs to store files to trace and reproduce the
-                            execution
-    
-    Cluster options:
-      --drmaa DRMAA         Run in a DRMAA cluster using this value as the number
-                            of elements to compute per job.
-      --drmaa-max-jobs DRMAA_MAX_JOBS
-                            Maximum parallell concurrent jobs
-      --resume              Resume a DRMAA execution
-      -q QUEUES             DRMAA cluster queues
+    -h, --help            show this help message and exit
+    -i MUTATIONS_FILE, --input MUTATIONS_FILE
+                        Variants file
+    -e ELEMENTS_FILE, --elements ELEMENTS_FILE
+                        Genomic elements to analyse
+    -o OUTPUT_FOLDER, --output OUTPUT_FOLDER
+                        Output folder. Default to regions file name without
+                        extensions.
+    -c CONFIG_FILE, --configuration CONFIG_FILE
+                        Configuration file. Default to 'oncodrivefml.conf' in
+                        the current folder if exists or to
+                        ~/.bbglab/oncodrivefml.conf if not.
+    --samples-blacklist SAMPLES_BLACKLIST
+                        Remove this samples when loading the input file
+    --debug             Show more progress details
+
       
 ## File formats ##
 
@@ -99,70 +64,3 @@ The regions file is a text file with 4 columns separated by a tab character (wit
 * Column 2: Start position. A positive integer.
 * Column 3: End position. A positive integer.
 * Column 4: Element identifier.
-
-## Run an example ##
-
-Download and extract example files:
-
-    $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples.tar.gz
-    $ tar xvzf oncodrivefml-examples.tar.gz
-    
-To run this example OncodriveFML needs all precomputed CADD scores that is a 80Gb file. It will be 
-automatically download the first time that you run OncodriveFML, but if you want to speed up the download is better
-if you first download it using our data package managment tool that is also installed when you install OncodriveFML.
-
-Run this command to download the CADD scores file to the default bgdata folder `~/.bgdata`:
- 
-    $ bg-data -n 10 genomicscores cadd 1.3
-    
-> **WARNING**:  CADD scores are original from http://cadd.gs.washington.edu/ and are freely available for all non-commercial applications. If you are planning on using them in a commercial application, please contact them at http://cadd.gs.washington.edu/contact.
-
-Also if you want to speed up the download of the genome reference that is also needed, run this command:
-
-    $ bg-data -n 10 datasets genomereference hg19
-
-Now run OncodriveFML like this:
-
-    $ oncodrivefml -i paad.txt.gz -r cds.regions.xz -t compute -s cadd.conf
-    
-    13:00:13 INFO: Loading regions
-    13:00:30 INFO: Loading and mapping mutations
-    13:00:30 INFO: [1 of 20763]
-    13:00:44 INFO: [7333 of 20763]
-    13:00:59 INFO: [14665 of 20763]
-    13:01:12 INFO: [20763 of 20763]
-    13:01:14 INFO: Computing signature
-    13:01:17 INFO: Computing statistics
-    13:01:19 INFO: [1 of 2560]
-    13:02:17 INFO: [145 of 2560]
-    13:02:41 INFO: [289 of 2560]
-    13:03:04 INFO: [433 of 2560]
-    13:04:11 INFO: [577 of 2560]
-    13:05:38 INFO: [721 of 2560]
-    13:05:38 INFO: [865 of 2560]
-    13:05:38 INFO: [1009 of 2560]
-    13:06:57 INFO: [1153 of 2560]
-    13:06:57 INFO: [1297 of 2560]
-    13:06:57 INFO: [1441 of 2560]
-    13:06:57 INFO: [1585 of 2560]
-    13:08:34 INFO: [1729 of 2560]
-    13:08:34 INFO: [1873 of 2560]
-    13:08:51 INFO: [2017 of 2560]
-    13:08:51 INFO: [2161 of 2560]
-    13:09:19 INFO: [2305 of 2560]
-    13:09:42 INFO: [2449 of 2560]
-    13:14:56 INFO: [2560 of 2560]
-    13:14:56 WARNING: There are background positions without signature probability. We are using a probability of zero at these positions.
-    13:14:56 WARNING: If you are computing the signature from the input file, most probable this means that you don't have enough mutations.
-    13:14:56 WARNING: Try using a precomputed signature of a similar cancer type to improve the results.
-    13:14:56 WARNING: The missing signatures are:
-    13:14:56 WARNING:       ref: 'TAT' alt: 'TCT'
-    13:14:56 WARNING:       ref: 'TAG' alt: 'TCG'
-    13:14:56 WARNING:       ref: 'ATT' alt: 'AGT'
-    13:14:56 WARNING:       ref: 'CAA' alt: 'CTA'
-    13:14:56 WARNING:       ref: 'TTA' alt: 'TAA'
-    13:14:56 INFO: Computing multiple test correction
-    13:14:59 INFO: Creating figures
-    13:15:08 INFO: Done
-    
-Ignore this warning that is due to the fact that we are using a small example dataset. You can browse the results in the `output` folder.
