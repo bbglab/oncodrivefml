@@ -198,7 +198,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
-                if mut['type'] == 'subs':
+                if mut['TYPE'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
