@@ -232,7 +232,7 @@ class GroupByMutationExecutor(ElementExecutor):
                 observed.append(mut['SCORE'])
                 background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
 
-            self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), observed)
+            self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
 
         # Calculate p-values
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
