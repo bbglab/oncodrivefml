@@ -2,8 +2,8 @@ import math
 from oncodrivefml.signature import get_ref
 
 window_size = 10
-weight
-weighting_function
+weight = None
+weighting_function = lambda x: 1
 
 
 def _init_indels(lenght=10, method='cte'):
@@ -22,7 +22,7 @@ class Weight:
         self.length = length
         if type == 'cte':
             self.funct = self.cte
-        if type=='linear':
+        if type =='linear':
             self.intercept = 1
             self.slope = -1.0/length
             self.funct = self.linear
