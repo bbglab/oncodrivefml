@@ -18,7 +18,7 @@ class ArithmeticMean(object):
         :return:
         """
         observed_value = np.mean(observed)
-        values = np.mean(np.array(list(values)), axis=1)
+        values = np.mean(values, axis=1)
         obs = len(values[values >= observed_value])
         neg_obs = len(values[values <= observed_value])
         return obs, neg_obs
@@ -35,17 +35,14 @@ class GeometricMean(object):
 
     @staticmethod
     def calc(values):
-        return stats.gmean(np.array(values) + 1.0) - 1.0
+        return stats.gmean(values + 1.0) - 1.0
 
     @staticmethod
-    def calc_observed(values, observed_value):
-        obs, neg_obs = 0, 0
-        for values in values:
-            background_test = GeometricMean.calc(values)
-            if background_test >= observed_value:
-                obs += 1
-            if background_test <= observed_value:
-                neg_obs += 1
+    def calc_observed(values, observed):
+        observed_value = stats.gmean(observed + 1.0) -1.0
+        values = stats.gmean(values +1.0, axis=1) -1.0
+        obs = len(values[values >= observed_value])
+        neg_obs = len(values[values <= observed_value])
         return obs, neg_obs
 
 

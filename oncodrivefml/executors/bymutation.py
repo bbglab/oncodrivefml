@@ -198,7 +198,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
-                if mut['type'] == 'subs':
+                if mut['TYPE'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
@@ -232,7 +232,7 @@ class GroupByMutationExecutor(ElementExecutor):
                 observed.append(mut['SCORE'])
                 background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
 
-            self.obs, self.neg_obs = statistic_test.calc_observed(zip(*background), observed)
+            self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), observed)
 
         # Calculate p-values
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
