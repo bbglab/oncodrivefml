@@ -3,41 +3,8 @@ from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.signature import get_ref
 
+from oncodrivefml.executors.indels import Indel
 import math
-
-class Weight:
-    '''
-    In 0 it will always be 1
-    In length + 1 is 0
-    '''
-    def __init__(self, length, type):
-        self.length = length
-        if type == 'cte':
-            self.funct = self.cte
-        if type=='linear':
-            self.intercept = 1
-            self.slope = -1.0/length
-            self.funct = self.linear
-
-    def function(self, x):
-        return self.funct(x)
-
-    def cte(self, x):
-        return 1
-
-    def linear(self, x):
-        return self.slope * x + self.intercept
-
-def weigth_indel_scores(indel_scores, indel_size, indel_window_size, funct):
-    # if we have and indel multiple of 3 all have weight 1
-    if not(indel_size % 3):
-        return indel_scores
-    #During the indel size, weight is one, so we ignore those
-    for i in range(indel_size, indel_window_size):#if indel_size is bigger than the window it is an empty range
-        # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
-        indel_scores[i] = indel_scores[i] * funct(i-indel_size+1) # first element has x = 1 TODO check
-
-
 
 class ElementExecutor(object):
 
@@ -77,41 +44,10 @@ class ElementExecutor(object):
                         break
 
             if indels and m['TYPE'] == "indel":
-                m['POSITION'] = int(m['POSITION'])
-                indel_size = max(len(m['REF']), len(m['ALT']))
-                is_insertion = True if '-' in m['REF'] else False
 
-                indel_window_size = 10
-                indel_scores = [math.nan]* indel_window_size
+                score = Indel.get_indel_score(m, scores, int(m['POSITION']))
 
-                weight = Weight(indel_window_size, 'cte')
-                # TODO move this outside
-                if not (indel_size % 3): # frame shift
-                    indel_window_size = (indel_size + 2) if (indel_size+2) <= indel_window_size else indel_window_size
-                    #TODO adapt window size for triplets
-
-                index = 0
-                for position in range(m['POSITION'], m['POSITION'] + indel_window_size):
-                    scores_in_position = scores.get_score_by_position(position) # if position is outside the element, it has not score so the indel score remains nan
-                    for score in scores_in_position:
-                        if is_insertion:
-                            alteration = m['ALT'][index] if index < indel_size else get_ref(position-indel_size)
-                        else:  # deletion
-                            try:
-                                alteration = get_ref(position+indel_size)
-                            except ValueError:  # generated when we are outside the element
-                                break # ignore it (score = nan)
-                        #alteration = (m['ALT'] if is_insertion else m['REF'])[index] if index < indel_size else get_ref(position-indel_size)
-                        if score.ref == get_ref(position) and score.alt == alteration:
-                            indel_scores[index] = score.value
-                            break
-                    index += 1
-
-                #indel_window_size = index #adjust the window size to the looped size. Only useful if we are at the end of the element
-
-                indel_scores = weigth_indel_scores(indel_scores, indel_size, indel_window_size, weight.function)
-
-                m['SCORE'] = max(indel_scores)
+                m['SCORE'] = score if not math.isnan(score) else None
 
             # Update scores
             if m.get('SCORE', None) is not None:
@@ -252,29 +188,65 @@ class GroupByMutationExecutor(ElementExecutor):
 
             for mut in self.result['mutations']:
 
-                simulation_scores = []
-                simulation_signature = []
+                if mut['type']=='subs':
 
-                if self.simulation_range is not None:
-                    positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
-                else:
-                    positions = self.scores.get_all_positions()
+                    simulation_scores = []
+                    simulation_signature = []
 
-                for pos in positions:
-                    for s in self.scores.get_score_by_position(pos):
-                        simulation_scores.append(s.value)
-                        simulation_signature.append(s.signature.get(mut[self.signature_column]))
+                    if self.simulation_range is not None:
+                        positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
+                    else:
+                        positions = self.scores.get_all_positions()
 
-                simulation_scores = np.array(simulation_scores)
+                    for pos in positions:
+                        for s in self.scores.get_score_by_position(pos):
+                            simulation_scores.append(s.value)
+                            simulation_signature.append(s.signature.get(mut[self.signature_column]))
 
-                if self.signature is not None:
-                    simulation_signature = np.array(simulation_signature)
-                    simulation_signature = simulation_signature / simulation_signature.sum()
-                else:
+                    simulation_scores = np.array(simulation_scores)
+
+                    if self.signature is not None:
+                        simulation_signature = np.array(simulation_signature)
+                        simulation_signature = simulation_signature / simulation_signature.sum()
+                    else:
+                        simulation_signature = None
+
+                    observed.append(mut['SCORE'])
+                    background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
+
+                else:  # indels
+
+                    simulation_scores = []
+                    simulation_signature = []
+
+                    if self.simulation_range is not None:
+                        positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
+                    else:
+                        positions = self.scores.get_all_positions()
+
+                    is_insertion = True if '-' in mut['REF'] else False
+
+                    if is_insertion:
+                        for pos in positions:
+                            if get_ref(pos) == get_ref(mut['POSITION']) and get_ref(pos + 1) == get_ref(mut['POSITION'] + 1):
+                                score = Indel.get_indel_score(mut, self.scores, pos)
+                                if not math.isnan(score):
+                                    simulation_scores.append(score)
+
+                    else:
+                        del_size = max(len(mut['REF']), len(mut['ALT']))
+                        for pos in positions:
+                            if get_ref(pos) == get_ref(mut['POSITION']) and get_ref(pos + del_size) == get_ref(mut['POSITION'] + del_size):
+                                score = Indel.get_indel_score(mut, self.scores, pos)
+                                if not math.isnan(score):
+                                    simulation_scores.append(score)
+
+                    simulation_scores = np.array(simulation_scores)
                     simulation_signature = None
 
-                observed.append(mut['SCORE'])
-                background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
+                    observed.append(mut['SCORE'])
+                    background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
+
 
             self.obs, self.neg_obs = statistic_test.calc_observed(zip(*background), observed)
 

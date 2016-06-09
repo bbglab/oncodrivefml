@@ -14,6 +14,8 @@ from oncodrivefml.signature import load_signature
 from multiprocessing.pool import Pool
 from oncodrivefml.utils import executor_run, loop_logging
 
+from oncodrivefml.executors.indels import _init_indels
+
 
 class OncodriveFML(object):
 
@@ -94,6 +96,9 @@ class OncodriveFML(object):
 
         # Sort executors to compute first the ones that have more mutations
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
+
+        #initialize the indels module
+        _init_indels(10, 'linear')
 
         # Run the executors
         with Pool(self.cores) as pool:
