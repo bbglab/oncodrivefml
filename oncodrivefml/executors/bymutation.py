@@ -188,44 +188,24 @@ class GroupByMutationExecutor(ElementExecutor):
 
             for mut in self.result['mutations']:
 
-                if mut['type']=='subs':
+                simulation_scores = []
+                simulation_signature = []
 
-                    simulation_scores = []
-                    simulation_signature = []
+                if self.simulation_range is not None:
+                    positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
+                else:
+                    positions = self.scores.get_all_positions()
 
-                    if self.simulation_range is not None:
-                        positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
-                    else:
-                        positions = self.scores.get_all_positions()
+                signature = self.signature
 
+                if mut['type'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
                             simulation_signature.append(s.signature.get(mut[self.signature_column]))
-
-                    simulation_scores = np.array(simulation_scores)
-
-                    if self.signature is not None:
-                        simulation_signature = np.array(simulation_signature)
-                        simulation_signature = simulation_signature / simulation_signature.sum()
-                    else:
-                        simulation_signature = None
-
-                    observed.append(mut['SCORE'])
-                    background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
-
-                else:  # indels
-
-                    simulation_scores = []
-                    simulation_signature = []
-
-                    if self.simulation_range is not None:
-                        positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
-                    else:
-                        positions = self.scores.get_all_positions()
-
+                else: #indels
                     is_insertion = True if '-' in mut['REF'] else False
-
+                    signature = None
                     if is_insertion:
                         for pos in positions:
                             if get_ref(pos) == get_ref(mut['POSITION']) and get_ref(pos + 1) == get_ref(mut['POSITION'] + 1):
@@ -241,12 +221,16 @@ class GroupByMutationExecutor(ElementExecutor):
                                 if not math.isnan(score):
                                     simulation_scores.append(score)
 
-                    simulation_scores = np.array(simulation_scores)
+                simulation_scores = np.array(simulation_scores)
+
+                if signature is not None:
+                    simulation_signature = np.array(simulation_signature)
+                    simulation_signature = simulation_signature / simulation_signature.sum()
+                else:
                     simulation_signature = None
 
-                    observed.append(mut['SCORE'])
-                    background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
-
+                observed.append(mut['SCORE'])
+                background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
 
             self.obs, self.neg_obs = statistic_test.calc_observed(zip(*background), observed)
 
