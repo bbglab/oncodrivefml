@@ -1,5 +1,6 @@
 import math
 from oncodrivefml.signature import get_ref
+from math import exp
 
 window_size = 10
 weight = None
@@ -15,8 +16,13 @@ def _init_indels(lenght=10, method='cte'):
 
 class Weight:
     '''
-    In 0 it will always be 1
-    In length + 1 is 0
+    Functions are implemented to work on the interval between 0 and the window length.
+    This means that the function is close to 1 at x=0 and close to 0 at x=length.
+
+    If x = actual position of the element in the window you get the original function value
+    If x = actual position of the element in the window - indel_size you get the function value starting at the first element outside the indel size
+    If x = actual position of the element in the window - indel_size +1 you get the function value starting at the last element of the indel_size
+
     '''
     def __init__(self, length, type):
         self.length = length
@@ -26,6 +32,9 @@ class Weight:
             self.intercept = 1
             self.slope = -1.0/length
             self.funct = self.linear
+        if type == 'logistic':
+            self.beta = 10
+            self.funct = self.logistic
 
     def function(self, x):
         return self.funct(x)
@@ -35,6 +44,9 @@ class Weight:
 
     def linear(self, x):
         return self.slope * x + self.intercept
+
+    def logistic(self, x):
+        return 1.0/(1+exp(self.beta*(x-self.length/2)))
 
 
 class Indel:
