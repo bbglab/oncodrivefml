@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
@@ -221,6 +223,9 @@ class GroupByMutationExecutor(ElementExecutor):
                                 if not math.isnan(score):
                                     simulation_scores.append(score)
 
+                    if len(simulation_scores) < 100:
+                        logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
+
                 simulation_scores = np.array(simulation_scores)
 
                 if signature is not None:
@@ -232,9 +237,10 @@ class GroupByMutationExecutor(ElementExecutor):
                 observed.append(mut['SCORE'])
                 background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
 
-            self.obs, self.neg_obs = statistic_test.calc_observed(zip(*background), observed)
+            self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
 
         # Calculate p-values
+        self.result['background_size'] = len(simulation_scores)
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
         self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
 
