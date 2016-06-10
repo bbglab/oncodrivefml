@@ -98,7 +98,7 @@ class OncodriveFML(object):
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
 
         # initialize the indels module
-        _init_indels(10, 'linear')
+        _init_indels(10, 'linear', 3)
 
         # Run the executors
         with Pool(self.cores) as pool:

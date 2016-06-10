@@ -5,13 +5,15 @@ from math import exp
 window_size = 10
 weight = None
 weighting_function = lambda x: 1
+frame_shift = 1
 
 
-def _init_indels(lenght=10, method='cte'):
-    global window_size, weight, weighting_function
+def _init_indels(lenght=10, method='cte', shift=1):
+    global window_size, weight, weighting_function, frame_shift
     window_size = lenght
     weight = Weight(window_size, method)
     weighting_function = weight.function
+    frame_shift = shift
 
 
 class Weight:
@@ -59,8 +61,8 @@ class Indel:
         indel_scores = [math.nan] * window_size
         indel_window_size = window_size
 
-        if (indel_size % 3) == 0:  # frame shift
-            indel_window_size = (indel_size + 2) if (indel_size + 2) <= window_size else window_size
+        if frame_shift != 1 and (indel_size % frame_shift) == 0:  # frame shift
+            indel_window_size = (indel_size + frame_shift-1) if (indel_size + frame_shift-1) <= window_size else window_size
 
         for index, position in enumerate(range(mutation_position, mutation_position + indel_window_size)):
             scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
@@ -76,7 +78,7 @@ class Indel:
                     indel_scores[index] = score.value
                     break
 
-        if (indel_size % 3) != 0:
+        if frame_shift == 1 or (indel_size % frame_shift) != 0:
             for i in range(indel_size, indel_window_size):  # if indel_size is bigger than the window it is an empty range
                 # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
                 indel_scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
