@@ -123,7 +123,11 @@ class GroupByMutationExecutor(ElementExecutor):
         # Input attributes
         self.name = element_id
         self.indels = config['statistic']['indels'] != 'none'
-        self.muts = [m for m in muts if m['TYPE'] == 'subs']
+        subs = self.configuration['statistic']['subs'] != 'none'
+        if subs:
+            self.muts = [m for m in muts if m['TYPE'] == 'subs']
+        else:
+            self.muts = []
 
         # Add only indels that are not in a repeatitive sequence
         if self.indels:

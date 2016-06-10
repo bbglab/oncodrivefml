@@ -76,6 +76,12 @@ method = amean
 # Gemoetric mean
 # method = gmean
 
+# Compute the substitutions
+subs = enabled
+
+# Do not compute the substitutions
+subs = none
+
 # Method to compute indels scores:
 
 # skip indels

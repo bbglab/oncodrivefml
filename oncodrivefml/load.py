@@ -35,7 +35,7 @@ MUTATIONS_SCHEMA = {
 }
 
 
-def load_mutations(file, signature=None, show_warnings=True, blacklist=None):
+def load_mutations(file, signature=None, show_warnings=True, blacklist=None, subs=True, indels=True):
     """
     Yields one line from the mutations file as a dictionary
     :param file: mutations file with format: ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
@@ -69,6 +69,12 @@ def load_mutations(file, signature=None, show_warnings=True, blacklist=None):
                 row['TYPE'] = 'indel'
             else:
                 row['TYPE'] = 'subs'
+
+        if row['TYPE'] == 'indel' and not indels:
+            continue
+        if row['TYPE'] == 'subs' and not subs:
+            continue
+
 
         if signature == 'bysample':
             row['SIGNATURE'] = row['SAMPLE']
@@ -150,7 +156,7 @@ def build_regions_tree(regions):
     return regions_tree
 
 
-def load_and_map_variants(variants_file, elements_file, signature_name='none', blacklist=None):
+def load_and_map_variants(variants_file, elements_file, signature_name='none', blacklist=None, subs=True, indels=True):
     """
 
     :param variants_file:
@@ -239,7 +245,7 @@ def load_and_map_variants(variants_file, elements_file, signature_name='none', b
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
-    for i, r in enumerate(load_mutations(variants_file, signature=signature_name, blacklist=blacklist), start=1):
+    for i, r in enumerate(load_mutations(variants_file, signature=signature_name, blacklist=blacklist, subs=subs, indels=indels), start=1):
 
         if r['CHROMOSOME'] not in elements_tree:
             continue
