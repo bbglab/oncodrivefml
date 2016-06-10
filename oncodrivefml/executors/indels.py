@@ -59,11 +59,10 @@ class Indel:
         indel_scores = [math.nan] * window_size
         indel_window_size = window_size
 
-        if not (indel_size % 3):  # frame shift
+        if (indel_size % 3) == 0:  # frame shift
             indel_window_size = (indel_size + 2) if (indel_size + 2) <= window_size else window_size
 
-        index = 0
-        for position in range(mutation_position, mutation_position + indel_window_size):
+        for index, position in enumerate(range(mutation_position, mutation_position + indel_window_size)):
             scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
             for score in scores_in_position:
                 if is_insertion:
@@ -76,9 +75,8 @@ class Indel:
                 if score.ref == get_ref(position) and score.alt == alteration:
                     indel_scores[index] = score.value
                     break
-            index += 1
 
-        if indel_size % 3:
+        if (indel_size % 3) != 0:
             for i in range(indel_size, indel_window_size):  # if indel_size is bigger than the window it is an empty range
                 # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
                 indel_scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check

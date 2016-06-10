@@ -97,7 +97,7 @@ class OncodriveFML(object):
         # Sort executors to compute first the ones that have more mutations
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
 
-        #initialize the indels module
+        # initialize the indels module
         _init_indels(10, 'linear')
 
         # Run the executors
