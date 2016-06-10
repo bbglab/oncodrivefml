@@ -68,13 +68,13 @@ class Indel:
             scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
             for score in scores_in_position:
                 if is_insertion:
-                    alteration = mutation['ALT'][index] if index < indel_size else get_ref(position - indel_size)
+                    alteration = mutation['ALT'][index] if index < indel_size else get_ref(mutation['CHROMOSOME'], position - indel_size)
                 else:  # deletion
                     try:
-                        alteration = get_ref(position + indel_size)
+                        alteration = get_ref(mutation['CHROMOSOME'], position + indel_size)
                     except ValueError:  # generated when we are outside the element
                         break  # ignore it (score = nan)
-                if score.ref == get_ref(position) and score.alt == alteration:
+                if score.ref == get_ref(mutation['CHROMOSOME'], position) and score.alt == alteration:
                     indel_scores[index] = score.value
                     break
 

@@ -183,6 +183,7 @@ class GroupByMutationExecutor(ElementExecutor):
         # Compute observed mutations statistics and scores
         self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels)
 
+
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
             observed = []
@@ -210,7 +211,7 @@ class GroupByMutationExecutor(ElementExecutor):
                     signature = None
                     if is_insertion:
                         for pos in positions:
-                            if get_ref(pos) == get_ref(mut['POSITION']) and get_ref(pos + 1) == get_ref(mut['POSITION'] + 1):
+                            if get_ref(mut['CHROMOSOME'], pos) == get_ref(mut['CHROMOSOME'], mut['POSITION']) and get_ref(mut['CHROMOSOME'], pos + 1) == get_ref(mut['CHROMOSOME'], mut['POSITION'] + 1):
                                 score = Indel.get_indel_score(mut, self.scores, pos)
                                 if not math.isnan(score):
                                     simulation_scores.append(score)
@@ -218,7 +219,7 @@ class GroupByMutationExecutor(ElementExecutor):
                     else:
                         del_size = max(len(mut['REF']), len(mut['ALT']))
                         for pos in positions:
-                            if get_ref(pos) == get_ref(mut['POSITION']) and get_ref(pos + del_size) == get_ref(mut['POSITION'] + del_size):
+                            if get_ref(mut['CHROMOSOME'], pos) == get_ref(mut['CHROMOSOME'], mut['POSITION']) and get_ref(mut['CHROMOSOME'], pos + del_size) == get_ref(mut['CHROMOSOME'], mut['POSITION'] + del_size):
                                 score = Indel.get_indel_score(mut, self.scores, pos)
                                 if not math.isnan(score):
                                     simulation_scores.append(score)
@@ -240,7 +241,7 @@ class GroupByMutationExecutor(ElementExecutor):
             self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
 
         # Calculate p-values
-        self.result['background_size'] = len(simulation_scores)
+        self.result['background_size'] = 0#TODO len(simulation_scores)
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
         self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
 
