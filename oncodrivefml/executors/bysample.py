@@ -77,7 +77,8 @@ class GroupBySampleExecutor(ElementExecutor):
 
                 observed.append(statistic_test.calc(scores))
                 random_scores = np.random.choice(simulation_scores, size=(self.sampling_size, len(scores)), p=simulation_signature, replace=True)
-                background.append(np.max(random_scores, axis=1))
+                # matrix sampling_size, len(scores)
+                background.append(np.max(random_scores, axis=1))  # gets the max of each row
 
             self.obs, self.neg_obs = statistic_test.calc_observed(zip(*background), observed)
 
