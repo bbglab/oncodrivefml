@@ -11,7 +11,7 @@ import math
 class ElementExecutor(object):
 
     @staticmethod
-    def compute_muts_statistics(muts, scores, indels=False):
+    def compute_muts_statistics(muts, scores, indels=False, positive_strand=True):
         """
         For each mutation in muts, get the score for that position and that
         mutation
@@ -47,7 +47,7 @@ class ElementExecutor(object):
 
             if indels and m['TYPE'] == "indel":
 
-                score = Indel.get_indel_score(m, scores, int(m['POSITION']))
+                score = Indel.get_indel_score(m, scores, int(m['POSITION']), positive_strand)
 
                 m['SCORE'] = score if not math.isnan(score) else None
 
@@ -123,7 +123,7 @@ class GroupByMutationExecutor(ElementExecutor):
         # Input attributes
         self.name = element_id
         self.indels = config['statistic']['indels'] != 'none'
-        subs = self.configuration['statistic']['subs'] != 'none'
+        subs = config['statistic']['subs'] != 'none'
         if subs:
             self.muts = [m for m in muts if m['TYPE'] == 'subs']
         else:
@@ -151,6 +151,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
         self.signature = signature
         self.segments = segments
+        self.is_positive_strand = segments[0].get('strand', True)
 
         # Configuration parameters
         self.score_config = config['score']
@@ -185,7 +186,7 @@ class GroupByMutationExecutor(ElementExecutor):
         self.scores = Scores(self.name, self.segments, self.signature, self.score_config)
 
         # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels)
+        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels, positive_strand=self.is_positive_strand)
 
 
         if len(self.result['mutations']) > 0:
@@ -205,6 +206,12 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
+                for pos in positions:
+                    for s in self.scores.get_score_by_position(pos):
+                        simulation_scores.append(s.value)
+                        simulation_signature.append(s.signature.get(mut[self.signature_column]))
+
+                '''
                 if mut['TYPE'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
@@ -230,7 +237,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
                     if len(simulation_scores) < 100:
                         logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
-
+                '''
                 simulation_scores = np.array(simulation_scores)
 
                 if signature is not None:
