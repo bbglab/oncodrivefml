@@ -54,33 +54,59 @@ class Weight:
 class Indel:
 
     @staticmethod
-    def get_indel_score(mutation, scores, mutation_position):
+    def get_indel_score(mutation, scores, mutation_position, positive_strand):
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
         is_insertion = True if '-' in mutation['REF'] else False
 
-        indel_scores = [math.nan] * window_size
+
         indel_window_size = window_size
 
         if frame_shift != 1 and (indel_size % frame_shift) == 0:  # frame shift
             indel_window_size = (indel_size + frame_shift-1) if (indel_size + frame_shift-1) <= window_size else window_size
 
-        for index, position in enumerate(range(mutation_position, mutation_position + indel_window_size)):
-            scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
-            for score in scores_in_position:
-                if is_insertion:
-                    alteration = mutation['ALT'][index] if index < indel_size else get_ref(mutation['CHROMOSOME'], position - indel_size)
-                else:  # deletion
-                    try:
-                        alteration = get_ref(mutation['CHROMOSOME'], position + indel_size)
-                    except ValueError:  # generated when we are outside the element
-                        break  # ignore it (score = nan)
-                if score.ref == get_ref(mutation['CHROMOSOME'], position) and score.alt == alteration:
-                    indel_scores[index] = score.value
-                    break
+        if indel_size > indel_window_size:
+            indel_window_size = indel_size
+
+        indel_scores = [math.nan] * indel_window_size
+
+        if positive_strand:
+            for index, position in enumerate(range(mutation_position, mutation_position + indel_window_size)):
+                scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
+                for score in scores_in_position:
+                    if is_insertion:
+                        alteration = mutation['ALT'][index] if index < indel_size else get_ref(mutation['CHROMOSOME'], position - indel_size)
+                    else:  # deletion
+                        try:
+                            alteration = get_ref(mutation['CHROMOSOME'], position + indel_size)
+                        except ValueError:  # generated when we are outside the element
+                            break  # ignore it (score = nan)
+                    if score.ref == get_ref(mutation['CHROMOSOME'], position) and score.alt == alteration:
+                        indel_scores[index] = score.value
+                        break
+        else:
+            for index, position in enumerate(range(mutation_position-indel_window_size, mutation_position)):
+                scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
+                for score in scores_in_position:
+                    if is_insertion:
+                        alteration = get_ref(mutation['CHROMOSOME'], position + indel_size) if index < (indel_window_size - indel_size) else mutation['ALT'][index - (indel_window_size - indel_size)]
+                    else:  # deletion
+                        try:
+                            alteration = get_ref(mutation['CHROMOSOME'], position - indel_size)
+                        except ValueError:  # generated when we are outside the element
+                            break  # ignore it (score = nan)
+                    if score.ref == get_ref(mutation['CHROMOSOME'], position) and score.alt == alteration:
+                        indel_scores[index] = score.value
+                        break
+
 
         if frame_shift == 1 or (indel_size % frame_shift) != 0:
-            for i in range(indel_size, indel_window_size):  # if indel_size is bigger than the window it is an empty range
-                # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
-                indel_scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
+            if positive_strand:
+                for i in range(indel_size, indel_window_size):  # if indel_size is bigger than the window it is an empty range
+                    # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
+                    indel_scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
+            else:
+                for i in range(indel_window_size-indel_size):
+                    indel_scores[i] *= weighting_function((indel_window_size - indel_size)-i)
 
-        return max(indel_scores)
+        cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
+        return max(cleaned_scores) if cleaned_scores else math.nan
