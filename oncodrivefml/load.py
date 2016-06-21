@@ -8,7 +8,7 @@ import itab
 
 from os.path import exists
 
-from oncodrivefml.config import file_name
+from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
 REGIONS_HEADER = ['chrom', 'start', 'stop', 'feature', 'segment']
 REGIONS_SCHEMA = {
@@ -33,6 +33,7 @@ MUTATIONS_SCHEMA = {
         'SIGNATURE':  {'reader': 'str(x)'}
     }
 }
+
 
 
 def load_mutations(file, signature=None, show_warnings=True, blacklist=None):
@@ -201,7 +202,7 @@ def load_and_map_variants(variants_file, elements_file, signature_name='none', b
             return pickle.load(fd), elements
 
     # Check if it's already done
-    variants_dict_precomputed = variants_file + "_mapping_" + file_name(elements_file) + '.pickle.gz'
+    variants_dict_precomputed = variants_file + "_mapping_" + get_name(elements_file) + '.pickle.gz'
     if exists(variants_dict_precomputed):
         try:
             logging.info("Using precomputed mutations mapping")
