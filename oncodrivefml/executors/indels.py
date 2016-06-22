@@ -6,6 +6,14 @@ window_size = 10
 weight = None
 weighting_function = lambda x: 1
 frame_shift = 1
+#TODO rename as inframe
+
+
+complements_dict = {"A": "T", "T": "A", "G": "C", "C": "G"}
+
+transition_dict = {"A": "G", "G": "A", "T": "C", "C": "T"}
+
+transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T"}
 
 
 def _init_indels(lenght=10, method='cte', shift=1):
@@ -35,7 +43,7 @@ class Weight:
             self.slope = -1.0/length
             self.funct = self.linear
         if type == 'logistic':
-            self.beta = 10
+            self.beta = 0.5
             self.funct = self.logistic
 
     def function(self, x):
@@ -54,62 +62,84 @@ class Weight:
 class Indel:
 
     @staticmethod
+    def compute_window_size(indel_size):
+        size = window_size
+
+        if frame_shift != 1 and (indel_size % frame_shift) == 0:  # in-frame
+            size = (indel_size + frame_shift - 1)
+
+        if indel_size > size:
+            size = indel_size
+
+        return size
+
+    @staticmethod
+    def compute_scores(reference, alternation, scores, initial_position, size):
+        computed_scores = [math.nan] * size
+        for index, position in enumerate(range(initial_position, initial_position + size)):
+            scores_in_position = scores.get_score_by_position(position)
+            for score in scores_in_position:
+                if score.ref == reference[index] and score.alt == alternation[index]:
+                    computed_scores[index] = score.value
+                    break
+        return computed_scores
+
+    @staticmethod
+    def get_mutation_sequences(mutation, is_positive_strand, size):
+        # TODO pass indel_size as parameter because it is already computed in the get_indel_score method
+        position = mutation['POSITION']
+        is_insertion = True if '-' in mutation['REF'] else False
+        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+        if is_positive_strand:
+            reference = get_ref(mutation['CHROMOSOME'], position, indel_size + size)  # ensure we have enough values
+            # TODO check if we are looking for values outside the element
+            if is_insertion:
+                alteration = mutation['ALT'] + reference
+            else:
+                alteration = reference[indel_size:]
+            return reference[:size], alteration[:size]
+        else:  # negative strand
+            reference = get_ref(mutation['CHROMOSOME'], position - (indel_size + size), indel_size + size)  # ensure we have enough values
+            if is_insertion:
+                alteration = reference + mutation['ALT']
+            else:
+                alteration = reference[:-indel_size]  # remove the last indels_size elements
+            return reference[-size:], alteration[-size:]  # return only last size elements
+
+    @staticmethod
+    def weight(scores, indel_size, total_size, is_positive_strand):
+        if frame_shift == 1 or (indel_size % frame_shift) != 0:
+
+            if is_positive_strand:
+                for i in range(indel_size, total_size):  # if indel_size is bigger than the window it is an empty range
+                    # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
+                    scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
+            else:
+                for i in range(total_size - indel_size):
+                    scores[i] *= weighting_function((total_size - indel_size) - i)
+
+        return scores
+
+    @staticmethod
     def get_indel_score(mutation, scores, mutation_position, positive_strand):
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
-        is_insertion = True if '-' in mutation['REF'] else False
 
+        indel_window_size = Indel.compute_window_size(indel_size)
 
-        indel_window_size = window_size
-
-        if frame_shift != 1 and (indel_size % frame_shift) == 0:  # frame shift
-            indel_window_size = (indel_size + frame_shift-1) if (indel_size + frame_shift-1) <= window_size else window_size
-
-        if indel_size > indel_window_size:
-            indel_window_size = indel_size
-
-        indel_scores = [math.nan] * indel_window_size
+        ref, alt = Indel.get_mutation_sequences(mutation, positive_strand, indel_window_size)
 
         if positive_strand:
-            for index, position in enumerate(range(mutation_position, mutation_position + indel_window_size)):
-                scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
-                for score in scores_in_position:
-                    if is_insertion:
-                        alteration = mutation['ALT'][index] if index < indel_size else get_ref(mutation['CHROMOSOME'], position - indel_size)
-                    else:  # deletion
-                        try:
-                            alteration = get_ref(mutation['CHROMOSOME'], position + indel_size)
-                        except ValueError:  # generated when we are outside the element
-                            break  # ignore it (score = nan)
-                    if score.ref == get_ref(mutation['CHROMOSOME'], position) and score.alt == alteration:
-                        indel_scores[index] = score.value
-                        break
+            init_pos = mutation_position
         else:
-            for index, position in enumerate(range(mutation_position-indel_window_size, mutation_position)):
-                scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
-                for score in scores_in_position:
-                    if is_insertion:
-                        alteration = get_ref(mutation['CHROMOSOME'], position + indel_size) if index < (indel_window_size - indel_size) else mutation['ALT'][index - (indel_window_size - indel_size)]
-                    else:  # deletion
-                        try:
-                            alteration = get_ref(mutation['CHROMOSOME'], position - indel_size)
-                        except ValueError:  # generated when we are outside the element
-                            break  # ignore it (score = nan)
-                    if score.ref == get_ref(mutation['CHROMOSOME'], position) and score.alt == alteration:
-                        indel_scores[index] = score.value
-                        break
+            init_pos = mutation_position - indel_window_size
 
+        indel_scores = Indel.compute_scores(ref, alt, scores, init_pos, indel_window_size)
 
-        if frame_shift == 1 or (indel_size % frame_shift) != 0:
-            if positive_strand:
-                for i in range(indel_size, indel_window_size):  # if indel_size is bigger than the window it is an empty range
-                    # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
-                    indel_scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
-            else:
-                for i in range(indel_window_size-indel_size):
-                    indel_scores[i] *= weighting_function((indel_window_size - indel_size)-i)
+        indel_scores = Indel.weight(indel_scores, indel_size, indel_window_size, positive_strand)
 
         cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
         return max(cleaned_scores) if cleaned_scores else math.nan
+
 
 
 
