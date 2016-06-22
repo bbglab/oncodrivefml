@@ -5,7 +5,7 @@ from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.signature import get_ref
 
-from oncodrivefml.executors.indels import Indel
+from oncodrivefml.executors.indels import Indel, complements_dict
 import math
 
 class ElementExecutor(object):
@@ -206,12 +206,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
-                for pos in positions:
-                    for s in self.scores.get_score_by_position(pos):
-                        simulation_scores.append(s.value)
-                        simulation_signature.append(s.signature.get(mut[self.signature_column]))
 
-                '''
                 if mut['TYPE'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
@@ -220,24 +215,32 @@ class GroupByMutationExecutor(ElementExecutor):
                 else: #indels
                     is_insertion = True if '-' in mut['REF'] else False
                     signature = None
+                    ref1 = get_ref(mut['CHROMOSOME'], mut['POSITION'])
                     if is_insertion:
-                        for pos in positions:
-                            if get_ref(mut['CHROMOSOME'], pos) == get_ref(mut['CHROMOSOME'], mut['POSITION']) and get_ref(mut['CHROMOSOME'], pos + 1) == get_ref(mut['CHROMOSOME'], mut['POSITION'] + 1):
-                                score = Indel.get_indel_score(mut, self.scores, pos)
-                                if not math.isnan(score):
-                                    simulation_scores.append(score)
-
+                        distance = 1
                     else:
-                        del_size = max(len(mut['REF']), len(mut['ALT']))
-                        for pos in positions:
-                            if get_ref(mut['CHROMOSOME'], pos) == get_ref(mut['CHROMOSOME'], mut['POSITION']) and get_ref(mut['CHROMOSOME'], pos + del_size) == get_ref(mut['CHROMOSOME'], mut['POSITION'] + del_size):
-                                score = Indel.get_indel_score(mut, self.scores, pos)
-                                if not math.isnan(score):
-                                    simulation_scores.append(score)
+                        distance = max(len(mut['REF']), len(mut['ALT']))
+                    if not self.is_positive_strand:
+                        distance *= -1
+                    ref1 = get_ref(mut['CHROMOSOME'], mut['POSITION'])
+                    ref2 = get_ref(mut['CHROMOSOME'], mut['POSITION']+distance)
+                    ref1_complementary = complements_dict[ref1]
+                    ref2_complementary = complements_dict[ref2]
+
+                    for pos in positions:
+                        if (get_ref(mut['CHROMOSOME'], pos) == ref1 or \
+                                get_ref(mut['CHROMOSOME'], pos) == ref1_complementary) \
+                                and \
+                                (get_ref(mut['CHROMOSOME'], pos + distance) == ref2 or \
+                                 get_ref(mut['CHROMOSOME'], pos + distance) == ref2_complementary) \
+                                :
+                            score = Indel.get_indel_score(mut, self.scores, pos, self.is_positive_strand)
+                            if not math.isnan(score):
+                                simulation_scores.append(score)
 
                     if len(simulation_scores) < 100:
                         logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
-                '''
+
                 simulation_scores = np.array(simulation_scores)
 
                 if signature is not None:
