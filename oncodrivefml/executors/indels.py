@@ -110,3 +110,15 @@ class Indel:
 
         cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
         return max(cleaned_scores) if cleaned_scores else math.nan
+
+
+
+    @staticmethod
+    def get_indel_score_substitutions(mutation, scores, mutation_position):
+        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+
+        indel_scores = []
+        for pos in range(mutation_position, mutation_position + indel_size):
+            indel_scores += [s.value for s in scores.get_score_by_position(pos)]
+
+        return max(indel_scores)
