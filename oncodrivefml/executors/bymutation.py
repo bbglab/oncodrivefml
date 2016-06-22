@@ -151,7 +151,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
         self.signature = signature
         self.segments = segments
-        self.is_positive_strand = segments[0].get('strand', True)
+        self.is_positive_strand = True if segments[0].get('strand', '+') == '+' else False
 
         # Configuration parameters
         self.score_config = config['score']
