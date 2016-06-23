@@ -1,4 +1,6 @@
 import math
+from enum import Enum
+
 from oncodrivefml.signature import get_ref
 from math import exp
 
@@ -152,3 +154,61 @@ class Indel:
             indel_scores += [s.value for s in scores.get_score_by_position(pos)]
 
         return max(indel_scores)
+
+    @staticmethod
+    def get_indel_score_for_background(scores, position, length, chromosome, pattern, indel_size, is_positive_strand):
+        # position is the starting position of the sequence where to apply the pattern
+        # no matter if it is positve or negative strand
+        reference = get_ref(chromosome, position, length)
+        alteration = Indel.apply_pattern(reference, pattern)
+
+        indel_scores = Indel.compute_scores(reference, alteration, scores, position, length)
+
+        indel_scores = Indel.weight(indel_scores, indel_size, length, is_positive_strand)
+
+        cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
+        return max(cleaned_scores) if cleaned_scores else math.nan
+
+    @staticmethod
+    def compute_pattern(reference, alternate, length):
+        pattern = []
+
+        for i in range(length):
+            if reference[i] == alternate[i]:
+                pattern.append(ChangePattern.same)
+            elif reference[i] == complements_dict[alternate[i]]:
+                pattern.append(ChangePattern.complementary)
+            elif reference[i] == transition_dict[alternate[i]]:
+                pattern.append(ChangePattern.transition)
+            else:
+                pattern.append(ChangePattern.transversion)
+
+        return pattern
+
+    @ staticmethod
+
+
+    def get_pattern(mutation, is_positive_strand, length):
+        ref, alt = Indel.get_mutation_sequences(mutation, is_positive_strand, length)
+        return Indel.compute_pattern(ref, alt, length)
+
+    @staticmethod
+    def apply_pattern(sequence, pattern):
+        new_seq = ''
+
+        for i in range(len(sequence)):
+            new_seq += pattern_change[pattern[i]](sequence[i])
+
+        return new_seq
+
+class ChangePattern(Enum):
+    same = 1,
+    complementary = 2,
+    transition = 3,
+    transversion = 4
+
+pattern_change = {ChangePattern.same: lambda x: x,
+                  ChangePattern.complementary: lambda x: complements_dict[x],
+                  ChangePattern.transition: lambda x: transition_dict[x],
+                  ChangePattern.transversion: lambda x: transversion_dict[x]
+                  }

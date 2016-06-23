@@ -212,31 +212,21 @@ class GroupByMutationExecutor(ElementExecutor):
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
                             simulation_signature.append(s.signature.get(mut[self.signature_column]))
+
+
                 else: #indels
-                    is_insertion = True if '-' in mut['REF'] else False
+                    #TODO change the method to compute first the position and then the scores only for those
+                    indel_size = max(len(mut['REF']), len(mut['ALT']))
+                    length = Indel.compute_window_size(indel_size)
+
+                    mutation_pattern = Indel.get_pattern(mut, self.is_positive_strand, length)
                     signature = None
-                    ref1 = get_ref(mut['CHROMOSOME'], mut['POSITION'])
-                    if is_insertion:
-                        distance = 1
-                    else:
-                        distance = max(len(mut['REF']), len(mut['ALT']))
-                    if not self.is_positive_strand:
-                        distance *= -1
-                    ref1 = get_ref(mut['CHROMOSOME'], mut['POSITION'])
-                    ref2 = get_ref(mut['CHROMOSOME'], mut['POSITION']+distance)
-                    ref1_complementary = complements_dict[ref1]
-                    ref2_complementary = complements_dict[ref2]
 
                     for pos in positions:
-                        if (get_ref(mut['CHROMOSOME'], pos) == ref1 or \
-                                get_ref(mut['CHROMOSOME'], pos) == ref1_complementary) \
-                                and \
-                                (get_ref(mut['CHROMOSOME'], pos + distance) == ref2 or \
-                                 get_ref(mut['CHROMOSOME'], pos + distance) == ref2_complementary) \
-                                :
-                            score = Indel.get_indel_score(mut, self.scores, pos, self.is_positive_strand)
-                            if not math.isnan(score):
-                                simulation_scores.append(score)
+                        score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],
+                                                                     mutation_pattern, indel_size, self.is_positive_strand)
+                        if not math.isnan(score):
+                            simulation_scores.append(score)
 
                     if len(simulation_scores) < 100:
                         logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
