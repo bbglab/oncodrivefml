@@ -188,11 +188,13 @@ class GroupByMutationExecutor(ElementExecutor):
         # Compute observed mutations statistics and scores
         self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels, positive_strand=self.is_positive_strand)
 
+        min_background_size = 0
 
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
             observed = []
             background = []
+
 
             for mut in self.result['mutations']:
 
@@ -223,9 +225,9 @@ class GroupByMutationExecutor(ElementExecutor):
                     signature = None
 
                     if self.is_positive_strand:
-                        sampling_positions = [pos for pos in list(positions) if pos >= mut['POSITION']]
+                        sampling_positions = [pos for pos in list(positions) if pos >= mut['POSITION'] - 20]
                     else:
-                        sampling_positions = [pos for pos in list(positions) if pos <= mut['POSITION']]
+                        sampling_positions = [pos for pos in list(positions) if pos <= mut['POSITION'] + 20]
 
                     for pos in sampling_positions:
                         score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],
@@ -247,10 +249,13 @@ class GroupByMutationExecutor(ElementExecutor):
                 observed.append(mut['SCORE'])
                 background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
 
+                if min_background_size == 0 or min_background_size > len(simulation_scores):
+                    min_background_size = len(simulation_scores)
+
             self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
 
         # Calculate p-values
-        self.result['background_size'] = 0#TODO len(simulation_scores)
+        self.result['min_background_size'] = min_background_size
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
         self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
 
