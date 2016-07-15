@@ -25,4 +25,12 @@ def load_configuration(config_file):
         sys.exit(-1)
 
 
-
+possible_extensions = ['.gz', '.xz', '.bz2', '.tsv', '.txt']
+special_characters = ['.', '_']
+def remove_extension_and_replace_special_characters(file_path):
+    file_name=os.path.basename(file_path)
+    for ext in possible_extensions:
+        file_name = file_name.replace(ext, '')
+    for char in special_characters:
+        file_name = file_name.replace(char, '-')
+    return file_name
