@@ -123,7 +123,7 @@ class GroupByMutationExecutor(ElementExecutor):
         # Input attributes
         self.name = element_id
         self.indels = config['statistic']['indels'] != 'none'
-        subs = self.configuration['statistic']['subs'] != 'none'
+        subs = config['statistic']['subs'] != 'none'
         if subs:
             self.muts = [m for m in muts if m['TYPE'] == 'subs']
         else:

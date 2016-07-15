@@ -26,3 +26,5 @@ dist/
 *.pickle.gz
 example/cds
 example/cdsOriginal
+
+docs/build/*
