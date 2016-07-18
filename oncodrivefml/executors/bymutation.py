@@ -5,13 +5,13 @@ from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.signature import get_ref
 
-from oncodrivefml.executors.indels import Indel
+from oncodrivefml.executors.indels import Indel, complements_dict
 import math
 
 class ElementExecutor(object):
 
     @staticmethod
-    def compute_muts_statistics(muts, scores, indels=False):
+    def compute_muts_statistics(muts, scores, indels=False, positive_strand=True):
         """
         For each mutation in muts, get the score for that position and that
         mutation
@@ -47,7 +47,7 @@ class ElementExecutor(object):
 
             if indels and m['TYPE'] == "indel":
 
-                score = Indel.get_indel_score(m, scores, int(m['POSITION']))
+                score = Indel.get_indel_score(m, scores, int(m['POSITION']), positive_strand)
 
                 m['SCORE'] = score if not math.isnan(score) else None
 
@@ -151,6 +151,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
         self.signature = signature
         self.segments = segments
+        self.is_positive_strand = True if segments[0].get('strand', '+') == '+' else False
 
         # Configuration parameters
         self.score_config = config['score']
@@ -185,13 +186,15 @@ class GroupByMutationExecutor(ElementExecutor):
         self.scores = Scores(self.name, self.segments, self.signature, self.score_config)
 
         # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels)
+        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels, positive_strand=self.is_positive_strand)
 
+        min_background_size = 0
 
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
             observed = []
             background = []
+
 
             for mut in self.result['mutations']:
 
@@ -205,28 +208,35 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
+
                 if mut['TYPE'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
                             simulation_signature.append(s.signature.get(mut[self.signature_column]))
-                else: #indels
-                    is_insertion = True if '-' in mut['REF'] else False
-                    signature = None
-                    if is_insertion:
-                        for pos in positions:
-                            if get_ref(mut['CHROMOSOME'], pos) == get_ref(mut['CHROMOSOME'], mut['POSITION']) and get_ref(mut['CHROMOSOME'], pos + 1) == get_ref(mut['CHROMOSOME'], mut['POSITION'] + 1):
-                                score = Indel.get_indel_score(mut, self.scores, pos)
-                                if not math.isnan(score):
-                                    simulation_scores.append(score)
 
+
+                else: #indels
+                    #TODO change the method to compute first the position and then the scores only for those
+                    indel_size = max(len(mut['REF']), len(mut['ALT']))
+                    length = Indel.compute_window_size(indel_size)
+
+                    mutation_pattern = Indel.get_pattern(mut, self.is_positive_strand, length)
+                    signature = None
+
+                    sampling_positions = list(positions)
+                    '''
+                    if self.is_positive_strand:
+                        sampling_positions = [pos for pos in list(positions) if pos >= mut['POSITION'] - 20]
                     else:
-                        del_size = max(len(mut['REF']), len(mut['ALT']))
-                        for pos in positions:
-                            if get_ref(mut['CHROMOSOME'], pos) == get_ref(mut['CHROMOSOME'], mut['POSITION']) and get_ref(mut['CHROMOSOME'], pos + del_size) == get_ref(mut['CHROMOSOME'], mut['POSITION'] + del_size):
-                                score = Indel.get_indel_score(mut, self.scores, pos)
-                                if not math.isnan(score):
-                                    simulation_scores.append(score)
+                        sampling_positions = [pos for pos in list(positions) if pos <= mut['POSITION'] + 20]
+                    '''
+
+                    for pos in sampling_positions:
+                        score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],
+                                                                     mutation_pattern, indel_size, self.is_positive_strand)
+                        if not math.isnan(score):
+                            simulation_scores.append(score)
 
                     if len(simulation_scores) < 100:
                         logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
@@ -242,10 +252,13 @@ class GroupByMutationExecutor(ElementExecutor):
                 observed.append(mut['SCORE'])
                 background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
 
+                if min_background_size == 0 or min_background_size > len(simulation_scores):
+                    min_background_size = len(simulation_scores)
+
             self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
 
         # Calculate p-values
-        self.result['background_size'] = 0#TODO len(simulation_scores)
+        self.result['min_background_size'] = min_background_size
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
         self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
 

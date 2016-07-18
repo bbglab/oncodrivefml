@@ -10,14 +10,16 @@ from os.path import exists
 
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
-REGIONS_HEADER = ['chrom', 'start', 'stop', 'feature', 'segment']
+REGIONS_HEADER = ['chrom', 'start', 'stop', 'feature', 'segment', 'other', 'strand']
 REGIONS_SCHEMA = {
     'fields': {
         'chrom': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
         'start': {'reader': 'int(x)', 'validator': 'x > 0'},
         'stop': {'reader': 'int(x)', 'validator': 'x > 0'},
         'feature': {'reader': 'str(x)'},
-        'segment': {'reader': 'str(x)', 'nullable': 'True'}
+        'segment': {'reader': 'str(x)', 'nullable': 'True'},
+        'other': {'reader': 'str(x)', 'nullable': 'True'},
+        'strand': {'reader': 'str(x)', 'nullable': 'True', 'validator': "x in ['+', '-']"}
 }}
 
 
@@ -121,6 +123,11 @@ def load_regions(file):
             if r['segment'] is None:
                 r['segment'] = r['feature']
 
+            if r['strand'] is None:
+                #TODO
+                pass
+
+
             regions[r['feature']].append(r)
 
         if len(all_errors) > 0:
@@ -130,6 +137,7 @@ def load_regions(file):
             ))
             for e in all_errors[:10]:
                 logging.warning(e)
+    logging.info("Regions: {}".format(len(regions)))
     return regions
 
 

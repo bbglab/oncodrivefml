@@ -1,4 +1,6 @@
 import math
+from enum import Enum
+
 from oncodrivefml.signature import get_ref
 from math import exp
 
@@ -6,6 +8,14 @@ window_size = 10
 weight = None
 weighting_function = lambda x: 1
 frame_shift = 1
+#TODO rename as inframe
+
+
+complements_dict = {"A": "T", "T": "A", "G": "C", "C": "G"}
+
+transition_dict = {"A": "G", "G": "A", "T": "C", "C": "T"}
+
+transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T"}
 
 
 def _init_indels(lenght=10, method='cte', shift=1):
@@ -35,7 +45,7 @@ class Weight:
             self.slope = -1.0/length
             self.funct = self.linear
         if type == 'logistic':
-            self.beta = 10
+            self.beta = 0.5
             self.funct = self.logistic
 
     def function(self, x):
@@ -54,33 +64,151 @@ class Weight:
 class Indel:
 
     @staticmethod
-    def get_indel_score(mutation, scores, mutation_position):
-        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
-        is_insertion = True if '-' in mutation['REF'] else False
+    def compute_window_size(indel_size):
+        size = window_size
 
-        indel_scores = [math.nan] * window_size
-        indel_window_size = window_size
+        if frame_shift != 1 and (indel_size % frame_shift) == 0:  # in-frame
+            size = (indel_size + frame_shift - 1)
 
-        if frame_shift != 1 and (indel_size % frame_shift) == 0:  # frame shift
-            indel_window_size = (indel_size + frame_shift-1) if (indel_size + frame_shift-1) <= window_size else window_size
+        if indel_size > size:
+            size = indel_size
 
-        for index, position in enumerate(range(mutation_position, mutation_position + indel_window_size)):
-            scores_in_position = scores.get_score_by_position(position)  # if position is outside the element, it has not score so the indel score remains nan
+        return size
+
+    @staticmethod
+    def compute_scores(reference, alternation, scores, initial_position, size):
+        computed_scores = [math.nan] * size
+        for index, position in enumerate(range(initial_position, initial_position + size)):
+            scores_in_position = scores.get_score_by_position(position)
             for score in scores_in_position:
-                if is_insertion:
-                    alteration = mutation['ALT'][index] if index < indel_size else get_ref(mutation['CHROMOSOME'], position - indel_size)
-                else:  # deletion
-                    try:
-                        alteration = get_ref(mutation['CHROMOSOME'], position + indel_size)
-                    except ValueError:  # generated when we are outside the element
-                        break  # ignore it (score = nan)
-                if score.ref == get_ref(mutation['CHROMOSOME'], position) and score.alt == alteration:
-                    indel_scores[index] = score.value
+                if score.ref == reference[index] and score.alt == alternation[index]:
+                    computed_scores[index] = score.value
                     break
+        return computed_scores
 
+    @staticmethod
+    def get_mutation_sequences(mutation, is_positive_strand, size):
+        # TODO pass indel_size as parameter because it is already computed in the get_indel_score method
+        position = mutation['POSITION']
+        is_insertion = True if '-' in mutation['REF'] else False
+        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+        if is_positive_strand:
+            reference = get_ref(mutation['CHROMOSOME'], position, indel_size + size)  # ensure we have enough values
+            # TODO check if we are looking for values outside the element
+            if is_insertion:
+                alteration = mutation['ALT'] + reference
+            else:
+                alteration = reference[indel_size:]
+            return reference[:size], alteration[:size]
+        else:  # negative strand
+            reference = get_ref(mutation['CHROMOSOME'], position - (indel_size + size), indel_size + size)  # ensure we have enough values
+            if is_insertion:
+                alteration = reference + mutation['ALT']
+            else:
+                alteration = reference[:-indel_size]  # remove the last indels_size elements
+            return reference[-size:], alteration[-size:]  # return only last size elements
+
+    @staticmethod
+    def weight(scores, indel_size, total_size, is_positive_strand):
         if frame_shift == 1 or (indel_size % frame_shift) != 0:
-            for i in range(indel_size, indel_window_size):  # if indel_size is bigger than the window it is an empty range
-                # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
-                indel_scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
+
+            if is_positive_strand:
+                for i in range(indel_size, total_size):  # if indel_size is bigger than the window it is an empty range
+                    # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
+                    scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
+            else:
+                for i in range(total_size - indel_size):
+                    scores[i] *= weighting_function((total_size - indel_size) - i)
+
+        return scores
+
+    @staticmethod
+    def get_indel_score(mutation, scores, mutation_position, positive_strand):
+        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+
+        indel_window_size = Indel.compute_window_size(indel_size)
+
+        ref, alt = Indel.get_mutation_sequences(mutation, positive_strand, indel_window_size)
+
+        if positive_strand:
+            init_pos = mutation_position
+        else:
+            init_pos = mutation_position - indel_window_size
+
+        indel_scores = Indel.compute_scores(ref, alt, scores, init_pos, indel_window_size)
+
+        indel_scores = Indel.weight(indel_scores, indel_size, indel_window_size, positive_strand)
+
+        cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
+        return max(cleaned_scores) if cleaned_scores else math.nan
+
+
+
+
+    @staticmethod
+    def get_indel_score_substitutions(mutation, scores, mutation_position):
+        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+
+        indel_scores = []
+        for pos in range(mutation_position, mutation_position + indel_size):
+            indel_scores += [s.value for s in scores.get_score_by_position(pos)]
 
         return max(indel_scores)
+
+    @staticmethod
+    def get_indel_score_for_background(scores, position, length, chromosome, pattern, indel_size, is_positive_strand):
+        # position is the starting position of the sequence where to apply the pattern
+        # no matter if it is positve or negative strand
+        reference = get_ref(chromosome, position, length)
+        alteration = Indel.apply_pattern(reference, pattern)
+
+        indel_scores = Indel.compute_scores(reference, alteration, scores, position, length)
+
+        indel_scores = Indel.weight(indel_scores, indel_size, length, is_positive_strand)
+
+        cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
+        return max(cleaned_scores) if cleaned_scores else math.nan
+
+    @staticmethod
+    def compute_pattern(reference, alternate, length):
+        pattern = []
+
+        for i in range(length):
+            if reference[i] == alternate[i]:
+                pattern.append(ChangePattern.same)
+            elif reference[i] == complements_dict[alternate[i]]:
+                pattern.append(ChangePattern.complementary)
+            elif reference[i] == transition_dict[alternate[i]]:
+                pattern.append(ChangePattern.transition)
+            else:
+                pattern.append(ChangePattern.transversion)
+
+        return pattern
+
+    @ staticmethod
+
+
+    def get_pattern(mutation, is_positive_strand, length):
+        ref, alt = Indel.get_mutation_sequences(mutation, is_positive_strand, length)
+        return Indel.compute_pattern(ref, alt, length)
+
+    @staticmethod
+    def apply_pattern(sequence, pattern):
+        new_seq = ''
+
+        for i in range(len(sequence)):
+            new_seq += pattern_change[pattern[i]](sequence[i])
+
+        return new_seq
+
+class ChangePattern(Enum):
+    same = 1,
+    complementary = 2,
+    transition = 3,
+    transversion = 4
+
+pattern_change = {ChangePattern.same: lambda x: x,
+                  ChangePattern.complementary: lambda x: complements_dict[x],
+                  ChangePattern.transition: lambda x: transition_dict[x],
+                  ChangePattern.transversion: lambda x: transversion_dict[x]
+                  }

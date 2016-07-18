@@ -422,7 +422,7 @@ def store_html(input_file, output_path, showit=False):
 def store_tsv(results, result_file):
 
     results.sort_values(by='pvalue', inplace=True)
-    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'background_size']
+    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'min_background_size']
     df = results[fields].copy()
     df.reset_index(inplace=True)
     df = add_symbol(df)
