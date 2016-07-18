@@ -224,10 +224,13 @@ class GroupByMutationExecutor(ElementExecutor):
                     mutation_pattern = Indel.get_pattern(mut, self.is_positive_strand, length)
                     signature = None
 
+                    sampling_positions = list(positions)
+                    '''
                     if self.is_positive_strand:
                         sampling_positions = [pos for pos in list(positions) if pos >= mut['POSITION'] - 20]
                     else:
                         sampling_positions = [pos for pos in list(positions) if pos <= mut['POSITION'] + 20]
+                    '''
 
                     for pos in sampling_positions:
                         score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],
