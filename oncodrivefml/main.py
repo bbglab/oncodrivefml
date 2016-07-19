@@ -1,3 +1,7 @@
+"""
+Contains the command line parsing and the main class of the method
+"""
+
 import argparse
 
 import logging
@@ -18,23 +22,18 @@ from oncodrivefml.executors.indels import _init_indels
 
 
 class OncodriveFML(object):
+    """
+
+    Args:
+       mutations_file: Mutations input file (see :mod:`oncodrivefml.load` for details)
+       elements_file: Genomic element input file (see :mod:`oncodrivefml.load` for details)
+       output_folder: Folder where the results will be store
+       configuration_file: Configuration file (see :ref:`configuration <project configuration>`)
+       blacklist: File with sample ids (one per line) to remove when loading the input file
+
+    """
 
     def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist):
-        """
-        Initialize OncodriveFML analysis
-
-        :param mutations_file: Mutations input file
-        :param elements_file: Genomic element input file
-        :param output_folder: Folder where the results will be store
-        :param configuration_file: Configuration file
-        :param blacklist: File with sample ids (one per line) to remove when loading the input file
-
-        Mutations file format: (see :ref: oncodrivefml.load.MUTATIONS_HEADER)
-        ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
-
-        Elements file format: (see :ref: oncodrivefml.load.REGIONS_HEADER)
-        ['chrom', 'start', 'stop', 'feature', 'segment']
-        """
         #TODO set defaults for output_folder, configuration_file and blacklist
 
         # Required parameters
@@ -58,12 +57,21 @@ class OncodriveFML(object):
 
     def create_element_executor(self, element_id, muts_for_an_element):
         """
+        To enable paralelization, for each element ID,
+        one :class:`oncodrivefml.executors.bymutation.ElementExecutor` is created.
 
-        :param element_id: element_id
-        :param muts_for_an_element: mutations associated with that id
-        :return:
+        Args:
+            element_id (str): ID of the element
+            muts_for_an_element (list): list with all the mutations observed in the element
+
+        Returns:
+            :class:`oncodrivefml.executors.bymutation.ElementExecutor`:
+            returns :class:`oncodrivefml.executors.bymutation.GroupByMutationExecutor` if
+            the statistic_method indicated in the configuration is not 'max-mean';
+            :class:`oncodrivefml.executors.bysamplen.GroupBySampleExecutor` otherwise.
+
+
         """
-
         if self.statistic_method == 'maxmean':
             return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
 
@@ -131,18 +139,22 @@ class OncodriveFML(object):
 
 def cmdline():
     """
-    Parses the command and runs the analysis. See :ref: OncodriveFML.run
+    Parses the command and runs the analysis. See :meth:`OncodriveFML.run`.
 
-    :return:
+    Required arguments:
 
-    Required:
-    - input: dataset/mutations_file/variants_file
-    - elements: genomic elements to analyse
-    Optional:
-    - output: output folder
-    - configuration: configuration file
-    - sample-blacklist: samples not considered from the input file
-    - debug:
+    -i, --input file        mutations file
+    -e, --elements file     elements file
+
+    Optional arguments:
+
+    -o, --output folder     output folder
+    -c, --configuration file
+                            configuration file
+    --samples-blacklist file
+                            file with blacklisted samples
+    --debug                         show more progress
+
     """
 
     # Command line arguments parser

@@ -13,14 +13,17 @@ class ElementExecutor(object):
     @staticmethod
     def compute_muts_statistics(muts, scores, indels=False, positive_strand=True):
         """
-        For each mutation in muts, get the score for that position and that
-        mutation
+        Gets the score of each mutation
 
-        :param muts: list of mutations corresponding to the element in the
-        variants_dict
-        :param scores: { pos : [ ( ref, alt, scoreValue,  {signatures:prob} ) ] }
-        :param indels:
-        :return:
+        Args:
+            muts (list): list of mutations
+            scores (dict): scores for all possible substitutions
+            indels (bool): are indels taken into account or not. Default to False.
+            positive_strand (bool): the element where the mutations occur has positive strand or not. Defaults to True.
+
+        Returns:
+            dict: several information about the mutations and a list of them with the scores
+
         """
 
         # Add scores to the element mutations
@@ -89,12 +92,28 @@ class ElementExecutor(object):
 
     def run(self):
         """
-        Computes the element p-value
+
+        Raises:
+            RuntimeError: method must be implemented
+
         """
         raise RuntimeError("The classes that extend ElementExecutor must override the run() method")
 
 
 def detect_repeatitive_seq(chrom, seq, pos):
+    """
+    How many times a sequences is repeated (in the reference genome)
+    starting in a certain position
+
+    Args:
+        chrom (str): chromosome ID
+        seq (str): sequence of bases to be detected
+        pos (int): position  where to start looking
+
+    Returns:
+        int: how many consequitive times the sequence appears
+
+    """
     size = len(seq)
     repeats = 0
     while seq == get_ref(chrom, pos, size=size):
@@ -105,21 +124,20 @@ def detect_repeatitive_seq(chrom, seq, pos):
 
 class GroupByMutationExecutor(ElementExecutor):
     """
-    This executor simulates each mutation independently following the signatures probability
-    and within a range if it's provided.
+    Excutor to simulate each mutation in a set. The simulation parameters are taken from the
+    configuration file.
+
+    Args:
+        element_id (str): element ID
+        muts (list): list of mutations belonging to that element (see :ref:`mutations <mutations dict>` inner items)
+        segments (list): list of segments belonging to that element (see :ref:`elements <elements dict>` inner items)
+        signature (dict): probabilites of each mutation (see :ref:`signatures <signature dict>`)
+        config (dict): configurations
+
+    Indels where the sequence is repeated a predefined number of times are
+    discarded.
     """
-
     def __init__(self, element_id, muts, segments, signature, config):
-        """
-
-        :param element_id: element id
-        :param muts: list of mutations corresponding to the element in the
-        variants_dict
-        :param segments: list of values from the elements dict
-        :param signature: dict with all signatures
-        :param config: dict with the configuration
-        """
-
         # Input attributes
         self.name = element_id
         self.indels = config['statistic']['indels'] != 'none'

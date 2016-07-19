@@ -1,3 +1,9 @@
+"""
+This module contains code related with the configuration file (see :ref:`project configuration`).
+
+Additionally, it includes other file realted code, specially from :mod:`bgconfig`.
+"""
+
 import logging
 import os
 
@@ -10,12 +16,15 @@ file_name = _file_name
 
 def load_configuration(config_file):
     """
-    Load the configuration file and check format.
+    Load the configuration file and checks the format.
 
-    :param config_file: The path to the configuration file. If it's none, use default location.
-    :return: The configuration dictionary
+    Args:
+        config_file: configuration file path
+
+    Returns:
+        :class:`bgconfig.BGConfig`: configuration as a :obj:`dict`
+
     """
-
     config_template = os.path.join(os.path.dirname(__file__), "oncodrivefml.conf.template")
 
     try:
@@ -26,8 +35,25 @@ def load_configuration(config_file):
 
 
 possible_extensions = ['.gz', '.xz', '.bz2', '.tsv', '.txt']
+"""
+Some expected extensions
+"""
 special_characters = ['.', '_']
+"""
+Some special characters
+"""
 def remove_extension_and_replace_special_characters(file_path):
+    """
+    Modifies the name of a file by removing any extension in :attr:`possible_extensions`
+    and replacing any character in :attr:`special_characters` for ``-``.
+
+    Args:
+        file_path: path to a file
+
+    Returns:
+        str: file name modified
+
+    """
     file_name=os.path.basename(file_path)
     for ext in possible_extensions:
         file_name = file_name.replace(ext, '')

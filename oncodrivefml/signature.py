@@ -1,3 +1,33 @@
+"""
+This module contatins information related with the signature.
+
+The signature is a way of assigning probabilities to certain mutations that have some
+relation amongst them (e.g. cancer type, sample...). These relation is identified by the
+**signature_id**. The *signature_id* can be the ``signature`` or
+the ``sample`` fields from the :file:`mutations_file` (see `mutations dict`_).
+
+The probabilities are taken using only substitutions. For them, the two bases that
+surround the mutated one are taken into account. This is called the triplet.
+For a certain mutation in a position *x* the reference triplet is the base in the
+refernce genome in position *x-1, the base in *x* and the base in the *x+1*. The altered triplet
+of the same mutation is equal for the bases in *x-1* and *x+1* but the base in *x* is the one
+observed in the mutation.
+
+
+.. _signature dict:
+
+signature (:obj:`dict`)
+
+    .. code-block:: python
+
+        { signature_id:
+            {
+                (ref_triplet, alt_triplet): prob
+            }
+        }
+
+"""
+
 import gzip
 import logging
 import os
@@ -11,11 +41,28 @@ from oncodrivefml.load import load_mutations
 from collections import defaultdict
 
 HG19 = None
+"""
+Path to the reference genome file.
+See: :func:`get_hg19_dataset`.
+"""
+
 HG19_MMAP_FILES = {}
+"""
+Dictionary with chromosome as keys and memory maps with the reference genome as values.
+See: :func:`get_hg19_mmap`.
+"""
+
 __CB = {"A": "T", "T": "A", "G": "C", "C": "G"}
 
 
 def get_hg19_dataset():
+    """
+    Sets the path to the reference genome
+
+    Returns:
+        :attr:`HG19`
+
+    """
     global HG19
 
     if HG19 is None:
@@ -25,6 +72,18 @@ def get_hg19_dataset():
 
 
 def get_hg19_mmap(chromosome):
+    """
+    Get a memory map with the reference genome of the chromosome.
+
+    Args:
+        chromosome (str): chromosome identifier (number or X or Y)
+
+    Returns:
+        mmap: memory map with the reference genome of the chromosome
+
+
+    If the chromosome was not in :attr:`HG19_MMAP_FILES` before, it is added.
+    """
     if chromosome not in HG19_MMAP_FILES:
         fd = open(join(get_hg19_dataset(), "chr{0}.txt".format(chromosome)), 'rb')
         HG19_MMAP_FILES[chromosome] = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
@@ -32,28 +91,87 @@ def get_hg19_mmap(chromosome):
 
 
 def get_ref_triplet(chromosome, start):
+    """
+
+    Args:
+        chromosome (str): chromosome identifier
+        start (int): starting position
+
+    Returns:
+        str: 3 bases from the reference genome
+
+    """
     return get_ref(chromosome, start, size=3)
 
 
 def get_ref(chromosome, start, size=1):
+    """
+
+    Args:
+        chromosome (str): chromosome identifier
+        start (int): starting position
+        size (int): amount of bases. Default to 1.
+
+    Returns:
+        str: bases in the reference genome
+
+    """
     mm_file = get_hg19_mmap(chromosome)
     mm_file.seek(start - 1)
     return mm_file.read(size).decode().upper()
 
 
 def get_reference_signature(line):
+    """
+
+    Args:
+        line (dict): contatins the chromosome and the position
+
+    Returns:
+        str: triplet around certain positions
+
+    """
     return get_ref_triplet(line['CHROMOSOME'], line['POSITION'] - 1)
 
 
 def get_alternate_signature(line):
+    """
+
+    Args:
+        line (dict): contains the previous base, the alteration and the next base
+
+    Returns:
+        str: triplet with the central base replaced by the alteration indicated in the line
+
+    """
     return line['Signature_reference'][0] + line['ALT'] + line['Signature_reference'][2]
 
 
 def complementary_sequence(seq):
+    """
+
+    Args:
+        seq (str): sequence of bases
+
+    Returns:
+        str: complementary sequence
+
+    """
     return "".join([__CB[base] if base in __CB else base for base in seq.upper()])
 
 
 def collapse_complementaries(signature):
+    """
+    Add to the amount of a certain pair (ref_triplet, alt_triplet) the amount of the complementary.
+
+    Args:
+        signature (dict): { (ref_triplet, alt_triplet): amount }
+
+    Returns:
+        dict: { (ref_triplet, alt_triplet): new_amount }. New_amount is the addition of the amount
+        for (ref_triplet, alt_triplet) and the amount for (complementary_ref_triplet, complementary_alt_triplet)
+
+    """
     comp_sig = defaultdict(int)
     for k, v in signature.items():
         comp_sig[k] += v
@@ -63,20 +181,50 @@ def collapse_complementaries(signature):
 
 
 def signature_probability(signature_counts):
+    """
+    Associates to each key (tuple(reference_tripet, altered_triplet)) the value divided by the total amount
+
+    Args:
+        signature_counts (dict): pair key-amount {(ref_triplet, alt_triplet): value}
+
+    Returns:
+        dict: pair key-(amount/total_amount)
+
+    """
     total = sum([v for v in signature_counts.values()])
     return {k: v/total for k, v in signature_counts.items()}
 
 
 def compute_signature(mutations_file, signature_name, blacklist):
     """
-    Gets the probability for each mutation (if it is a substitution)
+    Gets the probability of each substitution that occurs for a certain signature_id.
 
-    :param mutations_file: mutations file
-    :param signature_name: passed to :ref: load_mutations
-    :param blacklist: passed to :ref: load_mutations
-    :return: { signatures*: { (reference_triplet, altered_tripled) :
-    probability }  }
-    *: comes from the mutations file (can be altered by signature_name)
+    Each substitution is identified by the pair (reference_triplet, altered_triplet).
+
+    The signature_id is taken from the mutations ``SIGNATURE`` field.
+
+    Args:
+        mutations_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        signature_name (str): passed to :func:`oncodrivefml.load.load_mutations`
+            as parameter ``signature``.
+        blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
+            Used by :func:`oncodrivefml.load.load_mutations`
+
+    Returns:
+        dict: probability of each substitution (measured by the triplets) grouped by the signature_id
+
+        .. code-block:: python
+
+            { signature_id:
+                {
+                    (ref_triplet, alt_triplet): prob
+                }
+            }
+
+    .. warning::
+
+        Only substitutions are taken into account
+
     """
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in load_mutations(mutations_file, signature=signature_name, show_warnings=False, blacklist=blacklist):
@@ -97,15 +245,32 @@ def compute_signature(mutations_file, signature_name, blacklist):
 
 def compute_signature_by_sample(mutations_file, blacklist, collapse=True):
     """
-    Gets the probability for each mutation (if it is a substitution)
+    Gets the probability of each substitution that occurs using the mutation
+    ``SAMPLE`` field as signature_id.
 
-    :param mutations_file:
-    :param blacklist:
-    :param collapse: flag indicating if a triplet and its complementary are
-    considered the same
-    :return: { sample*: { (reference_triplet, altered_tripled) :
-    probability }  }
-    *: comes from the mutations file
+    Each substitution is identified by the pair (reference_triplet, altered_triplet).
+
+    Args:
+        mutations_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
+            Used by :func:`oncodrivefml.load.load_mutations`
+        collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
+
+    Returns:
+        dict: probability of each substitution (measured by the triplets) grouped by the signature_id
+
+        .. code-block:: python
+
+            { signature_id:
+                {
+                    (ref_triplet, alt_triplet): prob
+                }
+            }
+
+    .. warning::
+
+        Only substitutions are taken into account
+
     """
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in load_mutations(mutations_file, show_warnings=False, blacklist=blacklist):
@@ -129,18 +294,29 @@ def compute_signature_by_sample(mutations_file, blacklist, collapse=True):
 
 def load_signature(mutations_file, signature_config, blacklist=None, signature_name="none"):
     """
+    Computes the probability that certain mutation occurs.
 
-    :param mutations_file:
-    :param signature_config: { method: , path:  ,column_ref: , column_alt: ,
-    column_probability: }
-    :param blacklist:
-    :param signature_name:
-    :return: { signatures: { (reference_triplet, altered_tripled) :
-    probability }  }
+    Args:
+        mutations_file:  mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
+        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
+            Used by :func:`oncodrivefml.load.load_mutations`
+        signature_name: defaults to 'none'.
 
-    First check if the file is a pickle
+    Returns:
+        dict: probability of each substitution (measured by the triplets) grouped by the signature_id
+
+        .. code-block:: python
+
+            { signature_id:
+                {
+                    (ref_triplet, alt_triplet): prob
+                }
+            }
+
+    Before computing the signature, it is checked whether a pickle file with the signature already exists or not.
+
     """
-
     method = signature_config['method']
     path = signature_config.get('path', None)
     column_ref = signature_config.get('column_ref', None)

@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to oncodrivefml's documentation!
+Welcome to OncodriveFML's documentation!
 ========================================
 
 OncodriveFML
@@ -12,6 +12,13 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   :caption: OncodriveFML
+
+   oncodriveFML.rst
+   workflow.rst
+   method.rst
+   configuration.rst
+
 
 
 

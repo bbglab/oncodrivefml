@@ -27,7 +27,7 @@ def _init_indels(lenght=10, method='cte', shift=1):
 
 
 class Weight:
-    '''
+    """
     Functions are implemented to work on the interval between 0 and the window length.
     This means that the function is close to 1 at x=0 and close to 0 at x=length.
 
@@ -35,7 +35,7 @@ class Weight:
     If x = actual position of the element in the window - indel_size you get the function value starting at the first element outside the indel size
     If x = actual position of the element in the window - indel_size +1 you get the function value starting at the last element of the indel_size
 
-    '''
+    """
     def __init__(self, length, type):
         self.length = length
         if type == 'cte':
@@ -144,7 +144,6 @@ class Indel:
 
 
 
-
     @staticmethod
     def get_indel_score_substitutions(mutation, scores, mutation_position):
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
@@ -185,9 +184,7 @@ class Indel:
 
         return pattern
 
-    @ staticmethod
-
-
+    @staticmethod
     def get_pattern(mutation, is_positive_strand, length):
         ref, alt = Indel.get_mutation_sequences(mutation, is_positive_strand, length)
         return Indel.compute_pattern(ref, alt, length)
@@ -200,6 +197,7 @@ class Indel:
             new_seq += pattern_change[pattern[i]](sequence[i])
 
         return new_seq
+
 
 class ChangePattern(Enum):
     same = 1,

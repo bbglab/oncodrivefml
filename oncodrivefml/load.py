@@ -1,3 +1,54 @@
+"""
+This module contains the methods used to
+load and parse the input files: elements and mutations
+
+.. _elements dict:
+
+elements (:obj:`dict`)
+    contains all the segments related to one element. The information is taken from
+    the :file:`elements_file`.
+
+    .. code-block:: python
+
+        { element_id:
+            [
+                {
+                'chr': chromosome,
+                'start': start_position_of_the_segment,
+                'stop': end_position_of_the_segment,
+                'element_id': element_id,
+                'segment': segment_id
+                }
+            ]
+        }
+
+
+.. _mutations dict:
+
+mutations (:obj:`dict`)
+    contains all the mutations for each element. Most of the information is taken from
+    the mutations_file but the *element_id* and the *segment* that are taken from the **elements**.
+    More information is added during the execution
+
+    .. code-block:: python
+
+        { element_id:
+            [
+                {
+                'CHR': chromosome,
+                'POS': position_where_the_mutation_occurs,
+                'SAMPLE': sample_id,
+                'TYPE': type_of_the_mutation,
+                'REF': reference_sequence,
+                'ALT': alteration_sequence,
+                'SIGNATURE': probability of that mutation to occur,
+                'SEGMENT': segment_id
+                }
+            ]
+        }
+
+"""
+
 from collections import defaultdict
 import gzip
 import logging
@@ -11,6 +62,10 @@ from os.path import exists
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
 REGIONS_HEADER = ['chrom', 'start', 'stop', 'feature', 'segment', 'other', 'strand']
+"""
+Headers of the data expected in the elements file (see :class:`oncodrivefml.main.OncodriveFML`).
+"""
+
 REGIONS_SCHEMA = {
     'fields': {
         'chrom': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
@@ -24,6 +79,10 @@ REGIONS_SCHEMA = {
 
 
 MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
+"""
+Headers of the data expected in the mutations file file (see :class:`oncodrivefml.main.OncodriveFML`).
+"""
+
 MUTATIONS_SCHEMA = {
     'fields': {
         'CHROMOSOME': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
@@ -39,15 +98,29 @@ MUTATIONS_SCHEMA = {
 
 def load_mutations(file, signature=None, show_warnings=True, blacklist=None, subs=True, indels=True):
     """
-    Yields one line from the mutations file as a dictionary
-    :param file: mutations file with format: ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
-    :param signature: only affects if it is bysample (in this case the
-    signatures of the sample [local] if modified to be the sample itself) or if
-    the signatures of the sample [local] is not present (in this case,
-    this value is used)
-    :param show_warnings:
-    :param blacklist: mutations that are omitted from the list
-    :return:
+
+    Args:
+        file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        signature (str, optional): signature type. Defaults to None.
+            (See `signature options table`_).
+        show_warnings (bool, optional): Defaults to True.
+        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
+        subs (bool, optional): use substitutions. Defaults to True.
+        indels (bool, optional): use indels. Defaults to True.
+
+    Yields:
+        One line from the mutations file as a dictionary. Each of the inner elements of
+        :ref:`mutations <mutations dict>`
+
+    .. table:: Signature options
+        :name: signature options table
+
+        =========   ============================================================================
+        bysample    value of sample field is used as signature value.
+        other       the value passed is used as signature if it was not specified in the file.
+                    If the cancer type columns is present, that one is used.
+        =========   ============================================================================
+
     """
 
     # Set of samples to blacklist
@@ -102,12 +175,15 @@ def load_mutations(file, signature=None, show_warnings=True, blacklist=None, sub
 
 def load_regions(file):
     """
+    Parse an elements file compliant with :attr:`REGIONS_HEADER`
 
-    :param file: mutation file with format ['chrom', 'start', 'stop', 'feature', 'segment']
-    (see :ref: REGIONS_HEADER)
-    :return: {feature: [ {chromosome: , start: , stop: , feature:, segment*:
-    } ] }
-    *: if the field is not present, feature is used for it
+    Args:
+        file: elements file. If 'segment' field is not present, the value of the 'feature'
+            is used instead.
+
+    Returns:
+        dict: elements where the element_id is the 'feature' (see :ref:`elements <elements dict>`).
+
     """
 
     regions = defaultdict(list)
@@ -144,8 +220,27 @@ def load_regions(file):
 def build_regions_tree(regions):
     """
 
-    :param regions:
+    Args:
+        regions (dict): segments grouped by :ref:`elements <elements dict>`.
+
+    Returns:
+        :obj:`dict` of :obj:`IntervalTree`: for each chromosome, it get one :obj:`IntervalTree` which
+        is a binary tree. The leafs are intervals [low limit, high limit) and the value associated with each interval
+        is the :obj:`tuple` (feature, segment).
+        It can be interpreted as:
+
+        .. code-block:: python
+
+            { chromosome:
+                (start_position, stop_position +1): (feature, segment)
+            }
+
+    """
+    """
+
+    :param regions: a
     :return: { chromosome: IntrevalTree }
+
     IntervalTree: binary tree with an interval [low limit, high limit) and a
     value for that interval (can be anything). E.g. [5:(10)]='a string as value'
     In our case [start : (stop+1)] = (feature, segment)
@@ -166,27 +261,49 @@ def build_regions_tree(regions):
 
 def load_and_map_variants(variants_file, elements_file, signature_name='none', blacklist=None, subs=True, indels=True):
     """
+    From the elements and variants files, get dictionaries with the segments grouped by element ID and the
+    mutations grouped in the same way.
 
-    :param variants_file:
-    :param elements_file:
-    :param signature_name:
-    :param blacklist:
-    :return: variants_dict, elements
-    variants_dict:
-    { element* : [ {chromosome: , positon: , sample: , type: , ref: ,
-    alt: , signatures: , segment*: } ] }
-    *: this value comes from the elements file
-    elements:
-    {feature: [ {chromosome: , start: , stop: , feature: , segment: } ] }
+    Args:
+        variants_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        elements_file: elements file (see :class:`oncodrivefml.main.OncodriveFML`)
+        signature_name (str, optional): Defaults to 'none'.
+        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
+        subs (bool, optional): use substitutions. Defaults to True.
+        indels (bool, optional): use indels. Defaults to True.
 
-    Checks if the pickle.gz already exists for mutations and elements files,
-    and uses those if possible.
-    If not, it loads the elements (see :ref: load_regions), generates the
-    elements-tree (see :ref: build_regions_tree) and combines it with the
-    variants_file (see :ref: load_mutations) to generate the variants_dict.
-    Blacklist and signatures are used when loading the mutations file.
+    Returns:
+        tuple: mutations and elements
+
+        Elements: `elements dict`_
+
+        Mutations `mutations dict`_
+
+
+    The process is done in 3 steps:
+       1. :meth:`load_regions`
+       #. :meth:`build_regions_tree`.
+       #. each mutation (:meth:`load_mutations`) is associated with the right
+          element ID
+
+    For each of the steps, a precomputed file is search:
+        1.
+            .. code-block:: python
+
+                elements_file + "_dict.pickle.gz"
+
+        #. Only if the mutations precomputed file is not found
+
+            .. code-block:: python
+
+                elements_file + "_tree.pickle.gz"
+
+        #.
+            .. code-block:: python
+
+                variants_file + "_mapping_" + get_name(elements_file) + '.pickle.gz'
+
     """
-
     # Load elements file
     elements = None
     elements_precomputed = elements_file + "_dict.pickle.gz"
