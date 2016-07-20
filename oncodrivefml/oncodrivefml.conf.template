@@ -23,6 +23,13 @@ method = full
 # column_alt = [column that contains the alternate signature]
 # column_probability = [column that contaions the probability]
 
+# classifier = column of the mutations file that replaces the SIGNATURE column
+# if method is "bysample" the classifier is overwriten to "SAMPLE".
+# Use "SIGNATURE" to keep the value.
+# It can be any string value. If there is no column with that name, then the name is
+# used.
+
+
 [score]
 # Path to score tab separated file compress with bgzip and next to a Tabix .tbi index file
 file = "%(bgdata://genomicscores/cadd/1.3)"
@@ -75,6 +82,12 @@ method = amean
 
 # Gemoetric mean
 # method = gmean
+
+# Compute the substitutions
+subs = enabled
+
+# Do not compute the substitutions
+subs = none
 
 # Method to compute indels scores:
 

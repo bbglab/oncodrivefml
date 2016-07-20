@@ -1,0 +1,14 @@
+sphinxcontrib-napoleon
+
+bgconfig >= 0.1.0
+numpy >= 1.9.0
+scipy >= 0.14.0
+statsmodels >= 0.6.1
+pytabix >= 0.1
+bokeh == 0.10
+pandas >= 0.15.2
+matplotlib >= 1.4.0
+intervaltree >= 2.1.0
+bgqmap >= 1.0.0
+bgdata >= 0.6.0
+itab >= 0.3.0

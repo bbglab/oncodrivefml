@@ -1,3 +1,11 @@
+"""
+This module contains the methods associated with the
+scores that are assigned to the mutations.
+
+The scores are read from a file.
+"""
+
+
 import logging
 import tabix
 
@@ -6,26 +14,71 @@ from collections import defaultdict, namedtuple
 from oncodrivefml.signature import get_ref_triplet
 
 ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'signature'])
+"""
+Tuple that contains the reference, the alteration, the score value and the signature name associated
+
+Parameters:
+    ref (str): reference base
+    alt (str): altered base
+    value (float): score value of that substitution
+    signature (dict): probability of that substitution (taking into account the previous and the next base) for each
+        signature ID
+"""
 
 
 class Scores(object):
+    """
+
+    Args:
+        element (str): element ID
+        segments (list): list of the segmenst associated to the element
+        signature (dict): probabilities {signature_key: { (ref, alt): prob }}
+        config (dict): configuration
+
+    Attributes:
+        scores_by_pos (dict): for each positions get all possible changes, and for each change the probability
+            according to the different signature IDs
+
+            .. code-block:: python
+
+                    { position:
+                        [
+                            ScoreValue(
+                                ref,
+                                alt_1,
+                                value,
+                                {
+                                    signature_id: prob_of_triplet_(ref_triplet, alt_1_triplet)
+                                }
+                            ),
+                            ScoreValue(
+                                ref,
+                                alt_2,
+                                value,
+                                {
+                                    signature_id: prob_of_triplet_(ref_triplet, alt_2_triplet)
+                                }
+                            ),
+                            ScoreValue(
+                                ref,
+                                alt_3,
+                                value,
+                                {
+                                    signature_id: prob_of_triplet_(ref_triplet, alt_3_triplet)
+                                }
+                            )
+                        ]
+                    }
+    """
 
     def __init__(self, element: str, segments: list, signature: dict, config: dict):
-        """
-
-        :param element: The element id
-        :param segments: A list with the element segments definition
-        :param signature: A dict with the signatures probability {'signature_key' : { (ref, alt): probability }}
-        :param config: Dictionary with the score configuration
-        :return:
-        """
 
         self.element = element
         self.segments = segments
         self.signature = signature
 
         # Score configuration
-        self.conf_file = config['file']#TODO rename as score configuration file
+        self.conf_file = config['file']
         self.conf_score = config['score']
         self.conf_chr = config['chr']
         self.conf_chr_prefix = config['chr_prefix']
@@ -44,6 +97,16 @@ class Scores(object):
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
         """
+        Get all ScoreValue objects that are asocated with that position
+
+        Args:
+            position (int): position
+
+        Returns:
+            :obj:`list` of :obj:`ScoreValue`: list of all ScoreValue related to that positon
+
+        """
+        """
         Get all the posible scores at the given position
 
         :param position: Genomic position in the gene
@@ -53,18 +116,24 @@ class Scores(object):
 
     def get_all_positions(self) -> List[int]:
         """
-        Get all possible score positions in the element
+        Get all positions in the element
 
-        :return: All the
+        Returns:
+            :obj:`list` of :obj:`int`: list of positions
+
         """
         return self.scores_by_pos.keys()
 
     def _read_score(self, row: list) -> float:
         """
-        Parses one score line and returns the score value
+        Parses a score line and returns the score value
 
-        :param row: A row from the score file
-        :return: The score parsed
+        Args:
+            row (list): row from the scores file
+
+        Returns:
+            float: score value
+
         """
         value_str = row[self.conf_score]
         if value_str is None or value_str == '':
@@ -85,15 +154,12 @@ class Scores(object):
 
     def _load_scores(self):
         """
-        For each mutation in certain element:
-        Looks in the scores file, for the scores associated with that element,
-        chromosome, start position and end position.
-        Fills scores_by_pos:
-        { position : [ (ref, alt, score, { signatures :  probability } ]
-        compute_muts_statistics
-        :return:
-        """
+        For each position get all possible substitutions and for each
 
+        Returns:
+            dict: for each positions get a list of ScoreValue with all signatures for that triplet
+            (see :attr:`scores_by_pos`)
+        """
         tb = tabix.open(self.conf_file)#conf_file is the file with the scores
 
         #Loop through a list of dictionaries from the elements dictionary
@@ -116,6 +182,7 @@ class Scores(object):
 
                     if self.signature is not None:
                         ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
+                        #TODO remove: already done
                         ref = row[self.conf_ref]
                         alt = row[self.conf_alt]
 
