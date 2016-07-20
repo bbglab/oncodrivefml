@@ -41,7 +41,7 @@ mutations (:obj:`dict`)
                 'TYPE': type_of_the_mutation,
                 'REF': reference_sequence,
                 'ALT': alteration_sequence,
-                'SIGNATURE': probability of that mutation to occur,
+                'SIGNATURE': group to which the mutation belongs to,
                 'SEGMENT': segment_id
                 }
             ]

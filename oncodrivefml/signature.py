@@ -2,9 +2,20 @@
 This module contatins information related with the signature.
 
 The signature is a way of assigning probabilities to certain mutations that have some
-relation amongst them (e.g. cancer type, sample...). These relation is identified by the
-**signature_id**. The *signature_id* can be the ``signature`` or
-the ``sample`` fields from the :file:`mutations_file` (see `mutations dict`_).
+relation amongst them (e.g. cancer type, sample...).
+
+This relation is identified by the **signature_id**.
+It uses the *SIGNATURE* field in the `mutations dict`_.
+
+.. warning::
+
+    The value of the *SIGNATURE* in the `mutations dict`_ can be different than the value
+     in the *SIGNATURE* column of the mutations file (see :class:`oncodrivefml.OncodriveFML`).
+
+The ``classifier`` parameter in the :ref:`configuration <project configuration>` of the signature
+specifies which column of the mutations file (:data:`oncodrivefml.load.MUTATIONS_HEADER`) is used to replace the
+*SIGNATURE* column. If the column does not exist the ``classifier`` itself is used as value for the
+*SIGNATURE*.
 
 The probabilities are taken using only substitutions. For them, the two bases that
 surround the mutated one are taken into account. This is called the triplet.
