@@ -96,7 +96,7 @@ MUTATIONS_SCHEMA = {
 }
 
 
-def load_mutations(file, signature_classifier=None, show_warnings=True, blacklist=None, subs=True, indels=True):
+def load_mutations(file, signature_classifier=None, show_warnings=True, blacklist=None):
     """
 
     Args:
@@ -107,8 +107,6 @@ def load_mutations(file, signature_classifier=None, show_warnings=True, blacklis
         show_warnings (bool, optional): Defaults to True.
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
             Defaults to None.
-        subs (bool, optional): use substitutions. Defaults to True.
-        indels (bool, optional): use indels. Defaults to True.
 
     Yields:
         One line from the mutations file as a dictionary. Each of the inner elements of
@@ -138,10 +136,6 @@ def load_mutations(file, signature_classifier=None, show_warnings=True, blacklis
             else:
                 row['TYPE'] = 'subs'
 
-        if row['TYPE'] == 'indel' and not indels:
-            continue
-        if row['TYPE'] == 'subs' and not subs:
-            continue
 
         row['SIGNATURE'] = row.get(signature_classifier, signature_classifier)
 
@@ -234,7 +228,7 @@ def build_regions_tree(regions):
     return regions_tree
 
 
-def load_and_map_variants(variants_file, elements_file, signature_classifier, blacklist=None, subs=True, indels=True):
+def load_and_map_variants(variants_file, elements_file, signature_classifier, blacklist=None):
     """
     From the elements and variants files, get dictionaries with the segments grouped by element ID and the
     mutations grouped in the same way.
@@ -244,8 +238,6 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
         elements_file: elements file (see :class:`oncodrivefml.main.OncodriveFML`)
         signature_name (str, optional): Defaults to 'none'.
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
-        subs (bool, optional): use substitutions. Defaults to True.
-        indels (bool, optional): use indels. Defaults to True.
 
     Returns:
         tuple: mutations and elements
@@ -345,7 +337,7 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
-    for i, r in enumerate(load_mutations(variants_file, signature_classifier=signature_classifier, blacklist=blacklist, subs=subs, indels=indels), start=1):
+    for i, r in enumerate(load_mutations(variants_file, signature_classifier=signature_classifier, blacklist=blacklist), start=1):
 
         if r['CHROMOSOME'] not in elements_tree:
             continue

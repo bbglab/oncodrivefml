@@ -93,9 +93,7 @@ class OncodriveFML(object):
             return
 
         # Load mutations mapping
-        indels = self.configuration['statistic']['indels'] != 'none'
-        subs = self.configuration['statistic']['subs'] != 'none'
-        self.mutations, self.elements = load_and_map_variants(self.mutations_file, self.elements_file, self.configuration['signature']['classifier'], blacklist=self.blacklist, subs=subs, indels=indels)
+        self.mutations, self.elements = load_and_map_variants(self.mutations_file, self.elements_file, self.configuration['signature']['classifier'], blacklist=self.blacklist)
 
         # Load signatures
         self.signatures = load_signature(self.mutations_file, self.configuration['signature'], blacklist=self.blacklist)
