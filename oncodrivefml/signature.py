@@ -195,7 +195,7 @@ def signature_probability(signature_counts):
     return {k: v/total for k, v in signature_counts.items()}
 
 
-def compute_signature(mutations_file, signature_name, blacklist):
+def compute_signature(mutations_file, classifier, blacklist, collapse=False):
     """
     Gets the probability of each substitution that occurs for a certain signature_id.
 
@@ -205,13 +205,14 @@ def compute_signature(mutations_file, signature_name, blacklist):
 
     Args:
         mutations_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
-        signature_name (str): passed to :func:`oncodrivefml.load.load_mutations`
-            as parameter ``signature``.
+        classifier (str): passed to :func:`oncodrivefml.load.load_mutations`
+            as parameter ``signature_classifier``.
         blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
             Used by :func:`oncodrivefml.load.load_mutations`
+        collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
 
     Returns:
-        dict: probability of each substitution (measured by the triplets) grouped by the signature_id
+        dict: probability of each substitution (measured by the triplets) grouped by the signature_classifier
 
         .. code-block:: python
 
@@ -227,7 +228,7 @@ def compute_signature(mutations_file, signature_name, blacklist):
 
     """
     signature_count = defaultdict(lambda: defaultdict(int))
-    for mut in load_mutations(mutations_file, signature=signature_name, show_warnings=False, blacklist=blacklist):
+    for mut in load_mutations(mutations_file, signature_classifier=classifier, show_warnings=False, blacklist=blacklist):
         if mut['TYPE'] != 'subs':
             continue
 
@@ -238,61 +239,16 @@ def compute_signature(mutations_file, signature_name, blacklist):
 
     signature = {}
     for k, v in signature_count.items():
-        signature[k] = signature_probability(v)
-
-    return signature
-
-
-def compute_signature_by_sample(mutations_file, blacklist, collapse=True):
-    """
-    Gets the probability of each substitution that occurs using the mutation
-    ``SAMPLE`` field as signature_id.
-
-    Each substitution is identified by the pair (reference_triplet, altered_triplet).
-
-    Args:
-        mutations_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
-        blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
-            Used by :func:`oncodrivefml.load.load_mutations`
-        collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
-
-    Returns:
-        dict: probability of each substitution (measured by the triplets) grouped by the signature_id
-
-        .. code-block:: python
-
-            { signature_id:
-                {
-                    (ref_triplet, alt_triplet): prob
-                }
-            }
-
-    .. warning::
-
-        Only substitutions are taken into account
-
-    """
-    signature_count = defaultdict(lambda: defaultdict(int))
-    for mut in load_mutations(mutations_file, show_warnings=False, blacklist=blacklist):
-        if mut['TYPE'] != 'subs':
-            continue
-
-        signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
-        signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
-
-        signature_count[mut['SAMPLE']][(signature_ref, signature_alt)] += 1
-
-    signature = {}
-    for k, v in signature_count.items():
         if collapse:
             signature[k] = signature_probability(collapse_complementaries(v))
         else:
             signature[k] = signature_probability(v)
 
+
     return signature
 
 
-def load_signature(mutations_file, signature_config, blacklist=None, signature_name="none"):
+def load_signature(mutations_file, signature_config, blacklist=None):
     """
     Computes the probability that certain mutation occurs.
 
@@ -301,7 +257,7 @@ def load_signature(mutations_file, signature_config, blacklist=None, signature_n
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
             Used by :func:`oncodrivefml.load.load_mutations`
-        signature_name: defaults to 'none'.
+        signature_classifier (str): classify the samples by it. Defaults to 'none'.
 
     Returns:
         dict: probability of each substitution (measured by the triplets) grouped by the signature_id
@@ -318,6 +274,7 @@ def load_signature(mutations_file, signature_config, blacklist=None, signature_n
 
     """
     method = signature_config['method']
+    classifier = signature_config['classifier']
     path = signature_config.get('path', None)
     column_ref = signature_config.get('column_ref', None)
     column_alt = signature_config.get('column_alt', None)
@@ -334,14 +291,14 @@ def load_signature(mutations_file, signature_config, blacklist=None, signature_n
 
     elif method == "full" or method == "complement":
 
-        signature_dict_precomputed = mutations_file + "_signature_full.pickle.gz"
+        signature_dict_precomputed = mutations_file + "_signature_full_"+classifier+".pickle.gz"
         if exists(signature_dict_precomputed):
             logging.info("Using precomputed signatures")
             with gzip.open(signature_dict_precomputed, 'rb') as fd:
                 signature_dict = pickle.load(fd)
         else:
             logging.info("Computing full global signatures")
-            signature_dict = compute_signature(mutations_file, signature_name, blacklist)
+            signature_dict = compute_signature(mutations_file, classifier, blacklist)
             try:
                 # Try to store as precomputed
                 with gzip.open(signature_dict_precomputed, 'wb') as fd:
@@ -360,7 +317,7 @@ def load_signature(mutations_file, signature_config, blacklist=None, signature_n
                 signature_dict = pickle.load(fd)
         else:
             logging.info("Computing signatures per sample")
-            signature_dict = compute_signature_by_sample(mutations_file, blacklist)
+            signature_dict = compute_signature(mutations_file, classifier, blacklist, collapse=True)
             try:
                 # Try to store as precomputed
                 with gzip.open(signature_dict_precomputed, 'wb') as fd:
@@ -376,5 +333,5 @@ def load_signature(mutations_file, signature_config, blacklist=None, signature_n
             logging.info("Loading signatures")
             signature_probabilities = pd.read_csv(path, sep='\t')
             signature_probabilities.set_index([column_ref, column_alt], inplace=True)
-            signature_dict = {signature_name: signature_probabilities.to_dict()[column_probability]}
+            signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
     return signature_dict

@@ -46,6 +46,9 @@ class OncodriveFML(object):
             self.cores = os.cpu_count()
         self.statistic_method = self.configuration['statistic']['method']
 
+        if self.configuration['signature']['method'] == 'bysample':
+            self.configuration['signature']['classifier'] == 'SAMPLE'
+
         # Optional parameters
         self.output_folder = file_name(self.elements_file) if output_folder is None else output_folder
         self.output_file_prefix = join(self.output_folder, file_name(self.mutations_file) + '-oncodrivefml')
@@ -92,7 +95,7 @@ class OncodriveFML(object):
         # Load mutations mapping
         indels = self.configuration['statistic']['indels'] != 'none'
         subs = self.configuration['statistic']['subs'] != 'none'
-        self.mutations, self.elements = load_and_map_variants(self.mutations_file, self.elements_file, blacklist=self.blacklist, subs=subs, indels=indels)
+        self.mutations, self.elements = load_and_map_variants(self.mutations_file, self.elements_file, self.configuration['signature']['classifier'], blacklist=self.blacklist, subs=subs, indels=indels)
 
         # Load signatures
         self.signatures = load_signature(self.mutations_file, self.configuration['signature'], blacklist=self.blacklist)

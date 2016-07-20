@@ -1,5 +1,6 @@
 [signature]
 method = option('none', 'full', 'complement', 'bysample', 'file')
+classifier = string(default='none')
 path = string(default=None)
 column_ref = string(default=None)
 column_alt = string(default=None)

@@ -96,30 +96,23 @@ MUTATIONS_SCHEMA = {
 }
 
 
-def load_mutations(file, signature=None, show_warnings=True, blacklist=None, subs=True, indels=True):
+def load_mutations(file, signature_classifier=None, show_warnings=True, blacklist=None, subs=True, indels=True):
     """
 
     Args:
         file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
-        signature (str, optional): signature type. Defaults to None.
-            (See `signature options table`_).
+        signature_classifier (str, optional): indicates which column replaces the signature column. Defaults to None.
+            Expected a value in MUTATIONS_SCHEMA. None implies using 'CANCER_TYPE if present. Empty column is replaced by
+            signature_classifier.
         show_warnings (bool, optional): Defaults to True.
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
+        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
+            Defaults to None.
         subs (bool, optional): use substitutions. Defaults to True.
         indels (bool, optional): use indels. Defaults to True.
 
     Yields:
         One line from the mutations file as a dictionary. Each of the inner elements of
         :ref:`mutations <mutations dict>`
-
-    .. table:: Signature options
-        :name: signature options table
-
-        =========   ============================================================================
-        bysample    value of sample field is used as signature value.
-        other       the value passed is used as signature if it was not specified in the file.
-                    If the cancer type columns is present, that one is used.
-        =========   ============================================================================
 
     """
 
@@ -150,15 +143,7 @@ def load_mutations(file, signature=None, show_warnings=True, blacklist=None, sub
         if row['TYPE'] == 'subs' and not subs:
             continue
 
-
-        if signature == 'bysample':
-            row['SIGNATURE'] = row['SAMPLE']
-        else:
-            if row.get('SIGNATURE', None) is None:
-                row['SIGNATURE'] = signature
-
-            if row.get('CANCER_TYPE', None) is not None:
-                row['SIGNATURE'] = row['CANCER_TYPE']
+        row['SIGNATURE'] = row.get(signature_classifier, signature_classifier)
 
         yield row
 
@@ -236,16 +221,6 @@ def build_regions_tree(regions):
             }
 
     """
-    """
-
-    :param regions: a
-    :return: { chromosome: IntrevalTree }
-
-    IntervalTree: binary tree with an interval [low limit, high limit) and a
-    value for that interval (can be anything). E.g. [5:(10)]='a string as value'
-    In our case [start : (stop+1)] = (feature, segment)
-
-    """
     regions_tree = defaultdict(IntervalTree)
     for i, (k, allr) in enumerate(regions.items()):
 
@@ -259,7 +234,7 @@ def build_regions_tree(regions):
     return regions_tree
 
 
-def load_and_map_variants(variants_file, elements_file, signature_name='none', blacklist=None, subs=True, indels=True):
+def load_and_map_variants(variants_file, elements_file, signature_classifier, blacklist=None, subs=True, indels=True):
     """
     From the elements and variants files, get dictionaries with the segments grouped by element ID and the
     mutations grouped in the same way.
@@ -370,7 +345,7 @@ def load_and_map_variants(variants_file, elements_file, signature_name='none', b
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
-    for i, r in enumerate(load_mutations(variants_file, signature=signature_name, blacklist=blacklist, subs=subs, indels=indels), start=1):
+    for i, r in enumerate(load_mutations(variants_file, signature_classifier=signature_classifier, blacklist=blacklist, subs=subs, indels=indels), start=1):
 
         if r['CHROMOSOME'] not in elements_tree:
             continue
