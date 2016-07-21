@@ -140,7 +140,7 @@ class QQPlot(object):
         if cutoff:
             # FDR
             for fdr_cutoff, fdr_color in zip((0.25, 0.1), ('green', 'red')):
-                fdr = self.data[self.data['qvalue'] < cutoff]['observed']
+                fdr = self.data[self.data['qvalue'] < fdr_cutoff]['observed']
                 if len(fdr) > 0:
                     fdr_y = np.min(fdr)
                     fdr_x = np.min(self.data[self.data['observed'] == fdr_y]['expected'])
