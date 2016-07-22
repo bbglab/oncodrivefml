@@ -49,8 +49,8 @@ class QQPlot(object):
         self.figure.xaxis.axis_label = 'Expected p-values'
         self.figure.yaxis.axis_label = 'Observed p-values'
         self.figure.axis.major_label_text_font_size = '14pt'
-        self.figure.xaxis[0].formatter = PrintfTickFormatter(format="%.0f") #%.0e
-        self.figure.yaxis[0].formatter = PrintfTickFormatter(format="%.0f")  # 1e-%1.4f
+        #self.figure.xaxis[0].formatter = PrintfTickFormatter(format="%.1f") #%.0e
+        #self.figure.yaxis[0].formatter = PrintfTickFormatter(format="%.1f")  # 1e-%1.4f
         #self.figure.xaxis[0].major_label_orientation = pi / 4
 
         self.layout = None
@@ -123,9 +123,10 @@ class QQPlot(object):
         max_x = float(self.data[['expected']].apply(np.max))
         max_y = float(self.data[['observed']].apply(np.max))
 
-        # Give some extra space (+-5%)
+        # Give some extra space (+-10%)
         max_x *= 1.1
-        max_y *= 1.1
+        # Give some extra space (+-20%)
+        max_y *= 1.2
 
         # Add a dashed diagonal from (min_x, max_x) to (min_y, max_y)
         self.figure.line(np.linspace(0, min(max_x, max_y)),
@@ -308,7 +309,8 @@ class QQPlot(object):
                         <link href="http://cdn.pydata.org/bokeh/release/bokeh-""" + bokeh_version + """.min.css" rel="stylesheet" type="text/css">
                         <script src="http://cdn.pydata.org/bokeh/release/bokeh-""" + bokeh_version + """.min.js"></script>
                         <link href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-""" + bokeh_version + """.min.css" rel="stylesheet" type="text/css">
-                        <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-""" + bokeh_version + """.min.js"></script>\n""" + \
+                        <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-""" + bokeh_version + """.min.js"></script>
+                        <style>.bk-root .bk-toolbar-above {right: auto;}</style>\n""" + \
                    script + \
                    """<body>\n""" + \
                    div + """
