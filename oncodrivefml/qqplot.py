@@ -1,3 +1,13 @@
+"""
+This module contains the methods used to store the results.
+
+3 different types of output are available:
+
+    - **tsv** file
+    - **png** graph: uses the *tsv* file and matplotlib
+    - **html** graph: uses the *tsv* file and bokeh
+"""
+
 import gzip
 import os
 import matplotlib
@@ -8,108 +18,70 @@ import pandas as pd
 import numpy as np
 from math import pi
 from bokeh import __version__ as bokeh_version
-from bokeh.io import vform
+from bokeh.io import vform, reset_output
 from bokeh.plotting import output_notebook
 from bokeh.embed import components
 from bokeh.plotting import figure, output_file, show, ColumnDataSource
-from bokeh.models import HoverTool, PrintfTickFormatter, CustomJS, TextInput, Circle
-
+from bokeh.models import HoverTool, PrintfTickFormatter, CustomJS, Circle
+from bokeh.models.widgets.inputs import TextInput
+from bokeh.layouts import column, widgetbox
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 
-TOOLS = "pan,box_zoom,resize,wheel_zoom,"
-TOOLS += "reset,previewsave,crosshair,hover"
-
 
 class QQPlot(object):
+    """
+    QQPlot
 
-    def __init__(self):
+    Args:
+        input_file: tsv file with the data
+        cutoff (bool): add cutoffs to the figure
+        rename_fields (dict): column names from the input file can be renamed providing a dictionary {old_name : new_name}
+        extra_fields (list): list of column names that want to be passed to the figure data. Need for example to
+            search by them.
+    """
 
-        # Open the figure
-        self._fig = figure(width=600, plot_height=600, tools=TOOLS)
+    def __init__(self, input_file, cutoff=True, rename_fields=None, extra_fields=None):
+        basic_tools = "pan,box_zoom,resize,wheel_zoom,reset,previewsave,crosshair"
+        self.figure = figure(width=600, plot_height=600, tools=basic_tools, toolbar_location="above")
+        # labels
+        self.figure.xaxis.axis_label = 'Expected p-values'
+        self.figure.yaxis.axis_label = 'Observed p-values'
+        self.figure.axis.major_label_text_font_size = '14pt'
+        #self.figure.xaxis[0].formatter = PrintfTickFormatter(format="%.1f") #%.0e
+        #self.figure.yaxis[0].formatter = PrintfTickFormatter(format="%.1f")  # 1e-%1.4f
+        #self.figure.xaxis[0].major_label_orientation = pi / 4
 
-        # Set the labels
-        self._fig.xaxis.axis_label = 'Expected p-values'
-        self._fig.yaxis.axis_label = 'Observed p-values'
-        self._fig.axis.major_label_text_font_size = '14pt'
-        self._fig.xaxis[0].formatter = PrintfTickFormatter(format="1e-%1.4f")
-        self._fig.yaxis[0].formatter = PrintfTickFormatter(format="1e-%1.4f")
-        self._fig.xaxis[0].major_label_orientation = pi/4
-        hover = self._fig.select(dict(type=HoverTool))
-        hover.mode = 'mouse'
-        hover.tooltips = None
-        self._widgets = None
-        self._source = None
-        self._cr = None
-        self._df = None
-        self._dict_for_df = None
-        self._extra_fields = None
-        self._data = None
-        self._max_x = None
-        self._max_y = None
+        self.layout = None
 
-    def add_tooltips(self, tooltips):
+        self.__load_values(input_file, rename_fields=rename_fields)
 
-        # Hover
-        code = """if (cb_data.index['1d'].indices.length > 0)\n"""
-        code += """{\n"""
-        code += """     var s = source.get('data');\n"""
-        code += """     if ( $( ".bk-tooltip.bk-tooltip-custom.bk-left" ).length == 0 )\n"""
-        code += """     {\n"""
-        code += """         $( ".bk-canvas-overlays" ).append( '<div class="bk-tooltip bk-tooltip-custom bk-left" style="z-index: 1010; top: 0px; left: 0px; display: block;"></div>' );\n"""
-        code += """     }\n"""
-        code += """     var inner = "<div><div><div>";\n"""
-        code += """     for(i in cb_data.index['1d'].indices)\n"""
-        code += """     {\n"""
-        code += """         index = cb_data.index['1d'].indices[i];\n"""
-        code += """         if (i > 2) break;\n"""
-        code += """         inner = inner + """+tooltips+"""\n"""
-        code += """     };\n"""
-        code += """     inner = inner + "<div><span style='font-size: 15px; color: #009;'>TOTAL OF: " + cb_data.index['1d'].indices.length + "</span></div>";\n"""
-        code += """     inner = inner + "</div></div></div>";\n"""
-        code += """     $('.bk-tooltip.bk-tooltip-custom.bk-left')[0].innerHTML = inner;\n"""
-        code += """     $('.bk-tooltip.bk-tooltip-custom.bk-left').attr('style', 'left:' + (cb_data.geometry.sx+10) + 'px; top:' + (cb_data.geometry.sy-5-$('.bk-tooltip.bk-tooltip-custom.bk-left').height()/2) + 'px; z-index: 1010; display: block;');\n"""
-        code += """}else\n"""
-        code += """{\n"""
-        code += """     $( "div" ).remove( ".bk-tooltip.bk-tooltip-custom.bk-left" );\n"""
-        code += """}\n"""
+        self.__create_basic_plot(extra_fields=extra_fields, cutoff=cutoff)
 
-        callback = CustomJS(args={'source': self._source}, code=code)
-        self._fig.add_tools(HoverTool(tooltips=None, callback=callback, renderers=[self._cr], mode='mouse'))
+    def __load_values(self, input_file, rename_fields=None):
+        """
+        Load the values for the plot as a :obj:`pandas.DataFrame`
 
-    def add_search_fields(self, search_fields, position=0):
-        for key, value in search_fields.items():
-            code_text_box = """
-                origSearch = cb_obj.get('value');
-                search = origSearch.toUpperCase();
-                var selected = source.get('selected')['1d'].indices;
-                searcher = source.get('data')."""+value+"""
-                selected.length = 0
-                for(index in searcher)
-                {
-                    if ( searcher[index].toUpperCase().indexOf(search) > -1)
-                        selected.push(index);
-                }
-                if (selected.length == 0)
-                    /*alert("Value not found: '"+origSearch+"'")*/
-                    swal("Value not found: '"+origSearch+"'")
-                source.trigger('change');"""
-            self._widgets.insert( position, TextInput(value="", title=key, name=key, callback=CustomJS(args=dict(source=self._source),  code=code_text_box)))
+        Args:
+            input_file: tsv file with data
+            rename_fields (dict): pair of old column name - new column name
 
-    def load(self, input_file, fields=None, basic_fields=None, extra_fields=None):
+        """
 
-        self._df = pd.read_csv(input_file, header=0, sep="\t")
-        inv_fields = {v: k for k, v in basic_fields.items()}
-        self._df = self._df.rename(columns = inv_fields)
+        self.data = pd.read_csv(input_file, header=0, sep="\t")
+        if rename_fields is not None:
+            self.data = self.data.rename(columns = rename_fields)
 
-        self._dict_for_df = { 'pvalue': self._df['pvalue'].tolist(), 'fdr': self._df['qvalue']}
-        self._extra_fields = extra_fields
+    def __create_basic_plot(self, extra_fields=None, cutoff = True):
+        """
+        Creates the basic plot.
 
-        for key, value in self._extra_fields.items():
-            self._dict_for_df[key] = self._df[value].tolist()
+        Args:
+            extra_fiedls (list): list of extra fields containen by each point
+            cutoff (bool): add cutoff
 
-    def add_basic_plot(self):
+        """
 
         # Default settings
         min_samples = 2
@@ -117,89 +89,216 @@ class QQPlot(object):
 
         colors = ['royalblue', 'blue']
 
-        self._dict_for_df ['observed'] = self._df['pvalue'].map(lambda x: -np.log10(x) if x > 0 else -np.log10(1 / min_pvalue))
-        self._dict_for_df ['color'] = self._df['num_samples'].map(lambda x: colors[1] if x >= min_samples else colors[0])
-        self._dict_for_df ['alpha'] = self._df['num_samples'].map(lambda x: 0.7 if x >= min_samples else 0.3)
+        self.data['observed'] = self.data['pvalue'].map(lambda x: -np.log10(x) if x > 0 else -np.log10(1 / min_pvalue))
+        self.data['color'] = self.data['num_samples'].map(lambda x: colors[1] if x >= min_samples else colors[0])
+        self.data['alpha'] = self.data['num_samples'].map(lambda x: 0.7 if x >= min_samples else 0.3)
 
-        self._data = pd.DataFrame( self._dict_for_df)
-
-        self._data.sort(columns=['observed'], inplace=True)
-        exp_pvalues = -np.log10(np.arange(1, len(self._data) + 1) / float(len(self._data)))
+        self.data.sort_values(by=['observed'], inplace=True)
+        exp_pvalues = -np.log10(np.arange(1, len(self.data) + 1) / float(len(self.data)))
         exp_pvalues.sort()
-        self._data['expected'] = exp_pvalues
+        self.data['expected'] = exp_pvalues
 
-        dict_for_source=dict(
-            x=self._data['expected'].tolist(),
-            y=self._data['observed'].tolist(),
-            color=self._data['color'].tolist(),
-            alpha=self._data['alpha'].tolist(),
-            pvalue=[str(x) for x in self._data["pvalue"]],
-            qvalue=[str(x) for x in self._data["fdr"]]
+        dict_for_source = dict(
+            x=self.data['expected'].tolist(),
+            y=self.data['observed'].tolist(),
+            color=self.data['color'].tolist(),
+            alpha=self.data['alpha'].tolist(),
+            pvalue=[str(x) for x in self.data["pvalue"]],
+            qvalue=[str(x) for x in self.data["qvalue"]]
         )
-        for key, value in self._extra_fields.items():
-            dict_for_source[key] = self._data[key].tolist()
+        if extra_fields is not None:
+            for field in extra_fields:
+                dict_for_source[field] = self.data[field].tolist()
 
-        self._source = ColumnDataSource( data = dict_for_source )
+        self._source = ColumnDataSource(data=dict_for_source)
 
         # Plot the first set of data
-        if len(self._data['expected']) > 0:
+        if len(self.data['expected']) > 0:
             invisible_circle = Circle(x='x', y='y', fill_color='color', fill_alpha='alpha', line_color=None, size=10)
             visible_circle = Circle(x='x', y='y', fill_color='color', fill_alpha=0.9, line_color='red', size=10)
-            self._cr = self._fig.add_glyph(self._source, invisible_circle, selection_glyph=visible_circle, nonselection_glyph=invisible_circle)
+            self.glyph = self.figure.add_glyph(self._source, invisible_circle, selection_glyph=visible_circle,
+                                           nonselection_glyph=invisible_circle)
 
         # Get the maximum pvalues (observed and expected)
-        self._max_x = float(self._data[['expected']].apply(np.max))
-        self._max_y = float(self._data[['observed']].apply(np.max))
+        max_x = float(self.data[['expected']].apply(np.max))
+        max_y = float(self.data[['observed']].apply(np.max))
 
-        # Give some extra space (+-5%)
-        self._max_x *= 1.1
-        self._max_y *= 1.1
+        # Give some extra space (+-10%)
+        max_x *= 1.1
+        # Give some extra space (+-20%)
+        max_y *= 1.2
 
         # Add a dashed diagonal from (min_x, max_x) to (min_y, max_y)
-        self._fig.line(np.linspace(0, min(self._max_x, self._max_y)),
-                np.linspace(0, min(self._max_x, self._max_y)),
-                color='red', line_width=2, line_dash=[5, 5])
+        self.figure.line(np.linspace(0, min(max_x, max_y)),
+                       np.linspace(0, min(max_x, max_y)),
+                       color='red', line_width=2, line_dash=[5, 5])
 
         # Set the grid
-        self._fig.grid.grid_line_alpha = 0.8
-        self._fig.grid.grid_line_dash = [6, 4]
-        self._widgets = [self._fig]
+        self.figure.grid.grid_line_alpha = 0.8
+        self.figure.grid.grid_line_dash = [6, 4]
 
-    def add_cutoff(self):
-        colors = ['royalblue', 'blue']
+        #cutoff
+        if cutoff:
+            # FDR
+            for fdr_cutoff, fdr_color in zip((0.25, 0.1), ('green', 'red')):
+                fdr = self.data[self.data['qvalue'] < fdr_cutoff]['observed']
+                if len(fdr) > 0:
+                    fdr_y = np.min(fdr)
+                    fdr_x = np.min(self.data[self.data['observed'] == fdr_y]['expected'])
+                    self.figure.line((fdr_x - max_x * 0.025, fdr_x + max_x * 0.025), (fdr_y, fdr_y),
+                                   color=fdr_color, line_width=2)
 
-        # FDR
-        genes_to_annotate = []
-        for fdr_cutoff, fdr_color in zip((0.25, 0.1), ('green', 'red')):
-            fdr = self._data[self._data['fdr'] < fdr_cutoff]['observed']
-            if len(fdr) > 0:
-                fdr_y = np.min(fdr)
-                fdr_x = np.min(self._data[self._data['observed'] == fdr_y]['expected'])
-                self._fig.line((fdr_x - self._max_x * 0.025, fdr_x + self._max_x * 0.025), (fdr_y, fdr_y),
-                        color=fdr_color, line_width=2)
+    def add_tooltip(self):
+        """
+        Adds tooltip to show the parameters of each glyph in the figure
+        """
+        tooltip = \
+            """
+            <div>
+                <span style='font-size: 17px; font-weight: bold;'>@HugoID</span>
+                <span style='font-size: 15px; color: #966;'>[@EnsblID]</span>
+            </div>
+            <div>
+                <span style='font-size: 15px;'>p, q-value</span>
+                <span style='font-size: 10px; color: #696;'>(@pvalue, @qvalue)</span>
+            </div>
+            </br>
 
-                # Add the name of the significant genes
-                genes = self._data[(self._data['observed'] >= fdr_y) & (self._data['expected'] >= fdr_x)]
-                for count, line in genes.iterrows():
-                    genes_to_annotate.append({'x': line['expected'],
-                                              'y': line['observed'],
-                                              'HugoID': line['HugoID'],
-                                              'color': colors[0] if line['color'] == colors[0] else fdr_color[0]})
+            """
+        self.figure.add_tools(HoverTool(tooltips=tooltip, mode='mouse', renderers=[self.glyph]))
+
+    def add_tooltip_enhanced(self):
+        """
+        The tooltip is shown via JavaScript to avoid been block in areas with a
+        high density of points
+        """
+        tooltip = \
+            """
+            "<div> \\
+                <span style='font-size: 17px; font-weight: bold;'>\"+s.HugoID[index]+\"</span> \\
+                <span style='font-size: 15px; color: #966;'>[\"+s.EnsblID[index]+\"]</span> \\
+            </div> \\
+            <div> \\
+                <span style='font-size: 15px;'>p, q-value</span> \\
+                <span style='font-size: 10px; color: #696;'>(\"+s.pvalue[index]+\", \"+s.qvalue[index]+\")</span> \\
+            </div> \\
+            </br>"
+            """
+
+        code = \
+            """
+            if (cb_data.index['1d'].indices.length > 0) {
+                var s = source.get('data');
+                if ( $( ".bk-tooltip.bk-tooltip-custom.bk-left" ).length == 0 ){
+                    $( ".bk-canvas-overlays" ).append( '<div class="bk-tooltip bk-tooltip-custom bk-left" style="z-index: 1010; top: 0px; left: 0px; display: block;"></div>' );
+                }
+                var inner = "<div><div><div>";
+                for(i in cb_data.index['1d'].indices){
+                    index = cb_data.index['1d'].indices[i];
+                    if (i > 2) break;
+                     inner = inner + """ + tooltip + """
+                }
+                if (i>2) {
+                    inner = inner + "<div><span style='font-size: 15px; color: #009;'>TOTAL OF: " + cb_data.index['1d'].indices.length + "</span></div>";
+                }
+                inner = inner + "</div></div></div>";
+                $('.bk-tooltip.bk-tooltip-custom.bk-left')[0].innerHTML = inner;
+                $('.bk-tooltip.bk-tooltip-custom.bk-left').attr('style', 'left:' + (cb_data.geometry.sx+10) + 'px; top:' + (cb_data.geometry.sy-5-$('.bk-tooltip.bk-tooltip-custom.bk-left').height()/2) + 'px; z-index: 1010; display: block;');
+            }else {
+                $("div").remove(".bk-tooltip.bk-tooltip-custom.bk-left");
+            }
+
+            """
+
+        callback = CustomJS(args={'source': self._source}, code=code)
+        self.figure.add_tools(HoverTool(tooltips=None, callback=callback, renderers=[self.glyph], mode='mouse'))
+
+    def add_search_widget(self, fields):
+        """
+        Add text input for each field.
+
+        Args:
+            fields (:obj:`str` or :obj:`list`): list of fields to do a search.
+
+        """
+        if not fields:
+            return
+
+        if isinstance(fields, str):
+            callback = CustomJS(args=dict(source=self._source),
+                                code=self.__get_search_box_code(fields))
+            widgets = TextInput(value="", name=fields, title=fields,
+                                callback = callback)
+        else:
+            widgets = []
+            for field in fields:
+                callback = CustomJS(args=dict(source=self._source),
+                                    code=self.__get_search_box_code(field))
+                text_input = TextInput(value="", name=field, title=field,
+                                       callback=callback)
+                widgets.append(text_input)
+
+        widgets = widgetbox(widgets)
+
+        self.layout = column(widgets, self.figure)
+
+
+    @staticmethod
+    def __get_search_box_code(field):
+        """
+        Code for a search box widget
+
+        Args:
+            field (str): field name
+
+        Returns:
+            str: Javascript code
+
+        """
+        code = \
+            """
+            origSearch = cb_obj.get('value');
+            search = origSearch.toUpperCase();
+            var selected = source.get('selected')['1d'].indices;
+            searcher = source.get('data').""" + field + """
+            selected.length = 0
+            for(index in searcher) {
+                if ( searcher[index].toUpperCase().indexOf(search) > -1) {
+                    selected.push(index);
+                }
+            }
+            if (selected.length == 0) {
+                swal("Error", "Value not found: '"+origSearch+"'", "error")
+            }
+            source.trigger('change');
+            """
+
+        return code
 
     def show(self, output_path, showit=True, notebook=False):
-        """Create an interactive qqplot"""
+        """
+        Show the figure
 
+        Args:
+            output_path: file where to store the figure
+            showit (bool): the figure is displayed (widgets and the like are not shown) or is fully saved. Defaults to True.
+            notebook (bool): if is is called form a notebook or not. Defaults to False.
+
+        """
         # Import modules
         if notebook:
             output_notebook()
-        layout = vform( *self._widgets)
+        else:
+            if output_path is not None:
+                output_file(output_path)
 
-        # Save the plot
-        if output_path is not None:
-            output_file(output_path)
+        if self.layout is not None:
+            layout = self.layout
+        else:
+            layout = self.figure
 
         if showit:
-            show(layout)
+            show(self.figure)
         else:
             script, div = components(layout)
             html = """  <!DOCTYPE html>
@@ -207,11 +306,14 @@ class QQPlot(object):
                         <script src="https://code.jquery.com/jquery-1.11.3.min.js">
                         </script><script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
                         <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
-                        <link href="http://cdn.pydata.org/bokeh/release/bokeh-"""+bokeh_version+""".min.css" rel="stylesheet" type="text/css">
-                        <script src="http://cdn.pydata.org/bokeh/release/bokeh-"""+bokeh_version+""".min.js"></script>\n"""+\
-                        script+\
-                        """<body>\n"""+\
-                        div+"""
+                        <link href="http://cdn.pydata.org/bokeh/release/bokeh-""" + bokeh_version + """.min.css" rel="stylesheet" type="text/css">
+                        <script src="http://cdn.pydata.org/bokeh/release/bokeh-""" + bokeh_version + """.min.js"></script>
+                        <link href="http://cdn.pydata.org/bokeh/release/bokeh-widgets-""" + bokeh_version + """.min.css" rel="stylesheet" type="text/css">
+                        <script src="http://cdn.pydata.org/bokeh/release/bokeh-widgets-""" + bokeh_version + """.min.js"></script>
+                        <style>.bk-root .bk-toolbar-above {right: auto;}</style>\n""" + \
+                   script + \
+                   """<body>\n""" + \
+                   div + """
                         </body>
                         </html>"""
             text_file = open(output_path, "w")
@@ -238,6 +340,21 @@ def add_symbol(df):
                        for line in gzip.open(ensemble_file, 'rt').readlines()}
     df.loc[:, 'symbol'] = df[df.columns[0]].apply(lambda e: gene_conversion.get(e, e))
     return df
+
+
+def qqplot_html(input_file, output_path, showit=False):
+
+    search_by_fields = ['HugoID', 'EnsblID']
+
+    qqp = QQPlot(input_file = input_file, rename_fields = {'samples_mut': 'num_samples','symbol': 'HugoID', 'index': 'EnsblID'}, extra_fields=search_by_fields, cutoff=True)
+
+    qqp.add_tooltip_enhanced()
+
+    qqp.add_search_widget(search_by_fields)
+
+    qqp.show(output_path = output_path, notebook = False, showit=False)
+
+
 
 
 def qqplot_png(input_file, output_file, showit=False):
@@ -397,23 +514,3 @@ def qqplot_png(input_file, output_file, showit=False):
 
     # Close the figure
     plt.close()
-
-
-def qqplot_html(input_file, output_path, showit=False):
-
-    qqp = QQPlot()
-    qqp.load(input_file = input_file, basic_fields = {'num_samples': 'samples_mut', 'pvalue': 'pvalue', 'qvalue': 'qvalue' },
-            extra_fields = {'HugoID': 'symbol', 'EnsblID': 'index'})
-    qqp.add_basic_plot()
-    qqp.add_cutoff()
-    qqp.add_search_fields( {'Hugo ID': 'HugoID', 'Ensembl ID': 'EnsblID'}, position = 0)
-    qqp.add_tooltips(""" "<div>\\
-                             <span style='font-size: 17px; font-weight: bold;'>\" + s.HugoID[index] + \"</span> \\
-                             <span style='font-size: 15px; color: #966;'>[\" + s.EnsblID[index] + \"]</span> \\
-                          </div> \\
-                          <div> \\
-                             <span style='font-size: 15px;'>p/q-value</span> \\
-                             <span style='font-size: 10px; color: #696;'>(\" + s.pvalue[index] + \", \" + s.qvalue[index] + \")</span> \\
-                          </div> \\
-                          </br>" """)
-    qqp.show(output_path = output_path, notebook = False, showit=showit)
