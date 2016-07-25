@@ -373,5 +373,7 @@ epub_exclude_files = ['search.html']
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'python': ('https://docs.python.org/', None),
-                       'numpy': ('http://docs.scipy.org/doc/numpy/', None)
+                       'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+                       'pandas': ('http://pandas-docs.github.io/pandas-docs-travis/', None),
+                       'matplotlib': ('http://matplotlib.org/', None)
                        }
