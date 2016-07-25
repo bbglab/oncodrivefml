@@ -47,7 +47,7 @@ class OncodriveFML(object):
         self.statistic_method = self.configuration['statistic']['method']
 
         if self.configuration['signature']['method'] == 'bysample':
-            self.configuration['signature']['classifier'] == 'SAMPLE'
+            self.configuration['signature']['classifier'] = 'SAMPLE'
 
         # Optional parameters
         self.output_folder = file_name(self.elements_file) if output_folder is None else output_folder
