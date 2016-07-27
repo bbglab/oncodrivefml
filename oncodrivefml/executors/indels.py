@@ -18,9 +18,9 @@ transition_dict = {"A": "G", "G": "A", "T": "C", "C": "T"}
 transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T"}
 
 
-def _init_indels(lenght=10, method='cte', shift=1):
+def _init_indels(length=10, method='cte', shift=1):
     global window_size, weight, weighting_function, frame_shift
-    window_size = lenght
+    window_size = length
     weight = Weight(window_size, method)
     weighting_function = weight.function
     frame_shift = shift
