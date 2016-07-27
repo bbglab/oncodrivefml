@@ -16,6 +16,7 @@ elements (:obj:`dict`)
                 'chr': chromosome,
                 'start': start_position_of_the_segment,
                 'stop': end_position_of_the_segment,
+                'strand': strand (+ -> positive, - -> negative, . -> unknown)
                 'element_id': element_id,
                 'segment': segment_id
                 }
@@ -61,7 +62,7 @@ from os.path import exists
 
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
-REGIONS_HEADER = ['chrom', 'start', 'stop', 'feature', 'segment', 'other', 'strand']
+REGIONS_HEADER = ['chrom', 'start', 'stop', 'strand', 'feature', 'segment', 'other']
 """
 Headers of the data expected in the elements file (see :class:`oncodrivefml.main.OncodriveFML`).
 """
@@ -71,10 +72,10 @@ REGIONS_SCHEMA = {
         'chrom': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
         'start': {'reader': 'int(x)', 'validator': 'x > 0'},
         'stop': {'reader': 'int(x)', 'validator': 'x > 0'},
+        'strand': {'reader': 'str(x)', 'validator': "x in ['.', '+', '-']",
         'feature': {'reader': 'str(x)'},
         'segment': {'reader': 'str(x)', 'nullable': 'True'},
-        'other': {'reader': 'str(x)', 'nullable': 'True'},
-        'strand': {'reader': 'str(x)', 'nullable': 'True', 'validator': "x in ['+', '-']"}
+        'other': {'reader': 'str(x)', 'nullable': 'True'}}
 }}
 
 
