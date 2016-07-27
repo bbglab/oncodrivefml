@@ -213,7 +213,6 @@ class GroupByMutationExecutor(ElementExecutor):
             observed = []
             background = []
 
-
             for mut in self.result['mutations']:
 
                 simulation_scores = []
@@ -226,13 +225,12 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
-
                 if mut['TYPE'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
-                            simulation_signature.append(s.signature.get(mut[self.signature_column]))
-
+                            #TODO KeyError
+                            simulation_signature.append(self.signature[mut[self.signature_column]].get((s.ref_triplet, s.alt_triplet), 0.0))
 
                 else: #indels
                     #TODO change the method to compute first the position and then the scores only for those
@@ -242,13 +240,7 @@ class GroupByMutationExecutor(ElementExecutor):
                     mutation_pattern = Indel.get_pattern(mut, self.is_positive_strand, length)
                     signature = None
 
-                    sampling_positions = list(positions)
-                    '''
-                    if self.is_positive_strand:
-                        sampling_positions = [pos for pos in list(positions) if pos >= mut['POSITION'] - 20]
-                    else:
-                        sampling_positions = [pos for pos in list(positions) if pos <= mut['POSITION'] + 20]
-                    '''
+                    sampling_positions = positions
 
                     for pos in sampling_positions:
                         score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],
