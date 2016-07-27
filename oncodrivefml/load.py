@@ -7,6 +7,7 @@ load and parse the input files: elements and mutations
 elements (:obj:`dict`)
     contains all the segments related to one element. The information is taken from
     the :file:`elements_file`.
+    Basic structure:
 
     .. code-block:: python
 
@@ -29,7 +30,8 @@ elements (:obj:`dict`)
 mutations (:obj:`dict`)
     contains all the mutations for each element. Most of the information is taken from
     the mutations_file but the *element_id* and the *segment* that are taken from the **elements**.
-    More information is added during the execution
+    More information is added during the execution.
+    Basic structure:
 
     .. code-block:: python
 
@@ -97,14 +99,11 @@ MUTATIONS_SCHEMA = {
 }
 
 
-def load_mutations(file, signature_classifier=None, show_warnings=True, blacklist=None):
+def load_mutations(file, show_warnings=True, blacklist=None):
     """
 
     Args:
         file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
-        signature_classifier (str, optional): indicates which column replaces the signature column. Defaults to None.
-            Expected a value in MUTATIONS_SCHEMA. None implies using 'CANCER_TYPE if present. Empty column is replaced by
-            signature_classifier.
         show_warnings (bool, optional): Defaults to True.
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
             Defaults to None.
@@ -136,9 +135,6 @@ def load_mutations(file, signature_classifier=None, show_warnings=True, blacklis
                 row['TYPE'] = 'indel'
             else:
                 row['TYPE'] = 'subs'
-
-
-        row['SIGNATURE'] = row.get(signature_classifier, signature_classifier)
 
         yield row
 
@@ -229,7 +225,7 @@ def build_regions_tree(regions):
     return regions_tree
 
 
-def load_and_map_variants(variants_file, elements_file, signature_classifier, blacklist=None):
+def load_and_map_variants(variants_file, elements_file, blacklist=None):
     """
     From the elements and variants files, get dictionaries with the segments grouped by element ID and the
     mutations grouped in the same way.
@@ -237,7 +233,6 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
     Args:
         variants_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
         elements_file: elements file (see :class:`oncodrivefml.main.OncodriveFML`)
-        signature_name (str, optional): Defaults to 'none'.
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
 
     Returns:
@@ -338,7 +333,7 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
-    for i, r in enumerate(load_mutations(variants_file, signature_classifier=signature_classifier, blacklist=blacklist), start=1):
+    for i, r in enumerate(load_mutations(variants_file, blacklist=blacklist), start=1):
 
         if r['CHROMOSOME'] not in elements_tree:
             continue
@@ -355,16 +350,10 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
 
         for interval in intervals:
             element, segment = interval.data
-            variants_dict[element].append({
-                'CHROMOSOME': r['CHROMOSOME'],
-                'POSITION': position,
-                'SAMPLE': r['SAMPLE'],
-                'TYPE': r['TYPE'],
-                'REF': r['REF'],
-                'ALT': r['ALT'],
-                'SIGNATURE': r['SIGNATURE'],
-                'SEGMENT': segment
-            })
+            mutation = r
+            mutation['POSITION'] = position
+            mutation['SEGMENT'] = segment
+            variants_dict[element].append(mutation)
 
     if i > show_small_progress_at:
         print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)

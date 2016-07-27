@@ -176,7 +176,7 @@ class GroupByMutationExecutor(ElementExecutor):
         self.sampling_size = config['background'].get('sampling', 100000)
         self.statistic_name = config['statistic'].get('method', 'amean')
         self.simulation_range = config['background'].get('range', None)
-        self.signature_column = 'SAMPLE' if config['signature'].get('method', 'full') == 'bysample' else 'SIGNATURE'
+        self.signature_column = config['signature']['classifier']
 
         # Output attributes
         self.obs = 0
@@ -230,7 +230,7 @@ class GroupByMutationExecutor(ElementExecutor):
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
                             #TODO KeyError
-                            simulation_signature.append(self.signature[mut[self.signature_column]].get((s.ref_triplet, s.alt_triplet), 0.0))
+                            simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
 
                 else: #indels
                     #TODO change the method to compute first the position and then the scores only for those

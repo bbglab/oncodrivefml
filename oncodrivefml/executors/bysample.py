@@ -59,7 +59,7 @@ class GroupBySampleExecutor(ElementExecutor):
         self.sampling_size = config['background'].get('sampling', 100000)
         self.statistic_name = config['statistic'].get('method', 'amean')
         self.simulation_range = config['background'].get('range', None)
-        self.signature_column = 'SAMPLE' if config['signature'].get('method', 'full') == 'bysample' else 'SIGNATURE'
+        self.signature_column = config['signature']['classifier']
 
         # Output attributes
         self.obs = 0
@@ -84,7 +84,7 @@ class GroupBySampleExecutor(ElementExecutor):
 
             scores_by_signature = defaultdict(list)
             for mut in self.result['mutations']:
-                scores_by_signature[mut[self.signature_column]].append(mut['SCORE'])
+                scores_by_signature[mut.get(self.signature_column, self.signature_column)].append(mut['SCORE'])
 
             for sample, scores in scores_by_signature.items():
 

@@ -239,14 +239,14 @@ def compute_signature(mutations_file, classifier, blacklist, collapse=False):
 
     """
     signature_count = defaultdict(lambda: defaultdict(int))
-    for mut in load_mutations(mutations_file, signature_classifier=classifier, show_warnings=False, blacklist=blacklist):
+    for mut in load_mutations(mutations_file, show_warnings=False, blacklist=blacklist):
         if mut['TYPE'] != 'subs':
             continue
 
         signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
         signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
 
-        signature_count[mut['SIGNATURE']][(signature_ref, signature_alt)] += 1
+        signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
 
     signature = {}
     for k, v in signature_count.items():
