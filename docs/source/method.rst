@@ -42,4 +42,4 @@ With insertions and deletions the approach is different,
 as they do not have only one change but multiple and their effect can
 comprise the rest of the gen.
 
-See :mod:`oncodrivefml.executores.indels` to find details.
+See :mod:`oncodrivefml.executors.indels` to find details.
