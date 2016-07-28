@@ -24,9 +24,13 @@ range = integer(default=None)
 
 [statistic]
 method = option('amean', 'gmean', 'maxmean')
-subs = option('enabled', 'none', default = 'enabled')
-indels = option('max', 'none', default = 'none')
-indels_max_repeats = integer(default=3)
+subs = boolean(default=True)
+
+    [[indels]]
+        enabled = boolean(default=False)
+        window_size = integer(default=10)
+        weight_function = option('constant', 'linear', 'logistic', default='linear')
+        in_frame_shift = boolean(default=False)
 
 [settings]
 cores = integer(default=None)

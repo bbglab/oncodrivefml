@@ -109,7 +109,12 @@ class OncodriveFML(object):
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
 
         # initialize the indels module
-        _init_indels(10, 'linear', 3)
+        indels_config = self.configuration['statistic']['indels']
+        if indels_config.get('enabled', False):
+
+            _init_indels(indels_config.get('window_size', 10),
+                         indels_config.get('weight_function','linear'),
+                         indels_config.get('in_frame_shift', False) )
 
         # Run the executors
         with Pool(self.cores) as pool:

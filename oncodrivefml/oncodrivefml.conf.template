@@ -84,21 +84,29 @@ method = amean
 # method = gmean
 
 # Compute the substitutions
-subs = enabled
+subs = True
 
 # Do not compute the substitutions
-subs = none
+subs = False
 
-# Method to compute indels scores:
+    # Insertions and deletions
+    [[indels]]
+        # Use indels
+        enabled = True
 
-# skip indels
-indels = none
+        # skip indels
+        indels = none
 
-# use maximum score
-# indels = max
+        # Widow size
+        window_size = 10
 
-# Indels maximum nearby repeats
-indels_max_repeats = 3
+        # Function to weight the scores within the window size but outside the indel size
+        weight_function = 'constant'
+        weight_function = 'linear'
+        weight_function = 'logistic'
+
+        # In frame shifts considered
+        in_frame_shift = boolean(default=False)
 
 [settings]
 

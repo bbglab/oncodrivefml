@@ -7,7 +7,7 @@ from math import exp
 window_size = 10
 weight = None
 weighting_function = lambda x: 1
-frame_shift = 1
+in_frame_shift = 1
 #TODO rename as inframe
 
 
@@ -18,12 +18,13 @@ transition_dict = {"A": "G", "G": "A", "T": "C", "C": "T"}
 transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T"}
 
 
-def _init_indels(lenght=10, method='cte', shift=1):
-    global window_size, weight, weighting_function, frame_shift
+def _init_indels(lenght=10, method='constant', shift=False):
+    global window_size, weight, weighting_function, in_frame_shift
     window_size = lenght
     weight = Weight(window_size, method)
     weighting_function = weight.function
-    frame_shift = shift
+    if shift:
+        in_frame_shift = 3
 
 
 class Weight:
@@ -38,8 +39,8 @@ class Weight:
     """
     def __init__(self, length, type):
         self.length = length
-        if type == 'cte':
-            self.funct = self.cte
+        if type == 'constant':
+            self.funct = self.constant
         if type =='linear':
             self.intercept = 1
             self.slope = -1.0/length
@@ -51,7 +52,7 @@ class Weight:
     def function(self, x):
         return self.funct(x)
 
-    def cte(self, x):
+    def constant(self, x):
         return 1
 
     def linear(self, x):
@@ -67,8 +68,8 @@ class Indel:
     def compute_window_size(indel_size):
         size = window_size
 
-        if frame_shift != 1 and (indel_size % frame_shift) == 0:  # in-frame
-            size = (indel_size + frame_shift - 1)
+        if in_frame_shift != 1 and (indel_size % in_frame_shift) == 0:  # in-frame
+            size = (indel_size + in_frame_shift - 1)
 
         if indel_size > size:
             size = indel_size
@@ -110,7 +111,7 @@ class Indel:
 
     @staticmethod
     def weight(scores, indel_size, total_size, is_positive_strand):
-        if frame_shift == 1 or (indel_size % frame_shift) != 0:
+        if in_frame_shift == 1 or (indel_size % in_frame_shift) != 0:
 
             if is_positive_strand:
                 for i in range(indel_size, total_size):  # if indel_size is bigger than the window it is an empty range

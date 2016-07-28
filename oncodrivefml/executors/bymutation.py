@@ -140,8 +140,8 @@ class GroupByMutationExecutor(ElementExecutor):
     def __init__(self, element_id, muts, segments, signature, config):
         # Input attributes
         self.name = element_id
-        self.indels = config['statistic']['indels'] != 'none'
-        subs = config['statistic']['subs'] != 'none'
+        self.indels = config['statistic']['indels'].get('enabled', False)
+        subs = config['statistic'].get('subs', False)
         if subs:
             self.muts = [m for m in muts if m['TYPE'] == 'subs']
         else:
@@ -149,7 +149,6 @@ class GroupByMutationExecutor(ElementExecutor):
 
         # Add only indels that are not in a repeatitive sequence
         if self.indels:
-            indels_max_repeats = config['statistic']['indels_max_repeats']
             indels_set = set()
             for m in [m for m in muts if m['TYPE'] == 'indel']:
                 chrom = m['CHROMOSOME']
@@ -161,11 +160,7 @@ class GroupByMutationExecutor(ElementExecutor):
                 if (chrom, pos, ref, alt) not in indels_set:
                     indels_set.add((chrom, pos, ref, alt))
 
-                    # Check if it's repeated
-                    seq = alt if '-' in ref else ref
-                    repeats = detect_repeatitive_seq(chrom, seq, pos)
-                    if repeats <= indels_max_repeats:
-                        self.muts.append(m)
+                    self.muts.append(m)
 
         self.signature = signature
         self.segments = segments
