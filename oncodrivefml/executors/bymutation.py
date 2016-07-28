@@ -161,11 +161,7 @@ class GroupByMutationExecutor(ElementExecutor):
                 if (chrom, pos, ref, alt) not in indels_set:
                     indels_set.add((chrom, pos, ref, alt))
 
-                    # Check if it's repeated
-                    seq = alt if '-' in ref else ref
-                    repeats = detect_repeatitive_seq(chrom, seq, pos)
-                    if repeats <= indels_max_repeats:
-                        self.muts.append(m)
+                    self.muts.append(m)
 
         self.signature = signature
         self.segments = segments
