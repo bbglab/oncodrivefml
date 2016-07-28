@@ -32,6 +32,7 @@ class GroupBySampleExecutor(ElementExecutor):
             self.muts = [m for m in muts if m['TYPE'] == 'subs']
         else:
             self.muts = []
+        '''
         self.indels = config['statistic']['indels'] != 'none'
         if self.indels:
             indels_max_repeats = config['statistic']['indels_max_repeats']
@@ -51,6 +52,7 @@ class GroupBySampleExecutor(ElementExecutor):
                     repeats = detect_repeatitive_seq(chrom, seq, pos)
                     if repeats <= indels_max_repeats:
                         self.muts.append(m)
+        '''
 
         self.is_positive_strand = True if segments[0].get('strand', '+') == '+' else False
 
