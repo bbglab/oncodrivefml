@@ -1,0 +1,60 @@
+name: oncodrivefml_develop
+dependencies:
+- bokeh=0.12.0=py35_0
+- cycler=0.10.0=py35_0
+- flask=0.10.1=py35_1
+- fontconfig=2.11.1=5
+- freetype=2.5.5=0
+- itsdangerous=0.24=py35_0
+- jinja2=2.8=py35_1
+- libgcc=5.2.0=0
+- libgfortran=3.0.0=1
+- libpng=1.6.17=0
+- libsodium=1.0.10=0
+- libxml2=2.9.2=0
+- markupsafe=0.23=py35_2
+- matplotlib=1.5.1=np111py35_0
+- mkl=11.3.1=0
+- numpy=1.11.0=py35_0
+- openssl=1.0.2h=0
+- pandas=0.18.1=np111py35_0
+- pip=8.1.1=py35_1
+- pyparsing=2.1.1=py35_0
+- pyqt=4.11.4=py35_1
+- python=3.5.1=0
+- python-dateutil=2.5.3=py35_0
+- pytz=2016.4=py35_0
+- pyyaml=3.11=py35_1
+- pyzmq=15.2.0=py35_1
+- qt=4.8.7=1
+- readline=6.2=2
+- requests=2.10.0=py35_0
+- scipy=0.17.0=np111py35_3
+- setuptools=20.7.0=py35_0
+- sip=4.16.9=py35_0
+- six=1.10.0=py35_0
+- sqlite=3.9.2=0
+- tk=8.5.18=0
+- tornado=4.3=py35_1
+- werkzeug=0.11.9=py35_0
+- wheel=0.29.0=py35_0
+- xz=5.0.5=1
+- yaml=0.1.6=0
+- zeromq=4.1.4=0
+- zlib=1.2.8=0
+- pip:
+  - ago==0.0.8
+  - bgconfig==0.3.0
+  - bgdata==0.18.0
+  - bgqmap==1.0.0
+  - click==6.6
+  - configobj==5.0.6
+  - drmaa==0.7.6
+  - intervaltree==2.1.0
+  - itab==0.9.0
+  - oncodrivefml==1.1.0
+  - patsy==0.4.1
+  - pytabix==0.1
+  - sortedcontainers==1.5.3
+  - statsmodels==0.6.1
+
