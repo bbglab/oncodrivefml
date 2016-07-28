@@ -2,6 +2,4 @@ requirements_file: docs/source/requirements.txt
 conda:
   file: docs/source/environment.yml
 python:
-  requirements:
-    - "-rdocs/source/requirements.txt"
   setup_py_install: true
