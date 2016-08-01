@@ -228,7 +228,7 @@ def build_regions_tree(regions):
     return regions_tree
 
 
-def load_and_map_variants(variants_file, elements_file, signature_classifier, blacklist=None):
+def load_and_map_variants(variants_file, elements_file, signature_classifier, blacklist=None, save_pickle=False):
     """
     From the elements and variants files, get dictionaries with the segments grouped by element ID and the
     mutations grouped in the same way.
@@ -238,6 +238,7 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
         elements_file: elements file (see :class:`oncodrivefml.main.OncodriveFML`)
         signature_name (str, optional): Defaults to 'none'.
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
+        save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
         tuple: mutations and elements
@@ -286,12 +287,13 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
     if elements is None:
         logging.info("Loading elements")
         elements = load_regions(elements_file)
-        # Try to store as precomputed
-        try:
-            with gzip.open(elements_precomputed, 'wb') as fd:
-                pickle.dump(elements, fd)
-        except OSError:
-            logging.debug("Imposible to write precomputed elements map here: {}".format(elements_precomputed))
+        if save_pickle:
+            # Try to store as precomputed
+            try:
+                with gzip.open(elements_precomputed, 'wb') as fd:
+                    pickle.dump(elements, fd)
+            except OSError:
+                logging.debug("Imposible to write precomputed elements map here: {}".format(elements_precomputed))
 
     # If the input file is a pickle file do nothing
     if variants_file.endswith(".pickle.gz"):
@@ -323,13 +325,13 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
     if elements_tree is None:
         logging.info("Loading genomic elements tree")
         elements_tree = build_regions_tree(elements)
-
-        # Try to store as precomputed
-        try:
-            with gzip.open(elements_tree_precomputed, 'wb') as fd:
-                pickle.dump(elements_tree, fd)
-        except OSError:
-            logging.debug("Imposible to write precomputed genomic elements tree here: {}".format(elements_tree_precomputed))
+        if save_pickle:
+            # Try to store as precomputed
+            try:
+                with gzip.open(elements_tree_precomputed, 'wb') as fd:
+                    pickle.dump(elements_tree, fd)
+            except OSError:
+                logging.debug("Imposible to write precomputed genomic elements tree here: {}".format(elements_tree_precomputed))
 
     # Mapping mutations
     variants_dict = defaultdict(list)
@@ -368,11 +370,12 @@ def load_and_map_variants(variants_file, elements_file, signature_classifier, bl
     if i > show_small_progress_at:
         print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)
 
-    # Try to store as precomputed
-    try:
-        with gzip.open(variants_dict_precomputed, 'wb') as fd:
-            pickle.dump(variants_dict, fd)
-    except OSError:
-        logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
+    if save_pickle:
+        # Try to store as precomputed
+        try:
+            with gzip.open(variants_dict_precomputed, 'wb') as fd:
+                pickle.dump(variants_dict, fd)
+        except OSError:
+            logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
 
     return variants_dict, elements

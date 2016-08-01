@@ -30,10 +30,11 @@ class OncodriveFML(object):
        output_folder: Folder where the results will be store
        configuration_file: Configuration file (see :ref:`configuration <project configuration>`)
        blacklist: File with sample ids (one per line) to remove when loading the input file
+       pickle_save (bool): save pickle files
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist):
+    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist, pickle_save):
         #TODO set defaults for output_folder, configuration_file and blacklist
 
         # Required parameters
@@ -41,6 +42,7 @@ class OncodriveFML(object):
         self.elements_file = file_exists_or_die(elements_file)
         self.configuration = load_configuration(configuration_file)
         self.blacklist = blacklist
+        self.save_pickle = pickle_save
         self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
@@ -93,10 +95,15 @@ class OncodriveFML(object):
             return
 
         # Load mutations mapping
-        self.mutations, self.elements = load_and_map_variants(self.mutations_file, self.elements_file, self.configuration['signature']['classifier'], blacklist=self.blacklist)
+        self.mutations, self.elements = load_and_map_variants(self.mutations_file,
+                                                              self.elements_file,
+                                                              self.configuration['signature']['classifier'],
+                                                              blacklist=self.blacklist,
+                                                              save_pickle=self.save_pickle)
 
         # Load signatures
-        self.signatures = load_signature(self.mutations_file, self.configuration['signature'], blacklist=self.blacklist)
+        self.signatures = load_signature(self.mutations_file, self.configuration['signature'],
+                                         blacklist=self.blacklist, save_pickle=self.save_pickle)
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for
@@ -159,7 +166,8 @@ def cmdline():
                             configuration file
     --samples-blacklist file
                             file with blacklisted samples
-    --debug                         show more progress
+    --save-pickle           store intermediate information in pickle files
+    --debug                 show more progress
 
     """
 
@@ -174,6 +182,7 @@ def cmdline():
     parser.add_argument('-o', '--output', dest='output_folder', default=None, help="Output folder. Default to regions file name without extensions.")
     parser.add_argument('-c', '--configuration', dest='config_file', default=None, help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
     parser.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
+    parser.add_argument('--save-pickle', dest='save_pickle', default=False, action='store_true', help="Save intermediate information as pickle files.")
     parser.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
 
     # Parse arguments
@@ -186,7 +195,9 @@ def cmdline():
 
     # Load configuration file and prepare analysis
     logging.info("Loading configuration")
-    analysis = OncodriveFML(args.mutations_file, args.elements_file, args.output_folder, args.config_file, args.samples_blacklist)
+    analysis = OncodriveFML(args.mutations_file, args.elements_file, args.output_folder, args.config_file,
+                            args.samples_blacklist, args.save_pickle)
+
 
     # Run the analysis
     analysis.run()

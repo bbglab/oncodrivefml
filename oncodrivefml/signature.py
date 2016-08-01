@@ -259,7 +259,7 @@ def compute_signature(mutations_file, classifier, blacklist, collapse=False):
     return signature
 
 
-def load_signature(mutations_file, signature_config, blacklist=None):
+def load_signature(mutations_file, signature_config, blacklist=None, save_pickle=False):
     """
     Computes the probability that certain mutation occurs.
 
@@ -268,7 +268,7 @@ def load_signature(mutations_file, signature_config, blacklist=None):
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
             Used by :func:`oncodrivefml.load.load_mutations`
-        signature_classifier (str): classify the samples by it. Defaults to 'none'.
+        save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
         dict: probability of each substitution (measured by the triplets) grouped by the signature_id
@@ -310,12 +310,13 @@ def load_signature(mutations_file, signature_config, blacklist=None):
         else:
             logging.info("Computing full global signatures")
             signature_dict = compute_signature(mutations_file, classifier, blacklist)
-            try:
-                # Try to store as precomputed
-                with gzip.open(signature_dict_precomputed, 'wb') as fd:
-                    pickle.dump(signature_dict, fd)
-            except OSError:
-                logging.debug("Imposible to write precomputed full signature here: {}".format(signature_dict_precomputed))
+            if save_pickle:
+                try:
+                    # Try to store as precomputed
+                    with gzip.open(signature_dict_precomputed, 'wb') as fd:
+                        pickle.dump(signature_dict, fd)
+                except OSError:
+                    logging.debug("Imposible to write precomputed full signature here: {}".format(signature_dict_precomputed))
 
         if method == "complement":
             signature_dict = collapse_complementaries(signature_dict)
@@ -329,12 +330,13 @@ def load_signature(mutations_file, signature_config, blacklist=None):
         else:
             logging.info("Computing signatures per sample")
             signature_dict = compute_signature(mutations_file, classifier, blacklist, collapse=True)
-            try:
-                # Try to store as precomputed
-                with gzip.open(signature_dict_precomputed, 'wb') as fd:
-                    pickle.dump(signature_dict, fd)
-            except OSError:
-                logging.debug("Imposible to write precomputed bysample signatures here: {}".format(signature_dict_precomputed))
+            if save_pickle:
+                try:
+                    # Try to store as precomputed
+                    with gzip.open(signature_dict_precomputed, 'wb') as fd:
+                        pickle.dump(signature_dict, fd)
+                except OSError:
+                    logging.debug("Imposible to write precomputed bysample signatures here: {}".format(signature_dict_precomputed))
 
     elif method == "file":
         if not os.path.exists(path):
