@@ -156,7 +156,7 @@ class QQPlot(object):
             """
             <div>
                 <span style='font-size: 17px; font-weight: bold;'>@HugoID</span>
-                <span style='font-size: 15px; color: #966;'>[@EnsblID]</span>
+                <span style='font-size: 15px; color: #966;'>[@EnsemblID]</span>
             </div>
             <div>
                 <span style='font-size: 15px;'>p, q-value</span>
@@ -176,7 +176,7 @@ class QQPlot(object):
             """
             "<div> \\
                 <span style='font-size: 17px; font-weight: bold;'>\"+s.HugoID[index]+\"</span> \\
-                <span style='font-size: 15px; color: #966;'>[\"+s.EnsblID[index]+\"]</span> \\
+                <span style='font-size: 15px; color: #966;'>[\"+s.EnsemblID[index]+\"]</span> \\
             </div> \\
             <div> \\
                 <span style='font-size: 15px;'>p, q-value</span> \\
@@ -526,9 +526,9 @@ def store_html(input_file, output_path):
 
     """
 
-    search_by_fields = ['HugoID', 'EnsblID']
+    search_by_fields = ['HugoID', 'EnsemblID']
 
-    qqp = QQPlot(input_file = input_file, rename_fields = {'samples_mut': 'num_samples','symbol': 'HugoID', 'index': 'EnsblID'}, extra_fields=search_by_fields, cutoff=True)
+    qqp = QQPlot(input_file = input_file, rename_fields = {'samples_mut': 'num_samples','symbol': 'HugoID', 'index': 'EnsemblID'}, extra_fields=search_by_fields, cutoff=True)
 
     qqp.add_tooltip_enhanced()
 
