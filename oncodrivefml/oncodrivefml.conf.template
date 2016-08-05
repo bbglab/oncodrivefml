@@ -15,6 +15,29 @@ method = full
 # "bysample": Compute a 96 matrix signature for each sample
 # method = bysample
 
+
+
+# Choose the classifier for the signature:
+
+# you can use any of the columns in the dataset
+# classifier = SAMPLE
+# classifier = CANCER_TYPE
+
+# or leave it empty to use the whole dataset
+
+
+# Choose if the signature must be computed using only the elements
+# that fall into the regions you are analysing:
+
+# False: use the whole dataset
+# use_only_mapped_elements = False
+
+# True:use only mutations fall in any of the elements from the elements file
+# use_only_mapped_elements = True
+
+
+use_only_mapped_elements
+
 # "file": Provide a file with the signature to use
 # The format is a tab separated file with header, and you have to set the columns to use.
 # method = file

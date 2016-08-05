@@ -206,7 +206,7 @@ def signature_probability(signature_counts):
     return {k: v/total for k, v in signature_counts.items()}
 
 
-def compute_signature(mutations_file, classifier, blacklist, collapse=False):
+def compute_signature(signature_function, classifier, blacklist, collapse=False):
     """
     Gets the probability of each substitution that occurs for a certain signature_id.
 
@@ -215,7 +215,7 @@ def compute_signature(mutations_file, classifier, blacklist, collapse=False):
     The signature_id is taken from the mutations ``SIGNATURE`` field.
 
     Args:
-        mutations_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        signature_function: function that yields one mutation each time
         classifier (str): passed to :func:`oncodrivefml.load.load_mutations`
             as parameter ``signature_classifier``.
         blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
@@ -239,7 +239,7 @@ def compute_signature(mutations_file, classifier, blacklist, collapse=False):
 
     """
     signature_count = defaultdict(lambda: defaultdict(int))
-    for mut in load_mutations(mutations_file, show_warnings=False, blacklist=blacklist):
+    for mut in signature_function():
         if mut['TYPE'] != 'subs':
             continue
 
@@ -259,12 +259,13 @@ def compute_signature(mutations_file, classifier, blacklist, collapse=False):
     return signature
 
 
-def load_signature(mutations_file, signature_config, blacklist=None, save_pickle=False):
+def load_signature(mutations_file, signature_function, signature_config, blacklist=None, save_pickle=False):
     """
     Computes the probability that certain mutation occurs.
 
     Args:
-        mutations_file:  mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        mutations_file: mutations file
+        signature_function: function that yields one mutation each time
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
         blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
             Used by :func:`oncodrivefml.load.load_mutations`
@@ -309,7 +310,7 @@ def load_signature(mutations_file, signature_config, blacklist=None, save_pickle
                 signature_dict = pickle.load(fd)
         else:
             logging.info("Computing full global signatures")
-            signature_dict = compute_signature(mutations_file, classifier, blacklist)
+            signature_dict = compute_signature(signature_function, classifier, blacklist)
             if save_pickle:
                 try:
                     # Try to store as precomputed
@@ -329,7 +330,7 @@ def load_signature(mutations_file, signature_config, blacklist=None, save_pickle
                 signature_dict = pickle.load(fd)
         else:
             logging.info("Computing signatures per sample")
-            signature_dict = compute_signature(mutations_file, classifier, blacklist, collapse=True)
+            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse=True)
             if save_pickle:
                 try:
                     # Try to store as precomputed
@@ -348,3 +349,20 @@ def load_signature(mutations_file, signature_config, blacklist=None, save_pickle
             signature_probabilities.set_index([column_ref, column_alt], inplace=True)
             signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
     return signature_dict
+
+
+def yield_mutations(mutations):
+    """
+    Yields one mutation each time from
+    a list of mutations
+
+    Args:
+        mutations (dict): :ref:`mutations <mutations dict>`
+
+    Yields:
+        Mutation
+
+    """
+    for elem, mutations_list in mutations.items():
+        for mutation in mutations_list:
+            yield mutation

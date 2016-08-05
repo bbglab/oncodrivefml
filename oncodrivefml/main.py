@@ -11,10 +11,10 @@ from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
-from oncodrivefml.load import load_and_map_variants
+from oncodrivefml.load import load_and_map_variants, load_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
-from oncodrivefml.signature import load_signature
+from oncodrivefml.signature import load_signature, yield_mutations
 from multiprocessing.pool import Pool
 from oncodrivefml.utils import executor_run, loop_logging
 
@@ -61,6 +61,7 @@ class OncodriveFML(object):
         self.signatures = None
         self.debug = False
 
+
     def create_element_executor(self, element_id, muts_for_an_element):
         """
         To enable paralelization, for each element ID,
@@ -102,8 +103,15 @@ class OncodriveFML(object):
                                                               save_pickle=self.save_pickle)
 
 
+
+        if self.configuration['signature'].get('use_only_mapped_elements', False):
+            signature_function = lambda: yield_mutations(self.mutations)
+        else:
+            signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
+
+
         # Load signatures
-        self.signatures = load_signature(self.mutations_file, self.configuration['signature'],
+        self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
                                          blacklist=self.blacklist, save_pickle=self.save_pickle)
 
         # Create one executor per element
