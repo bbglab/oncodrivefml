@@ -13,16 +13,16 @@ from typing import List
 from collections import defaultdict, namedtuple
 from oncodrivefml.signature import get_ref_triplet
 
-ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'signature'])
+ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'ref_triplet', 'alt_triplet'])
 """
-Tuple that contains the reference, the alteration, the score value and the signature name associated
+Tuple that contains the reference, the alteration, the score value and the triplets
 
 Parameters:
     ref (str): reference base
     alt (str): altered base
     value (float): score value of that substitution
-    signature (dict): probability of that substitution (taking into account the previous and the next base) for each
-        signature ID
+    ref_triplet (str): reference triplet
+    alt_triplet (str): altered triplet
 """
 
 
@@ -47,25 +47,22 @@ class Scores(object):
                                 ref,
                                 alt_1,
                                 value,
-                                {
-                                    signature_id: prob_of_triplet_(ref_triplet, alt_1_triplet)
-                                }
+                                ref_triplet,
+                                alt_triple
                             ),
                             ScoreValue(
                                 ref,
                                 alt_2,
                                 value,
-                                {
-                                    signature_id: prob_of_triplet_(ref_triplet, alt_2_triplet)
-                                }
+                                ref_triplet,
+                                alt_triple
                             ),
                             ScoreValue(
                                 ref,
                                 alt_3,
                                 value,
-                                {
-                                    signature_id: prob_of_triplet_(ref_triplet, alt_3_triplet)
-                                }
+                                ref_triplet,
+                                alt_triple
                             )
                         ]
                     }
@@ -105,12 +102,6 @@ class Scores(object):
         Returns:
             :obj:`list` of :obj:`ScoreValue`: list of all ScoreValue related to that positon
 
-        """
-        """
-        Get all the posible scores at the given position
-
-        :param position: Genomic position in the gene
-        :return: A list of dicts like this {'ref': 'A', 'alt': 'T', 'value': 3.23, 'signatures': {'sample1': 0.1, 'sample2': 0.4}}
         """
         return self.scores_by_pos.get(position, [])
 
@@ -168,23 +159,22 @@ class Scores(object):
                 #get all rows with certain chromosome and startcompute_muts_statistics and stop
                 # between the element start -1 and stop
                 for row in tb.query("{}{}".format(self.conf_chr_prefix, region['chrom']), region['start']-1, region['stop']):
+
+                    if self.conf_element is not None:
+                        # Check that is the element we want
+                        if row[self.conf_element] != self.element:
+                            continue
+
                     value = self._read_score(row)
 
                     ref = row[self.conf_ref]
                     alt = row[self.conf_alt]
                     pos = int(row[self.conf_pos])
 
-                    if self.conf_element is not None:
-                        #Check that is the element we want
-                        #TODO move up to reduce time
-                        if row[self.conf_element] != self.element:
-                            continue
+
 
                     if self.signature is not None:
                         ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
-                        #TODO remove: already done
-                        ref = row[self.conf_ref]
-                        alt = row[self.conf_alt]
 
                         if ref is not None and ref_triplet[1] != ref:
                             logging.warning("Background mismatch at position %d at '%s'", int(row[self.conf_pos]), self.element)
@@ -193,18 +183,9 @@ class Scores(object):
                     alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
 
                     for a in alts:
+                        alt_triplet = ref_triplet[0] + a + ref_triplet[2]
 
-                        pos_signature = {}
-                        if self.signature is not None:
-                            alt_triplet = ref_triplet[0] + a + ref_triplet[2]
-                            try:
-                                for k in self.signature.keys():
-                                    signature_value = self.signature[k].get((ref_triplet, alt_triplet), 0.0)
-                                    pos_signature[k] = signature_value
-                            except KeyError:
-                                self.missing_signatures[ref_triplet] = alt_triplet
-
-                        self.scores_by_pos[pos].append(ScoreValue(ref, a, value, pos_signature))
+                        self.scores_by_pos[pos].append(ScoreValue(ref, a, value, ref_triplet, alt_triplet))
 
             except tabix.TabixError:
                 logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.conf_chr_prefix, region['chrom'], region['start']-1, region['stop']))

@@ -142,25 +142,14 @@ class GroupByMutationExecutor(ElementExecutor):
         self.name = element_id
         self.indels = config['statistic']['indels'].get('enabled', False)
         subs = config['statistic'].get('subs', False)
-        if subs:
-            self.muts = [m for m in muts if m['TYPE'] == 'subs']
+
+        if subs and self.indels:
+            self.muts = muts
         else:
-            self.muts = []
-
-        # Add only indels that are not in a repeatitive sequence
-        if self.indels:
-            indels_set = set()
-            for m in [m for m in muts if m['TYPE'] == 'indel']:
-                chrom = m['CHROMOSOME']
-                ref = m['REF']
-                alt = m['ALT']
-                pos = m['POSITION']
-
-                # Skip recurrent indels
-                if (chrom, pos, ref, alt) not in indels_set:
-                    indels_set.add((chrom, pos, ref, alt))
-
-                    self.muts.append(m)
+            if subs:
+                self.muts = [m for m in muts if m['TYPE'] == 'subs']
+            else:
+                self.muts =[m for m in muts if m['TYPE'] == 'indel']
 
         self.signature = signature
         self.segments = segments
@@ -171,7 +160,7 @@ class GroupByMutationExecutor(ElementExecutor):
         self.sampling_size = config['background'].get('sampling', 100000)
         self.statistic_name = config['statistic'].get('method', 'amean')
         self.simulation_range = config['background'].get('range', None)
-        self.signature_column = 'SAMPLE' if config['signature'].get('method', 'full') == 'bysample' else 'SIGNATURE'
+        self.signature_column = config['signature']['classifier']
 
         # Output attributes
         self.obs = 0
@@ -208,7 +197,6 @@ class GroupByMutationExecutor(ElementExecutor):
             observed = []
             background = []
 
-
             for mut in self.result['mutations']:
 
                 simulation_scores = []
@@ -221,13 +209,12 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
-
                 if mut['TYPE'] == 'subs':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
-                            simulation_signature.append(s.signature.get(mut[self.signature_column]))
-
+                            #TODO KeyError
+                            simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
 
                 else: #indels
                     #TODO change the method to compute first the position and then the scores only for those
@@ -237,13 +224,7 @@ class GroupByMutationExecutor(ElementExecutor):
                     mutation_pattern = Indel.get_pattern(mut, self.is_positive_strand, length)
                     signature = None
 
-                    sampling_positions = list(positions)
-                    '''
-                    if self.is_positive_strand:
-                        sampling_positions = [pos for pos in list(positions) if pos >= mut['POSITION'] - 20]
-                    else:
-                        sampling_positions = [pos for pos in list(positions) if pos <= mut['POSITION'] + 20]
-                    '''
+                    sampling_positions = positions
 
                     for pos in sampling_positions:
                         score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],

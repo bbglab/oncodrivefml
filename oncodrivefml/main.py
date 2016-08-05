@@ -59,6 +59,7 @@ class OncodriveFML(object):
         self.mutations = None
         self.elements = None
         self.signatures = None
+        self.debug = False
 
     def create_element_executor(self, element_id, muts_for_an_element):
         """
@@ -97,9 +98,9 @@ class OncodriveFML(object):
         # Load mutations mapping
         self.mutations, self.elements = load_and_map_variants(self.mutations_file,
                                                               self.elements_file,
-                                                              self.configuration['signature']['classifier'],
                                                               blacklist=self.blacklist,
                                                               save_pickle=self.save_pickle)
+
 
         # Load signatures
         self.signatures = load_signature(self.mutations_file, self.configuration['signature'],
@@ -127,7 +128,8 @@ class OncodriveFML(object):
         with Pool(self.cores) as pool:
             results = {}
             logging.info("Computing OncodriveFML")
-            for executor in loop_logging(pool.imap(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
+            map_func = pool.imap if not self.debug else map
+            for executor in loop_logging(map_func(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
                 if len(executor.result['mutations']) > 0:
                     results[executor.name] = executor.result
         #For each element, you get the p values and more info
