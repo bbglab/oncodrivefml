@@ -301,44 +301,6 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
         # We don't use signature
         logging.warning("We are not using any signature")
 
-    elif method == "full" or method == "complement":
-
-        signature_dict_precomputed = mutations_file + "_signature_full_"+classifier+".pickle.gz"
-        if exists(signature_dict_precomputed):
-            logging.info("Using precomputed signatures")
-            with gzip.open(signature_dict_precomputed, 'rb') as fd:
-                signature_dict = pickle.load(fd)
-        else:
-            logging.info("Computing full global signatures")
-            signature_dict = compute_signature(signature_function, classifier, blacklist)
-            if save_pickle:
-                try:
-                    # Try to store as precomputed
-                    with gzip.open(signature_dict_precomputed, 'wb') as fd:
-                        pickle.dump(signature_dict, fd)
-                except OSError:
-                    logging.debug("Imposible to write precomputed full signature here: {}".format(signature_dict_precomputed))
-
-        if method == "complement":
-            signature_dict = collapse_complementaries(signature_dict)
-
-    elif method == "bysample":
-        signature_dict_precomputed = mutations_file + "_signature_bysample.pickle.gz"
-        if exists(signature_dict_precomputed):
-            logging.info("Using precomputed per sample signatures")
-            with gzip.open(signature_dict_precomputed, 'rb') as fd:
-                signature_dict = pickle.load(fd)
-        else:
-            logging.info("Computing signatures per sample")
-            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse=True)
-            if save_pickle:
-                try:
-                    # Try to store as precomputed
-                    with gzip.open(signature_dict_precomputed, 'wb') as fd:
-                        pickle.dump(signature_dict, fd)
-                except OSError:
-                    logging.debug("Imposible to write precomputed bysample signatures here: {}".format(signature_dict_precomputed))
-
     elif method == "file":
         if not os.path.exists(path):
             logging.error("Signature file {} not found.".format(path))
@@ -348,6 +310,31 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
             signature_probabilities = pd.read_csv(path, sep='\t')
             signature_probabilities.set_index([column_ref, column_alt], inplace=True)
             signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
+
+    elif method == "full" or method == "complement":
+        hash_value = '{:02X}'.format(hash(frozenset(signature_config.items())))
+        signature_dict_precomputed = mutations_file + '_signature_' + hash_value + ".pickle.gz"
+
+        if exists(signature_dict_precomputed):
+            logging.info("Using precomputed signatures")
+            with gzip.open(signature_dict_precomputed, 'rb') as fd:
+                signature_dict = pickle.load(fd)
+        else:
+            logging.info("Computing signatures")
+            if method == "complement":
+                collapse = True
+            else:
+                collapse = False
+            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse)
+            if save_pickle:
+                try:
+                    # Try to store as precomputed
+                    with gzip.open(signature_dict_precomputed, 'wb') as fd:
+                        pickle.dump(signature_dict, fd)
+                except OSError:
+                    logging.debug(
+                        "Imposible to write precomputed signature here: {}".format(signature_dict_precomputed))
+
     return signature_dict
 
 
