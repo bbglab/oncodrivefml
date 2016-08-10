@@ -74,10 +74,10 @@ REGIONS_SCHEMA = {
         'chrom': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
         'start': {'reader': 'int(x)', 'validator': 'x > 0'},
         'stop': {'reader': 'int(x)', 'validator': 'x > 0'},
-        'strand': {'reader': 'str(x)', 'validator': "x in ['.', '+', '-']",
+        'strand': {'reader': 'str(x)', 'validator': "x in ['.', '+', '-']"},
         'feature': {'reader': 'str(x)'},
         'segment': {'reader': 'str(x)', 'nullable': 'True'},
-        'other': {'reader': 'str(x)', 'nullable': 'True'}}
+        'other': {'reader': 'str(x)', 'nullable': 'True'}
 }}
 
 
