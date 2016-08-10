@@ -49,7 +49,7 @@ class OncodriveFML(object):
         self.statistic_method = self.configuration['statistic']['method']
 
         if self.configuration['signature']['method'] == 'bysample':
-            self.configuration['signature']['method'] == 'complement'
+            self.configuration['signature']['method'] = 'complement'
             self.configuration['signature']['classifier'] = 'SAMPLE'
 
         # Optional parameters
