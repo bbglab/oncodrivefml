@@ -171,20 +171,16 @@ class Scores(object):
                     alt = row[self.conf_alt]
                     pos = int(row[self.conf_pos])
 
+                    ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
 
-
-                    if self.signature is not None:
-                        ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
-
-                        if ref is not None and ref_triplet[1] != ref:
-                            logging.warning("Background mismatch at position %d at '%s'", int(row[self.conf_pos]), self.element)
+                    if ref is not None and ref_triplet[1] != ref:
+                        logging.warning("Background mismatch at position %d at '%s'", int(row[self.conf_pos]), self.element)
 
                     # Expand funseq2 dots
                     alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
 
                     for a in alts:
                         alt_triplet = ref_triplet[0] + a + ref_triplet[2]
-
                         self.scores_by_pos[pos].append(ScoreValue(ref, a, value, ref_triplet, alt_triplet))
 
             except tabix.TabixError:

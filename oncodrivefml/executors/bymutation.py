@@ -214,7 +214,8 @@ class GroupByMutationExecutor(ElementExecutor):
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)
                             #TODO KeyError
-                            simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
+                            if signature is not None:
+                                simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
 
                 else: #indels
                     #TODO change the method to compute first the position and then the scores only for those
