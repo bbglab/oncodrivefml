@@ -50,6 +50,10 @@ class ElementExecutor(object):
 
             if indels and m['TYPE'] == "indel":
 
+                # very long indels are discarded
+                if max(len(m['REF']), len(m['ALT'])) > 20:
+                    continue
+
                 score = Indel.get_indel_score(m, scores, int(m['POSITION']), positive_strand)
 
                 m['SCORE'] = score if not math.isnan(score) else None
