@@ -51,7 +51,6 @@ mutations (:obj:`dict`)
         }
 
 """
-
 from collections import defaultdict
 import gzip
 import logging
@@ -117,7 +116,7 @@ def load_mutations(file, show_warnings=True, blacklist=None):
     # Set of samples to blacklist
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
 
-    reader = itab.DictReader(file, header=MUTATIONS_HEADER, schema=MUTATIONS_SCHEMA)
+    reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA)
     all_errors = []
     for ix, (row, errors) in enumerate(reader, start=1):
         if len(errors) > 0:
