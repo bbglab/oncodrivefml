@@ -105,7 +105,7 @@ class GroupByMutationWeigthedExecutor(GroupByMutationExecutor):
 
             # Weighted
             observed_value = np.average(observed, weights=weights)
-            values = np.averages(values, axis=1, weights=weights)
+            values = np.average(values, axis=1, weights=weights)
 
             self.obs = len(values[values >= observed_value])
             self.neg_obs = len(values[values <= observed_value])
