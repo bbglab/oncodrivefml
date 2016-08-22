@@ -1,6 +1,8 @@
 import math
 from enum import Enum
 
+import logging
+
 from oncodrivefml.signature import get_ref
 from math import exp
 
@@ -11,11 +13,11 @@ in_frame_shift = 1
 #TODO rename as inframe
 
 
-complements_dict = {"A": "T", "T": "A", "G": "C", "C": "G"}
+complements_dict = {"A": "T", "T": "A", "G": "C", "C": "G", 'N': 'N'}
 
-transition_dict = {"A": "G", "G": "A", "T": "C", "C": "T"}
+transition_dict = {"A": "G", "G": "A", "T": "C", "C": "T", 'N': 'N'}
 
-transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T"}
+transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T", 'N': 'N'}
 
 
 def _init_indels(lenght=10, method='constant', shift=False):
@@ -193,10 +195,8 @@ class Indel:
     @staticmethod
     def apply_pattern(sequence, pattern):
         new_seq = ''
-
         for i in range(len(sequence)):
             new_seq += pattern_change[pattern[i]](sequence[i])
-
         return new_seq
 
 
