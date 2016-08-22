@@ -6,10 +6,12 @@ import argparse
 
 import logging
 import os
+from collections import defaultdict
 
 from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
+from oncodrivefml.executors.bymutationweigthed import GroupByMutationWeigthedExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.load import load_and_map_variants, load_mutations
 from oncodrivefml.mtc import multiple_test_correction
@@ -52,6 +54,8 @@ class OncodriveFML(object):
             self.configuration['signature']['method'] = 'complement'
             self.configuration['signature']['classifier'] = 'SAMPLE'
 
+        self.muts_by_sample = defaultdict(int)
+
         # Optional parameters
         self.output_folder = file_name(self.elements_file) if output_folder is None else output_folder
         self.output_file_prefix = join(self.output_folder, file_name(self.mutations_file) + '-oncodrivefml')
@@ -83,7 +87,7 @@ class OncodriveFML(object):
         if self.statistic_method == 'maxmean':
             return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
 
-        return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
+        return GroupByMutationWeigthedExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.muts_by_sample, self.configuration)
 
     def run(self):
         """
@@ -110,6 +114,9 @@ class OncodriveFML(object):
         else:
             signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
 
+        # Count mutations per sample
+        for mut in signature_function():
+            self.muts_by_sample[mut['SAMPLE']] += 1
 
         # Load signatures
         self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
