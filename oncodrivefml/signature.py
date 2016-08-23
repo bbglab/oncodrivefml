@@ -312,10 +312,13 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
             signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
 
     elif method == "full" or method == "complement":
-        hash_value = '{:02X}'.format(hash(frozenset(signature_config.items())))
-        signature_dict_precomputed = mutations_file + '_signature_' + hash_value + ".pickle.gz"
+        if classifier == 'none' or classifier == 'SAMPLE':
+            signature_dict_precomputed = mutations_file + '_signature_' + method +'_' + classifier + ".pickle.gz"
+        else:
+            signature_dict_precomputed = None
+            save_pickle = False
 
-        if exists(signature_dict_precomputed):
+        if signature_dict_precomputed is not None and exists(signature_dict_precomputed):
             logging.info("Using precomputed signatures")
             with gzip.open(signature_dict_precomputed, 'rb') as fd:
                 signature_dict = pickle.load(fd)
