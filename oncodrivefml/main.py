@@ -6,6 +6,7 @@ import argparse
 
 import logging
 import os
+import sys
 
 from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
@@ -142,6 +143,10 @@ class OncodriveFML(object):
                 if len(executor.result['mutations']) > 0:
                     results[executor.name] = executor.result
         #For each element, you get the p values and more info
+
+        if results == {}:
+            logging.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")
+            sys.exit(0)
 
         # Run multiple test correction
         logging.info("Computing multiple test correction")
