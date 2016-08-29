@@ -99,9 +99,34 @@ class GeometricMean(object):
         return obs, neg_obs
 
 
+class ArithmeticMeanHeteroscedasticScores(object):
+
+    @staticmethod
+    def calc_observed(values, observed):
+
+        observed = observed**0.5
+        values = values**0.5
+
+        mean_score = np.mean(values)
+        std_dev = np.std(values)
+
+        observed = observed - mean_score
+        values = values - mean_score
+        observed = observed / std_dev
+        values = values / std_dev
+
+        observed_value = np.mean(observed)
+        values = np.mean(values, axis=1)
+        obs = len(values[values >= observed_value])
+        neg_obs = len(values[values <= observed_value])
+        return obs, neg_obs
+
+
+
 STATISTIC_TESTS = {
     'amean': ArithmeticMean(),
     'maxmean': MaximumAndArithmeticMean(),
-    'gmean': GeometricMean()
+    'gmean': GeometricMean(),
+    'amean_scoresmodif': ArithmeticMeanHeteroscedasticScores()
 }
 

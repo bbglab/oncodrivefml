@@ -24,7 +24,7 @@ recurrence = boolean
 range = integer(default=None)
 
 [statistic]
-method = option('amean', 'gmean', 'maxmean')
+method = option('amean', 'gmean', 'maxmean', 'amean_scoresmodif')
 subs = boolean(default=True)
 
     [[indels]]
