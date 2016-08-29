@@ -113,7 +113,7 @@ if you first download it using our data package managment tool that is also inst
 
 Run this command to download the CADD scores file to the default bgdata folder `~/.bgdata`:
  
-    $ bg-data -n 10 genomicscores cadd 1.3
+    $ bg-data -n 10 genomicscores cadd 1.0
     
 > **WARNING**:  CADD scores are original from http://cadd.gs.washington.edu/ and are freely available for all non-commercial applications. If you are planning on using them in a commercial application, please contact them at http://cadd.gs.washington.edu/contact. 
 
