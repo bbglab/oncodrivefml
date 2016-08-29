@@ -104,11 +104,9 @@ class ArithmeticMeanHeteroscedasticScores(object):
     @staticmethod
     def calc_observed(values, observed):
 
-        observed = observed**0.5
-        values = values**0.5
-
-        mean_score = np.mean(values)
-        std_dev = np.std(values)
+        means = np.mean(values, axis=1)
+        mean_score = np.mean(means)
+        std_dev = np.std(means)
 
         observed = observed - mean_score
         values = values - mean_score
