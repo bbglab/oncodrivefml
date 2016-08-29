@@ -110,15 +110,12 @@ method = amean
 subs = True
 
 # Do not compute the substitutions
-subs = False
+#subs = False
 
     # Insertions and deletions
     [[indels]]
         # Use indels
         enabled = True
-
-        # skip indels
-        indels = none
 
         # Widow size
         window_size = 10
