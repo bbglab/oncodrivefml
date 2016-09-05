@@ -5,7 +5,7 @@ from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.signature import get_ref
 
-from oncodrivefml.executors.indels import Indel, complements_dict
+from oncodrivefml.indels import Indel, complements_dict
 import math
 
 class ElementExecutor(object):

@@ -19,7 +19,7 @@ from oncodrivefml.signature import load_signature, yield_mutations
 from multiprocessing.pool import Pool
 from oncodrivefml.utils import executor_run, loop_logging
 
-from oncodrivefml.executors.indels import _init_indels
+from oncodrivefml.indels import _init_indels
 
 
 class OncodriveFML(object):
