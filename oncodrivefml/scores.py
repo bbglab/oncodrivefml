@@ -31,13 +31,11 @@ class Scores(object):
 
     Args:
         element (str): element ID
-        segments (list): list of the segmenst associated to the element
-        signature (dict): probabilities {signature_key: { (ref, alt): prob }}
+        segments (list): list of the segments associated to the element
         config (dict): configuration
 
     Attributes:
-        scores_by_pos (dict): for each positions get all possible changes, and for each change the probability
-            according to the different signature IDs
+        scores_by_pos (dict): for each positions get all possible changes, and for each change the triplets
 
             .. code-block:: python
 
@@ -68,11 +66,10 @@ class Scores(object):
                     }
     """
 
-    def __init__(self, element: str, segments: list, signature: dict, config: dict):
+    def __init__(self, element: str, segments: list, config: dict):
 
         self.element = element
         self.segments = segments
-        self.signature = signature
 
         # Score configuration
         self.conf_file = config['file']
@@ -87,9 +84,8 @@ class Scores(object):
 
         # Scores to load
         self.scores_by_pos = defaultdict(list)
-        self.missing_signatures = {}
 
-        # Initialize background scores and signatures
+        # Initialize background scores
         self._load_scores()
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
@@ -148,7 +144,7 @@ class Scores(object):
         For each position get all possible substitutions and for each
 
         Returns:
-            dict: for each positions get a list of ScoreValue with all signatures for that triplet
+            dict: for each positions get a list of ScoreValue
             (see :attr:`scores_by_pos`)
         """
         tb = tabix.open(self.conf_file)#conf_file is the file with the scores
@@ -156,7 +152,7 @@ class Scores(object):
         #Loop through a list of dictionaries from the elements dictionary
         for region in self.segments:
             try:
-                #get all rows with certain chromosome and startcompute_muts_statistics and stop
+                # get all rows with certain chromosome and start and stop
                 # between the element start -1 and stop
                 for row in tb.query("{}{}".format(self.conf_chr_prefix, region['chrom']), region['start']-1, region['stop']):
 
