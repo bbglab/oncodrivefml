@@ -5,8 +5,9 @@ from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.signature import get_ref
 
-from oncodrivefml.indels import Indel, complements_dict
+from oncodrivefml.indels import Indel
 import math
+
 
 class ElementExecutor(object):
 
@@ -189,7 +190,7 @@ class GroupByMutationExecutor(ElementExecutor):
         """
 
         # Load element scores
-        self.scores = Scores(self.name, self.segments, self.signature, self.score_config)
+        self.scores = Scores(self.name, self.segments, self.score_config)
 
         # Compute observed mutations statistics and scores
         self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels, positive_strand=self.is_positive_strand)
