@@ -3,6 +3,7 @@ Contains the command line parsing and the main class of the method
 """
 
 import argparse
+import functools
 
 import logging
 import os
@@ -15,7 +16,7 @@ from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.load import load_and_map_variants, load_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
-from oncodrivefml.signature import load_signature, yield_mutations
+from oncodrivefml.signature import get_signature, yield_mutations
 from multiprocessing.pool import Pool
 from oncodrivefml.utils import executor_run, loop_logging
 
@@ -104,17 +105,11 @@ class OncodriveFML(object):
                                                               blacklist=self.blacklist,
                                                               save_pickle=self.save_pickle)
 
-
-
-        if self.configuration['signature'].get('use_only_mapped_elements', False):
-            signature_function = lambda: yield_mutations(self.mutations)
-        else:
-            signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
-
-
         # Load signatures
-        self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
-                                         blacklist=self.blacklist, save_pickle=self.save_pickle)
+        self.signatures = get_signature(self.configuration['signature'], self.mutations_file, self.mutations,
+                                        self.elements_file, self.elements, save_pickle=self.save_pickle,
+                                        blacklist=self.blacklist, cores=self.cores)
+
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for

@@ -38,18 +38,20 @@ signature (:obj:`dict`)
         }
 
 """
-
+import functools
 import gzip
+import json
 import logging
 import os
 import mmap
 import pickle
+from multiprocessing.pool import Pool
 
 import bgdata
 import pandas as pd
 from os.path import join, exists
 from oncodrivefml.load import load_mutations
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 HG19 = None
 """
@@ -191,7 +193,7 @@ def collapse_complementaries(signature):
     return comp_sig
 
 
-def signature_probability(signature_counts):
+def sum2one_dict(signature_counts):
     """
     Associates to each key (tuple(reference_tripet, altered_triplet)) the value divided by the total amount
 
@@ -206,7 +208,30 @@ def signature_probability(signature_counts):
     return {k: v/total for k, v in signature_counts.items()}
 
 
-def compute_signature(signature_function, classifier, blacklist, collapse=False):
+def signature_counts(signature_function, classifier):
+    """
+    Count the number of mutation of each type (ref_triplet, alt_triplet)
+    are found
+
+    Args:
+        signature_function: function that yields mutations
+        classifier (str): identifier of the signature
+
+    Returns:
+
+    """
+    signature_count = defaultdict(lambda: defaultdict(int))
+    for mut in signature_function():
+        if mut['TYPE'] != 'subs':
+            continue
+
+        signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
+        signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
+
+        signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
+    return signature_count
+
+def compute_signature(signature_function, classifier, collapse=False):
     """
     Gets the probability of each substitution that occurs for a certain signature_id.
 
@@ -218,8 +243,6 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False)
         signature_function: function that yields one mutation each time
         classifier (str): passed to :func:`oncodrivefml.load.load_mutations`
             as parameter ``signature_classifier``.
-        blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
-            Used by :func:`oncodrivefml.load.load_mutations`
         collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
 
     Returns:
@@ -238,107 +261,16 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False)
         Only substitutions are taken into account
 
     """
-    signature_count = defaultdict(lambda: defaultdict(int))
-    for mut in signature_function():
-        if mut['TYPE'] != 'subs':
-            continue
-
-        signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
-        signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
-
-        signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
+    signature_count = signature_counts(signature_function, classifier)
 
     signature = {}
     for k, v in signature_count.items():
         if collapse:
-            signature[k] = signature_probability(collapse_complementaries(v))
+            signature[k] = sum2one_dict(collapse_complementaries(v))
         else:
-            signature[k] = signature_probability(v)
-
+            signature[k] = sum2one_dict(v)
 
     return signature
-
-
-def load_signature(mutations_file, signature_function, signature_config, blacklist=None, save_pickle=False):
-    """
-    Computes the probability that certain mutation occurs.
-
-    Args:
-        mutations_file: mutations file
-        signature_function: function that yields one mutation each time
-        signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
-            Used by :func:`oncodrivefml.load.load_mutations`
-        save_pickle (:obj:`bool`, optional): save pickle files
-
-    Returns:
-        dict: probability of each substitution (measured by the triplets) grouped by the signature_id
-
-        .. code-block:: python
-
-            { signature_id:
-                {
-                    (ref_triplet, alt_triplet): prob
-                }
-            }
-
-    Before computing the signature, it is checked whether a pickle file with the signature already exists or not.
-
-    """
-    method = signature_config['method']
-    classifier = signature_config['classifier']
-    path = signature_config.get('path', None)
-    column_ref = signature_config.get('column_ref', None)
-    column_alt = signature_config.get('column_alt', None)
-    column_probability = signature_config.get('column_probability', None)
-
-    if path is not None and path.endswith(".pickle.gz"):
-        with gzip.open(path, 'rb') as fd:
-            return pickle.load(fd)
-
-    signature_dict = None
-    if method == "none":
-        # We don't use signature
-        logging.warning("We are not using any signature")
-
-    elif method == "file":
-        if not os.path.exists(path):
-            logging.error("Signature file {} not found.".format(path))
-            return -1
-        else:
-            logging.info("Loading signatures")
-            signature_probabilities = pd.read_csv(path, sep='\t')
-            signature_probabilities.set_index([column_ref, column_alt], inplace=True)
-            signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
-
-    elif method == "full" or method == "complement":
-        if classifier == 'none' or classifier == 'SAMPLE':
-            signature_dict_precomputed = mutations_file + '_signature_' + method +'_' + classifier + ".pickle.gz"
-        else:
-            signature_dict_precomputed = None
-            save_pickle = False
-
-        if signature_dict_precomputed is not None and exists(signature_dict_precomputed):
-            logging.info("Using precomputed signatures")
-            with gzip.open(signature_dict_precomputed, 'rb') as fd:
-                signature_dict = pickle.load(fd)
-        else:
-            logging.info("Computing signatures")
-            if method == "complement":
-                collapse = True
-            else:
-                collapse = False
-            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse)
-            if save_pickle:
-                try:
-                    # Try to store as precomputed
-                    with gzip.open(signature_dict_precomputed, 'wb') as fd:
-                        pickle.dump(signature_dict, fd)
-                except OSError:
-                    logging.debug(
-                        "Imposible to write precomputed signature here: {}".format(signature_dict_precomputed))
-
-    return signature_dict
 
 
 def yield_mutations(mutations):
@@ -356,3 +288,348 @@ def yield_mutations(mutations):
     for elem, mutations_list in mutations.items():
         for mutation in mutations_list:
             yield mutation
+
+
+def get_signature_function(only_mapped_mutations, mutations, mutations_file, blacklist=None):
+    """
+    Computes the corresponding signature function depending on the *only_mapped_mutations* flag
+
+    Args:
+        only_mapped_mutations (bool): flag indicating if only the mutation that fall into regions are
+            used to compute the signature or the whole dataset
+        mutations (dict): :ref:`mutations <mutations dict>`
+        mutations_file (str): file path
+        blacklist (str): file with blacklisted samples
+
+    Returns:
+        function. :func:`yield_yield_mutations` if only_mapped_mutations,
+            otherwise :func:`oncodrivefml.load.load_mutations`
+
+    """
+    if only_mapped_mutations:
+        signature_function = functools.partial(yield_mutations, mutations)
+    else:
+        signature_function = functools.partial(load_mutations, mutations_file, show_warnings=False,
+                                               blacklist=blacklist)
+    return signature_function
+
+
+def load_signature(signature_config, regions_file, mutations_file, regions, mutations, save_pickle=False, blacklist=None, cores=None):
+    """
+    Computes the probability that certain mutation occurs.
+
+    Args:
+        signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
+        regions_file (str): regions file
+        mutations_file (str): mutations file
+        regions (dict): see :ref:`elements dict`
+        mutations (dict): see :ref:`mutations dict`
+        save_pickle (:obj:`bool`, optional): save pickle files
+        blacklist (str): blacklist used with the mutations file
+        cores (int): cores to use
+
+    Returns:
+        dict. Signature
+
+    """
+    method = signature_config['method']
+    classifier = signature_config['classifier']
+    limit_signature_to_mapped_mutations = signature_config.get('use_only_mapped_mutations', False)
+    correct_signature_by_sites = signature_config.get('correct_signature_by_sites', True)
+
+    if method == "complement":
+        collapse = True
+    else:
+        collapse = False
+
+    signature_dict = None
+    if classifier == 'none' or classifier == 'SAMPLE':
+        signature_dict_precomputed = mutations_file + '_signature_' + method + '_' + classifier + ".pickle.gz"
+    else:
+        signature_dict_precomputed = None
+        save_pickle = False
+
+    if signature_dict_precomputed is not None and exists(signature_dict_precomputed):
+        logging.info("Using precomputed signatures")
+        with gzip.open(signature_dict_precomputed, 'rb') as fd:
+            signature_dict = pickle.load(fd)
+    else:
+        logging.info("Computing signatures")
+
+        signature_function = get_signature_function(limit_signature_to_mapped_mutations, mutations, mutations_file, blacklist)
+
+        signature_dict = compute_signature(signature_function, classifier, collapse)
+        if save_pickle:
+            try:
+                # Try to store as precomputed
+                with gzip.open(signature_dict_precomputed, 'wb') as fd:
+                    pickle.dump(signature_dict, fd)
+            except OSError:
+                logging.debug(
+                    "Imposible to write precomputed signature here: {}".format(signature_dict_precomputed))
+
+    # TODO add checks for the signature
+
+    if signature_dict is not None and correct_signature_by_sites:  # correct the signature
+
+        triplets_probabilities = load_regions_signature(limit_signature_to_mapped_mutations, collapse, regions,
+                                                        regions_file, save_pickle, cores)
+
+        logging.info('Correcting signatures')
+
+        signature_dict = correct_signature_by_triplets_frequencies(signature_dict, triplets_probabilities)
+
+    return signature_dict
+
+
+def get_signature(signature_config, mutations_file, mutations, regions_file, regions, save_pickle=False, blacklist=None, cores=None):
+    """
+    Computes the probability that certain mutation occurs.
+
+    Args:
+        signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
+        mutations_file (str): mutations file
+        mutations (dict): see :ref:`mutations dict`
+        regions_file (str): regions file
+        regions (dict): see :ref:`elements dict`
+        save_pickle (:obj:`bool`, optional): save pickle files
+        blacklist (str): blacklist used with the mutations file
+        cores (int): cores to use
+
+    Returns:
+        dict: probability of each substitution (measured by the triplets) grouped by the signature_id
+
+        .. code-block:: python
+
+            { signature_id:
+                {
+                    (ref_triplet, alt_triplet): prob
+                }
+            }
+
+    Before computing the signature, it is checked whether a pickle file with the signature already exists or not.
+
+    """
+    method = signature_config['method']
+    path = signature_config.get('path', None)
+
+    if path is not None and path.endswith(".pickle.gz"):
+        with gzip.open(path, 'rb') as fd:
+            return pickle.load(fd)
+
+    signature_dict = None
+    if method == "none":
+        # We don't use signature
+        logging.warning("We are not using any signature")
+
+    elif method == "file":  # read the signature from a file
+        if not os.path.exists(path):
+            logging.error("Signature file {} not found.".format(path))
+            return -1
+        else:
+            classifier = signature_config['classifier']
+            column_ref = signature_config.get('column_ref', None)
+            column_alt = signature_config.get('column_alt', None)
+            column_probability = signature_config.get('column_probability', None)
+
+            logging.info("Loading signatures")
+            signature_probabilities = pd.read_csv(path, sep='\t')
+            signature_probabilities.set_index([column_ref, column_alt], inplace=True)
+            signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
+
+    elif method == "full" or method == "complement":
+        signature_dict = load_signature(signature_config, regions_file, mutations_file, regions, mutations, save_pickle, blacklist, cores)
+
+    return signature_dict
+
+
+def correct_signature_by_triplets_frequencies(signature, triplets_frequencies):
+    """
+    Normalized de signature by the frequency of the triplets
+
+    Args:
+        signature (dict): see :ref:`signature dict`
+        triplets_frequencies (dict): {triplet: frequency}
+
+    Returns:
+        dict. Normalized signature
+
+    """
+    if signature is None:
+        return None
+    corrected_signature = {}
+    for k,v in signature.items():
+        corrected_signature[k] = get_normalized_frequencies(v, triplets_frequencies)
+
+    return corrected_signature
+
+
+def collapse_complementary_counts(triplets_counts):
+    """
+    Collapse complementaries
+
+    Args:
+        triplets_counts (dict): {triplet: counts}
+
+    Returns:
+        dict. Complementary sequences values added together
+
+    """
+    comp_sig = defaultdict(int)
+    for k, v in triplets_counts.items():
+        comp_sig[k] += v
+        comp_k = complementary_sequence(k)
+        comp_sig[comp_k] += v
+    return comp_sig
+
+
+def get_normalized_frequencies(signature, triplets_frequencies):
+    """
+    Divides the frequency of each triplet alteration by the
+    frequency of the reference triplet to get the normalized
+    signature
+
+    Args:
+        signature (dict): {(ref_triplet, alt_triplet): counts}
+        triplets_frequencies (dict): {triplet: frequency}
+
+    Returns:
+        dict. Normalized signature
+
+    """
+    corrected_signature = {}
+    for triplet_pair, frequency in signature.items():
+        ref_triplet = triplet_pair[0]
+        corrected_signature[triplet_pair] = frequency/triplets_frequencies[ref_triplet]
+    return sum2one_dict(corrected_signature)
+
+
+def triplets_of_sequence(sequence):
+    """
+    Yields each triplet from a sequence of nucleotides
+
+    Args:
+        sequence (str): sequence of nucleotides
+
+    Yields:
+        str. Triplet
+
+    """
+    iterator = iter(sequence)
+
+    n1 = next(iterator)
+    n2 = next(iterator)
+
+    for n3 in iterator:
+        yield n1+n2+n3
+        n1 = n2
+        n2 = n3
+
+
+def triplet_counter_executor(elements_segments):
+    """
+    For a list of regions, get all the triplets present
+    in all the segments
+
+    Args:
+        elements_segments (:obj:`list` of :obj:`list`): list of lists of segments
+
+    Returns:
+        :class:`collections.Counter`. Count of each triplet
+        in the regions
+
+    """
+    counts = Counter()
+    for segments in elements_segments:
+        for segment in segments:
+            chrom = segment['chrom']
+            start = segment['start']
+            stop = segment['stop']
+            seq = get_ref(chrom, start, stop-start+1)
+            counts.update(triplets_of_sequence(seq))
+    return counts
+
+def triplets_counter(elements, cores=None):
+    """
+    Counts triplets in the elements
+
+    Args:
+        elements (ditc): see :ref:`elements dict`
+        cores (int): cores to use
+
+    Returns:
+        :class:`collections.Counter`. Counts of the triplets in the elements
+
+    """
+    logging.info('Computing the signature of the region')
+    if cores is None:
+        cores = os.cpu_count()
+    counter = Counter()
+    pool = Pool(cores)
+    for result in pool.imap(triplet_counter_executor, chunkizator(elements.values(), size=500)):
+        counter.update(result)
+    return counter
+
+
+def load_regions_signature(only_mapped_mutations, collapse, regions, regions_file, save_pickle=False, cores=None):
+    """
+    Load the frequency of the triplets
+
+    Args:
+        only_mapped_mutations (bool): if we use only the mapped mutations, we must use the
+            regions to get the counts of the triplets. If not, we use the whole genome counts.
+        collapse (bool): collapse complementaries
+        regions (dict): see :ref:`elements dict`
+        regions_file (str): path to elements file
+        save_pickle (bool): save intermediate pickle files
+        cores (int): cores to use
+
+    Returns:
+        dict. {triplet: prob}
+
+    """
+    if only_mapped_mutations:  # use only mapped regions
+        precomputed_regions_counts = regions_file + '_signature.json'
+        if exists(precomputed_regions_counts):
+            with open(precomputed_regions_counts) as fd:
+                triplets_counts = json.load(fd)
+        else:
+            triplets_counts = triplets_counter(regions, cores)
+            if save_pickle:
+                with open(precomputed_regions_counts, 'w') as fd:
+                    json.dump(triplets_counts, fd)
+
+    else:  # use whole genome
+        file = bgdata.get_path('datasets', 'genomesignature', 'hg19')
+        with open(file) as fd:
+            triplets_counts = json.load(fd)
+
+    if collapse:
+        triplets_counts = collapse_complementary_counts(triplets_counts)
+
+    return sum2one_dict(triplets_counts)
+
+
+
+def chunkizator(iterable, size=1000):
+    """
+    Creates chunks from an iterable
+
+    Args:
+        iterable:
+        size (int): elements in the chunk
+
+    Yields:
+        list. Chunk
+
+    """
+    s = 0
+    chunk = []
+    for i in iterable:
+        if s == size:
+            yield chunk
+            chunk = []
+            s = 0
+        chunk.append(i)
+        s += 1
+    yield chunk

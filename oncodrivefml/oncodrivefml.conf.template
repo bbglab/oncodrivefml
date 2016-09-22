@@ -30,13 +30,25 @@ method = full
 # that fall into the regions you are analysing:
 
 # False: use the whole dataset
-# use_only_mapped_elements = False
+# use_only_mapped_mutations = False
 
 # True:use only mutations fall in any of the elements from the elements file
-# use_only_mapped_elements = True
+# use_only_mapped_mutations = True
 
 
-use_only_mapped_elements
+# Choose if the signature you want to correct the signature
+# by the number of sites:
+
+# True: correct the signature (if the use_only_mapped_mutations flag is used
+# the signature is corrected using the counts of triplets of the segments in the
+# regions file)
+# correct_signature_by_sites = True
+
+# False: do not correct
+# correct_signature_by_sites = False
+
+
+
 
 # "file": Provide a file with the signature to use
 # The format is a tab separated file with header, and you have to set the columns to use.
