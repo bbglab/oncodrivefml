@@ -76,8 +76,8 @@ class Scores(object):
         self.conf_score = config['score']
         self.conf_chr = config['chr']
         self.conf_chr_prefix = config['chr_prefix']
-        self.conf_ref = config['ref']
-        self.conf_alt = config['alt']
+        self.conf_ref = config.get('ref', None)
+        self.conf_alt = config.get('alt', None)
         self.conf_pos = config['pos']
         self.conf_element = config.get('element', None)
         self.conf_extra = config.get('extra', None)
@@ -163,11 +163,19 @@ class Scores(object):
 
                     value = self._read_score(row)
 
-                    ref = row[self.conf_ref]
-                    alt = row[self.conf_alt]
+                    if self.conf_alt is None:
+                        alt = None
+                    else:
+                        alt = row[self.conf_alt]
+
                     pos = int(row[self.conf_pos])
 
                     ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
+
+                    if self.conf_ref is None:
+                        ref = ref_triplet[1]
+                    else:
+                        ref = row[self.conf_ref]
 
                     if ref is not None and ref_triplet[1] != ref:
                         logging.warning("Background mismatch at position %d at '%s'", int(row[self.conf_pos]), self.element)

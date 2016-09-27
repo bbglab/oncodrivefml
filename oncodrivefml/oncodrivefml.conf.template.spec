@@ -12,8 +12,8 @@ file = string
 chr = integer
 chr_prefix = string
 pos = integer
-ref = integer
-alt = integer
+ref = integer(default=None)
+alt = integer(default=None)
 score = integer
 element = integer(default=None)
 extra = integer(default=None)
