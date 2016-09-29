@@ -25,6 +25,7 @@ range = integer(default=None)
 
 [statistic]
 method = option('amean', 'gmean', 'maxmean', 'amean_scoresmodif')
+one_mut_per_sample = boolean(default=False)
 subs = boolean(default=True)
 
     [[indels]]

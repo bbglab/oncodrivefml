@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 import numpy as np
 from oncodrivefml.scores import Scores
@@ -12,7 +13,7 @@ import math
 class ElementExecutor(object):
 
     @staticmethod
-    def compute_muts_statistics(muts, scores, indels=False, positive_strand=True):
+    def compute_muts_statistics(muts, scores, indels=False, positive_strand=True, only_max_per_sample=False):
         """
         Gets the score of each mutation
 
@@ -28,25 +29,24 @@ class ElementExecutor(object):
         """
 
         # Add scores to the element mutations
-        scores_by_sample = {}
+        scores_by_sample = defaultdict(list)
         scores_list = []
-        scores_subs_list = []
-        scores_indels_list = []
-        subs_counter = 0 #counts how many are type substition
-        total_subs_score = 0 #counts how many substitutons have a score value
         positions = []
         mutations = []
+        amount_of_subs = 0
+        amount_of_indels = 0
+
+        mut_per_sample = {}
+
         for m in muts:
 
             # Get substitutions scores
             if m['TYPE'] == "subs":
-                subs_counter += 1
                 m['POSITION'] = int(m['POSITION'])
                 values = scores.get_score_by_position(m['POSITION'])
                 for v in values:
                     if v.ref == m['REF'] and v.alt == m['ALT']:
                         m['SCORE'] = v.value
-                        total_subs_score += 1
                         break
 
             if indels and m['TYPE'] == "indel":
@@ -63,19 +63,40 @@ class ElementExecutor(object):
             if m.get('SCORE', None) is not None:
 
                 sample = m['SAMPLE']
-                if sample not in scores_by_sample:
-                    scores_by_sample[sample] = []
 
+                if only_max_per_sample:
+
+                    if sample not in scores_by_sample.keys() or m['SCORE'] > max(scores_by_sample[sample]):
+                        mut_per_sample[sample] = m
+
+                else:
+
+                    scores_by_sample[sample].append(m['SCORE'])
+
+                    scores_list.append(m['SCORE'])
+
+                    if m['TYPE'] == "subs":
+                        amount_of_subs += 1
+                    elif m['TYPE'] == "indel":
+                        amount_of_indels += 1
+
+                    positions.append(m['POSITION'])
+                    mutations.append(m)
+
+        if only_max_per_sample:
+            for sample, m in mut_per_sample.items():
                 scores_by_sample[sample].append(m['SCORE'])
+
                 scores_list.append(m['SCORE'])
 
                 if m['TYPE'] == "subs":
-                    scores_subs_list.append(m['SCORE'])
+                    amount_of_subs += 1
                 elif m['TYPE'] == "indel":
-                    scores_indels_list.append(m['SCORE'])
+                    amount_of_indels += 1
 
                 positions.append(m['POSITION'])
                 mutations.append(m)
+
 
         # Aggregate scores
         num_samples = len(scores_by_sample)
@@ -84,11 +105,9 @@ class ElementExecutor(object):
             'samples_mut': num_samples,
             'muts': len(scores_list),
             'muts_recurrence': len(set(positions)),
-            'subs': subs_counter,
-            'subs_score': total_subs_score,
+            'subs': amount_of_subs,
+            'indels': amount_of_indels,
             'scores': scores_list,
-            'scores_subs': scores_subs_list,
-            'scores_indels': scores_indels_list,
             'positions': positions,
             'mutations': mutations
         }
@@ -166,6 +185,7 @@ class GroupByMutationExecutor(ElementExecutor):
         self.statistic_name = config['statistic'].get('method', 'amean')
         self.simulation_range = config['background'].get('range', None)
         self.signature_column = config['signature']['classifier']
+        self.only_max_per_sample = config['statistic'].get('one_mut_per_sample', False)
 
         # Output attributes
         self.obs = 0
@@ -193,7 +213,9 @@ class GroupByMutationExecutor(ElementExecutor):
         self.scores = Scores(self.name, self.segments, self.score_config)
 
         # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels, positive_strand=self.is_positive_strand)
+        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels,
+                                                   positive_strand=self.is_positive_strand,
+                                                   only_max_per_sample=self.only_max_per_sample)
 
 
         if len(self.result['mutations']) > 0:

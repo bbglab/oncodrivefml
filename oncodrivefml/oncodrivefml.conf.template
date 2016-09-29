@@ -106,6 +106,13 @@ method = amean
 # Gemoetric mean
 # method = gmean
 
+# Use only one mutation per sample in each gene
+# Use all the mutation from the same sample
+one_mut_per_sample = False
+
+# Use only the mutation whit the maximum score
+one_mut_per_sample = True
+
 # Compute the substitutions
 subs = True
 
