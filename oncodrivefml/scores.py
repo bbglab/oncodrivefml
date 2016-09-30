@@ -161,7 +161,10 @@ class Scores(object):
                         if row[self.conf_element] != self.element:
                             continue
 
-                    value = self._read_score(row)
+                    try:
+                        value = self._read_score(row)
+                    except IndexError:
+                        continue
 
                     if self.conf_alt is None:
                         alt = None
