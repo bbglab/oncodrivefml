@@ -19,7 +19,7 @@ class ElementExecutor(object):
         Args:
             muts (list): list of mutations
             scores (dict): scores for all possible substitutions
-            indels (class): indels class if indels are considered. False otherwise.
+            indels (:obj:`oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise.
             positive_strand (bool): the element where the mutations occur has positive strand or not. Defaults to True.
 
         Returns:
