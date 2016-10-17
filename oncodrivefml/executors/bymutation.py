@@ -12,14 +12,14 @@ import math
 class ElementExecutor(object):
 
     @staticmethod
-    def compute_muts_statistics(muts, scores, indels=False, positive_strand=True):
+    def compute_muts_statistics(muts, scores, indels=False):
         """
         Gets the score of each mutation
 
         Args:
             muts (list): list of mutations
             scores (dict): scores for all possible substitutions
-            indels (bool): are indels taken into account or not. Default to False.
+            indels (class): indels class if indels are considered. False otherwise.
             positive_strand (bool): the element where the mutations occur has positive strand or not. Defaults to True.
 
         Returns:
@@ -49,13 +49,13 @@ class ElementExecutor(object):
                         total_subs_score += 1
                         break
 
-            if indels and m['TYPE'] == "indel":
+            if indels is not False and m['TYPE'] == "indel":
 
                 # very long indels are discarded
                 if max(len(m['REF']), len(m['ALT'])) > 20:
                     continue
 
-                score = Indel.get_indel_score(m, scores, int(m['POSITION']), positive_strand)
+                score = indels.get_indel_score(m)
 
                 m['SCORE'] = score if not math.isnan(score) else None
 
@@ -192,8 +192,11 @@ class GroupByMutationExecutor(ElementExecutor):
         # Load element scores
         self.scores = Scores(self.name, self.segments, self.score_config)
 
+        if self.indels:
+            self.indels = Indel(self.scores, 'pattern', self.is_positive_strand)
+
         # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels, positive_strand=self.is_positive_strand)
+        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels)
 
 
         if len(self.result['mutations']) > 0:
@@ -223,19 +226,12 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 else: #indels
                     #TODO change the method to compute first the position and then the scores only for those
-                    indel_size = max(len(mut['REF']), len(mut['ALT']))
-                    length = Indel.compute_window_size(indel_size)
-
-                    mutation_pattern = Indel.get_pattern(mut, self.is_positive_strand, length)
                     signature = None
 
                     sampling_positions = positions
 
-                    for pos in sampling_positions:
-                        score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],
-                                                                     mutation_pattern, indel_size, self.is_positive_strand)
-                        if not math.isnan(score):
-                            simulation_scores.append(score)
+                    simulation_scores = self.indels.get_background_indel_scores(mut, sampling_positions)
+
 
                     if len(simulation_scores) < 100:
                         logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))

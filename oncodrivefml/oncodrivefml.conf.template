@@ -125,8 +125,8 @@ subs = True
         weight_function = 'linear'
         weight_function = 'logistic'
 
-        # In frame shifts considered
-        in_frame_shift = boolean(default=False)
+        # Frame shifts considered (for coding regions)
+        frame_shift = boolean(default=False)
 
 [settings]
 

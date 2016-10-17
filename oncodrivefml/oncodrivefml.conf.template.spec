@@ -31,7 +31,7 @@ subs = boolean(default=True)
         enabled = boolean(default=False)
         window_size = integer(default=10)
         weight_function = option('constant', 'linear', 'logistic', default='linear')
-        in_frame_shift = boolean(default=False)
+        frame_shift = boolean(default=False)
 
 [settings]
 cores = integer(default=None)
