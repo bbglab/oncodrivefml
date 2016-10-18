@@ -91,7 +91,7 @@ MUTATIONS_SCHEMA = {
         'POSITION':   {'reader': 'int(x)', 'validator': 'x > 0'},
         'REF':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
         'ALT':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
-        'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel"]'},
+        'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel", "MNP"]'},
         'SAMPLE':     {'reader': 'str(x)'},
         'SIGNATURE':  {'reader': 'str(x)'}
     }
@@ -130,8 +130,10 @@ def load_mutations(file, show_warnings=True, blacklist=None):
             continue
 
         if row.get('TYPE', None) is None:
-            if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) > 1 or len(row['ALT']) > 1:
+            if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) != len(row['ALT']):
                 row['TYPE'] = 'indel'
+            elif len(row['REF']) == len(row['ALT']) and len(row['REF']) > 1:
+                row['TYPE'] = 'MNP'
             else:
                 row['TYPE'] = 'subs'
 

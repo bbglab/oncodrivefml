@@ -2,6 +2,7 @@
 method = option('none', 'full', 'complement', 'bysample', 'file')
 classifier = string(default='none')
 use_only_mapped_elements = boolean(default=False)
+include_mnp = boolean(default=False)
 path = string(default=None)
 column_ref = string(default=None)
 column_alt = string(default=None)
@@ -26,6 +27,7 @@ range = integer(default=None)
 [statistic]
 method = option('amean', 'gmean', 'maxmean', 'amean_scoresmodif')
 subs = boolean(default=True)
+mnp = boolean(default=True)
 
     [[indels]]
         enabled = boolean(default=False)

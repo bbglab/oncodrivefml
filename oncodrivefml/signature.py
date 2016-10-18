@@ -206,7 +206,7 @@ def signature_probability(signature_counts):
     return {k: v/total for k, v in signature_counts.items()}
 
 
-def compute_signature(signature_function, classifier, blacklist, collapse=False):
+def compute_signature(signature_function, classifier, blacklist, collapse=False, include_mnp=False):
     """
     Gets the probability of each substitution that occurs for a certain signature_id.
 
@@ -240,13 +240,24 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False)
     """
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in signature_function():
-        if mut['TYPE'] != 'subs':
+        if mut['TYPE'] == 'subs':
+            signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
+            signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
+
+            signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
+        elif include_mnp and mut['TYPE'] == 'MNP':
+            pos = mut['POSITION']
+            for index, nucleotides in enumerate(zip(mut['REF'], mut['ALT'])):
+                ref_nucleotide, alt_nucleotide = nucleotides
+                signature_ref = get_ref_triplet(mut['CHROMOSOME'], pos - 1 + index)
+                if signature_ref[1] != ref_nucleotide:
+                    logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, mut['CHROMOSOME']))
+                    continue
+                signature_alt = signature_ref[0] + alt_nucleotide + signature_ref[2]
+
+                signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
+        else:
             continue
-
-        signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
-        signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
-
-        signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
 
     signature = {}
     for k, v in signature_count.items():
@@ -291,6 +302,7 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
     column_ref = signature_config.get('column_ref', None)
     column_alt = signature_config.get('column_alt', None)
     column_probability = signature_config.get('column_probability', None)
+    include_mnp = signature_config.get('include_mnp', False)
 
     if path is not None and path.endswith(".pickle.gz"):
         with gzip.open(path, 'rb') as fd:
@@ -328,7 +340,7 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
                 collapse = True
             else:
                 collapse = False
-            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse)
+            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse, include_mnp)
             if save_pickle:
                 try:
                     # Try to store as precomputed

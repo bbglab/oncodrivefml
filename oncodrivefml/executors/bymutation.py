@@ -49,6 +49,23 @@ class ElementExecutor(object):
                         total_subs_score += 1
                         break
 
+            if m['TYPE'] == "MNP":
+                pos = int(m['POSITION'])
+                mnp_scores = []
+                for index, nucleotides in enumerate(zip(m['REF'], m['ALT'])):
+                    ref_nucleotide, alt_nucleotide = nucleotides
+                    values = scores.get_score_by_position(pos+index)
+                    for v in values:
+                        if v.ref == ref_nucleotide and v.alt == alt_nucleotide:
+                            mnp_scores.append(v.value)
+                            break
+                    else:
+                        logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, m['CHROMOSOME']))
+                if not mnp_scores:
+                    continue
+                m['SCORE'] = max(mnp_scores)
+                m['POSITION'] = pos + mnp_scores.index(m['SCORE'])
+
             if indels and m['TYPE'] == "indel":
 
                 # very long indels are discarded
@@ -146,15 +163,19 @@ class GroupByMutationExecutor(ElementExecutor):
         # Input attributes
         self.name = element_id
         self.indels = config['statistic']['indels'].get('enabled', False)
-        subs = config['statistic'].get('subs', False)
+        subs = config['statistic'].get('subs', True)
+        mnp = config['statistic'].get('mnp', True)
 
-        if subs and self.indels:
+        if subs and self.indels and mnp:
             self.muts = muts
         else:
+            self.muts = []
             if subs:
-                self.muts = [m for m in muts if m['TYPE'] == 'subs']
-            else:
-                self.muts =[m for m in muts if m['TYPE'] == 'indel']
+                self.muts += [m for m in muts if m['TYPE'] == 'subs']
+            if mnp:
+                self.muts += [m for m in muts if m['TYPE'] == 'MNP']
+            if self.indels:
+                self.muts += [m for m in muts if m['TYPE'] == 'indel']
 
         self.signature = signature
         self.segments = segments
@@ -213,7 +234,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 signature = self.signature
 
-                if mut['TYPE'] == 'subs':
+                if mut['TYPE'] == 'subs' or mut['TYPE'] == 'MNP':
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             simulation_scores.append(s.value)

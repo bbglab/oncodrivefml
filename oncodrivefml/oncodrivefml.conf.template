@@ -15,8 +15,6 @@ method = full
 # "bysample": Compute a 96 matrix signature for each sample
 # method = bysample
 
-
-
 # Choose the classifier for the signature:
 
 # you can use any of the columns in the dataset
@@ -24,6 +22,13 @@ method = full
 # classifier = CANCER_TYPE
 
 # or leave it empty to use the whole dataset
+
+
+# Include MNP mutation in the signature
+# include_mnp = True
+
+# Do not include MNP mutations
+include_mnp = False
 
 
 # Choose if the signature must be computed using only the elements
@@ -111,6 +116,12 @@ subs = True
 
 # Do not compute the substitutions
 #subs = False
+
+# Compute the MNP mutations
+mnp = True
+
+# Do not compute the MNP mutations
+#mnp = False
 
     # Insertions and deletions
     [[indels]]
