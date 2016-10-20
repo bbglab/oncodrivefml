@@ -8,6 +8,7 @@ The scores are read from a file.
 
 import logging
 import tabix
+import numpy as np
 
 from typing import List
 from collections import defaultdict, namedtuple
@@ -66,7 +67,7 @@ class Scores(object):
                     }
     """
 
-    def __init__(self, element: str, segments: list, config: dict):
+    def __init__(self, element: str, segments: list, config: dict, stops=False):
 
         self.element = element
         self.segments = segments
@@ -85,8 +86,13 @@ class Scores(object):
         # Scores to load
         self.scores_by_pos = defaultdict(list)
 
+        self.stops = stops
+
         # Initialize background scores
         self._load_scores()
+
+        if stops is not False:
+            self._get_stop_scores(stops)
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
         """
@@ -190,6 +196,27 @@ class Scores(object):
                         alt_triplet = ref_triplet[0] + a + ref_triplet[2]
                         self.scores_by_pos[pos].append(ScoreValue(ref, a, value, ref_triplet, alt_triplet))
 
+
             except tabix.TabixError:
                 logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.conf_chr_prefix, region['chrom'], region['start']-1, region['stop']))
                 continue
+
+
+    def _get_stop_scores(self, stops):
+        self.stop_scores = []
+        if len(stops) > 3:
+            # if more than 3 positions have stops we get the stop value from those
+            for pos, alts in stops.items():
+                for s in self.get_score_by_position(pos):
+                    if s.alt in alts:
+                        self.stop_scores.append(s.value)
+        if len(self.stop_scores) < 3:
+            A = 8.9168668946147314
+            B = 0.082688007694096191
+            all_scores = []
+            positions = self.get_all_positions()
+            for pos in positions:
+                for s in self.get_score_by_position(pos):
+                    all_scores.append(s.value)
+            mean = np.mean(all_scores)
+            self.stop_scores = [A * np.exp(B * mean)]

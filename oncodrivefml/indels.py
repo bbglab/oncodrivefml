@@ -1,5 +1,7 @@
 import math
 from enum import Enum
+import numpy as np
+import random
 
 import logging
 
@@ -9,8 +11,9 @@ from math import exp
 window_size = 10
 weight = None
 weighting_function = lambda x: 1
-in_frame_length = 1
-#TODO rename as inframe
+frame_length = 1
+
+stop_function = None
 
 
 complements_dict = {"A": "T", "T": "A", "G": "C", "C": "G", 'N': 'N'}
@@ -22,14 +25,19 @@ transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T", 'N': 'N'}
 
 
 def _init_indels(indels_config):
-    global window_size, weight, weighting_function, in_frame_length
+    global window_size, weight, weighting_function, frame_length, stop_function
     if indels_config['method'] == 'pattern':
         window_size = indels_config.get('window_size', 10)
         function = indels_config.get('weight_function', 'constant')
         weight = Weight(window_size, function)
         weighting_function = weight.function
-        if indels_config.get('frame_shift', False):
-            in_frame_length = 3
+
+    elif indels_config['method'] == 'stop':
+        stop = StopsScore(indels_config.get('stop_function', 'mean'))
+        stop_function = stop.function
+
+    if indels_config.get('enable_frame', False):
+        frame_length = 3
 
 
 class Weight:
@@ -67,22 +75,68 @@ class Weight:
         return 1.0/(1+exp(self.beta*(x-self.length/2)))
 
 
+class StopsScore:
+    def __init__(self, type):
+        if type == 'mean':
+            self.funct = self.mean
+        elif type =='median':
+            self.funct = self.median
+        elif type == 'random':
+            self.funct = self.random
+        elif type == 'random_choice':
+            self.funct = self.choose
+
+    def function(self, x):
+        return self.funct(x)
+
+    def mean(self, x):
+        return np.mean(x)
+
+    def median(self, x):
+        return np.median(x)
+
+    def random(self, x):
+        p2 = max(x)
+        p1 = min(x)
+        return random.uniform(p1, p2)
+
+    def choose(self, x):
+        return random.choice(x)
+
+
+
 class Indel:
 
-    def __init__(self, scores, method, has_positive_strand=True):
+    def __init__(self, scores, signature, signature_id, method, has_positive_strand=True):
         self.scores = scores
+        self.signature = signature
+        self.signature_id = signature_id
         self.has_positive_strand = has_positive_strand
 
         if method == 'pattern':
             self.get_background_indel_scores = self.get_background_indel_scores_from_pattern
             self.get_indel_score = self.get_indel_score_from_pattern
+        elif method == "stop":
+            self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions
+            self.get_indel_score = self.get_indel_score_from_stop
+            try:
+                s = self.scores.stop_scores
+            except AttributeError:
+                logging.warning("The scores object does not have the score of the stops. Indels are being discarded")
+                self.get_indel_score = self.not_found
+
+    @staticmethod
+    def is_frameshift(size):
+        if frame_length != 1 and (size % frame_length) == 0:
+            return False
+        return True
 
     @staticmethod
     def compute_window_size(indel_size):
         size = window_size
 
-        if in_frame_length != 1 and (indel_size % in_frame_length) == 0:  # in-frame
-            size = (indel_size + in_frame_length - 1)
+        if not Indel.is_frameshift(indel_size):  # in-frame
+            size = (indel_size + frame_length - 1)
 
         if indel_size > size:
             size = indel_size
@@ -110,18 +164,18 @@ class Indel:
                 alteration = reference[:-indel_size]  # remove the last indels_size elements
             return reference[-size:], alteration[-size:]  # return only last size elements
 
-    def weight(self, scores, indel_size, total_size):
-        if in_frame_length == 1 or (indel_size % in_frame_length) != 0:
+    def weight(self, score_values, indel_size, total_size):
+        if Indel.is_frameshift(indel_size):
 
             if self.has_positive_strand:
                 for i in range(indel_size, total_size):  # if indel_size is bigger than the window it is an empty range
                     # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
-                    scores[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
+                    score_values[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
             else:
                 for i in range(total_size - indel_size):
-                    scores[i] *= weighting_function((total_size - indel_size) - i)
+                    score_values[i] *= weighting_function((total_size - indel_size) - i)
 
-        return scores
+        return score_values
 
     def compute_scores(self, reference, alternation, initial_position, size):
         computed_scores = [math.nan] * size
@@ -177,7 +231,7 @@ class Indel:
         return max(cleaned_scores) if cleaned_scores else math.nan
 
     def get_background_indel_scores_from_pattern(self, mutation, positions):
-        scores = []
+        indel_scores = []
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
         length = Indel.compute_window_size(indel_size)
         mutation_pattern = self.get_pattern(mutation, length)
@@ -187,9 +241,9 @@ class Indel:
                                                         indel_size)
 
             if not math.isnan(score):
-                scores.append(score)
+                indel_scores.append(score)
 
-        return scores
+        return indel_scores, None
 
     @staticmethod
     def compute_pattern(reference, alternate, length):
@@ -218,6 +272,39 @@ class Indel:
             new_seq += pattern_change[pattern[i]](sequence[i])
         return new_seq
 
+
+    def get_indel_score_from_stop(self, mutation):
+        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+        if Indel.is_frameshift(indel_size):
+            return stop_function(self.scores.stop_scores)
+        else:
+            position = int(mutation['POSITION'])
+            ref, alt = self.get_mutation_sequences(mutation, indel_size)
+
+            if self.has_positive_strand:
+                init_pos = position
+            else:
+                init_pos = position - indel_size
+            indel_scores = self.compute_scores(ref, alt, init_pos, indel_size)
+
+            cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
+            return max(cleaned_scores) if cleaned_scores else math.nan
+
+
+    def get_background_indel_scores_as_substitutions(self, mutation, positions):
+        indel_scores = []
+        signatures = []
+        for pos in positions:
+            for s in self.scores.get_score_by_position(pos):
+                indel_scores.append(s.value)
+                if self.signature is not None:
+                    signatures.append(
+                        self.signature[mutation.get(self.signature_id, self.signature_id)].get(
+                            (s.ref_triplet, s.alt_triplet), 0.0))
+        return indel_scores, signatures
+
+    def not_found(self, mutation):
+        return np.nan
 
 class ChangePattern(Enum):
     same = 1,

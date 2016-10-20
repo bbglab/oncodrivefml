@@ -368,3 +368,41 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
 
     return variants_dict, elements
+
+
+def load_stops_file(file, save_pickle=False):
+    stops = None
+    stops_precomputed = file + "_dict.pickle.gz"
+    if exists(stops_precomputed):
+        try:
+            logging.info("Using precomputed stops file")
+            with gzip.open(stops_precomputed, 'rb') as fd:
+                stops = pickle.load(fd)
+        except EOFError:
+            logging.error("Loading file {}".format(stops))
+            stops = None
+    if stops is None:
+        logging.info("Loading stops")
+        stops = defaultdict(lambda: defaultdict(list))
+        with open(file) as fd:
+            #TODO add itab reader
+            for line in fd:
+                line = line.strip()
+                values = line.split('\t')
+                chr = values[0]
+                pos = int(values[1])
+                #TODO add check for the ref
+                ref = values[2]
+                alt = values[3]
+                id = values[4]
+                stops[id][pos].append(alt)
+
+        if save_pickle:
+            # Try to store as precomputed
+            try:
+                with gzip.open(stops_precomputed, 'wb') as fd:
+                    pickle.dump(stops, fd)
+            except OSError:
+                logging.debug("Imposible to write precomputed stops here: {}".format(stops_precomputed))
+
+    return stops

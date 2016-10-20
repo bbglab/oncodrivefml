@@ -112,21 +112,50 @@ subs = True
 # Do not compute the substitutions
 #subs = False
 
+
+
+
     # Insertions and deletions
     [[indels]]
         # Use indels
         enabled = True
 
+        # Method to compute and simulate the indels
+        # Use the pattern of changes produced by the indel to
+        # compute the substitutions and simlate the same type of changes
+        method = pattern
+
+        # Use the stops scores to compute the scores of the indels in the gene
+        # Indels are simulated as substitutions
+        #method = stop
+
+
+        # Distinguish between frame shift and in frame indels (for coding regions)
+        #enable_frame = True
+        enable_frame = False
+
+
+        # Pattern method configuration
         # Widow size
         window_size = 10
 
         # Function to weight the scores within the window size but outside the indel size
         weight_function = 'constant'
-        weight_function = 'linear'
-        weight_function = 'logistic'
+        #weight_function = 'linear'
+        #weight_function = 'logistic'
 
-        # Distinguish between frame shift and in frame indels (for coding regions)
-        frame_shift = boolean(default=False)
+        # Stop method configuration
+        # Function used on the scores of the stops to compute the indel scores
+        stop_function = mean
+        #stop_function = median
+        #stop_function = random
+        #stop_function = random_choice
+
+        # File with the position and nucleotides of the stops
+        stops_file = path/to/file.txt
+
+
+
 
 [settings]
 

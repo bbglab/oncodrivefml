@@ -29,9 +29,14 @@ subs = boolean(default=True)
 
     [[indels]]
         enabled = boolean(default=False)
+        method = option('pattern', 'stop', default='pattern')
+        enable_frame = boolean(default=False)
+
         window_size = integer(default=10)
         weight_function = option('constant', 'linear', 'logistic', default='linear')
-        frame_shift = boolean(default=False)
+
+        stop_function = option('mean', 'median', 'random', 'random_choice', default='mean')
+        stops_file = string(default=None)
 
 [settings]
 cores = integer(default=None)

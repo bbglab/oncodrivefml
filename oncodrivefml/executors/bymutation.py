@@ -142,10 +142,11 @@ class GroupByMutationExecutor(ElementExecutor):
     Indels where the sequence is repeated a predefined number of times are
     discarded.
     """
-    def __init__(self, element_id, muts, segments, signature, config):
+    def __init__(self, element_id, muts, segments, signature, config, stops=None):
         # Input attributes
         self.name = element_id
         self.indels = config['statistic']['indels'].get('enabled', False)
+        self.indels_conf = config['statistic']['indels']
         subs = config['statistic'].get('subs', False)
 
         if subs and self.indels:
@@ -173,6 +174,8 @@ class GroupByMutationExecutor(ElementExecutor):
         self.result = None
         self.scores = None
 
+        self.stops = stops
+
     def run(self):
         """
         Loads the scores and compute the statistics for the observed mutations.
@@ -190,10 +193,12 @@ class GroupByMutationExecutor(ElementExecutor):
         """
 
         # Load element scores
-        self.scores = Scores(self.name, self.segments, self.score_config)
+        self.scores = Scores(self.name, self.segments, self.score_config,
+                             self.stops if self.stops is not None else False)
 
         if self.indels:
-            self.indels = Indel(self.scores, 'pattern', self.is_positive_strand)
+            self.indels = Indel(self.scores, self.signature, self.signature_column,
+                                self.indels_conf['method'], self.is_positive_strand)
 
         # Compute observed mutations statistics and scores
         self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels)
@@ -225,12 +230,9 @@ class GroupByMutationExecutor(ElementExecutor):
                                 simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
 
                 else: #indels
-                    #TODO change the method to compute first the position and then the scores only for those
-                    signature = None
-
                     sampling_positions = positions
 
-                    simulation_scores = self.indels.get_background_indel_scores(mut, sampling_positions)
+                    simulation_scores, simulation_signature = self.indels.get_background_indel_scores(mut, sampling_positions)
 
 
                     if len(simulation_scores) < 100:
@@ -238,7 +240,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 simulation_scores = np.array(simulation_scores)
 
-                if signature is not None:
+                if signature is not None and simulation_signature is not None:
                     simulation_signature = np.array(simulation_signature)
                     simulation_signature = simulation_signature / simulation_signature.sum()
                 else:
