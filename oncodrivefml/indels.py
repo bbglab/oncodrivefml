@@ -117,7 +117,7 @@ class Indel:
             self.get_background_indel_scores = self.get_background_indel_scores_from_pattern
             self.get_indel_score = self.get_indel_score_from_pattern
         elif method == "stop":
-            self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions
+            self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions_without_signature
             self.get_indel_score = self.get_indel_score_from_stop
             self.scores.get_stop_scores()
 
@@ -298,6 +298,13 @@ class Indel:
                         self.signature[mutation.get(self.signature_id, self.signature_id)].get(
                             (s.ref_triplet, s.alt_triplet), 0.0))
         return indel_scores, signatures
+
+    def get_background_indel_scores_as_substitutions_without_signature(self, mutation, positions):
+        indel_scores = []
+        for pos in positions:
+            for s in self.scores.get_score_by_position(pos):
+                indel_scores.append(s.value)
+        return indel_scores, None
 
     def not_found(self, mutation):
         return np.nan
