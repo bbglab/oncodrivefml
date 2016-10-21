@@ -119,11 +119,7 @@ class Indel:
         elif method == "stop":
             self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions
             self.get_indel_score = self.get_indel_score_from_stop
-            try:
-                s = self.scores.stop_scores
-            except AttributeError:
-                logging.warning("The scores object does not have the score of the stops. Indels are being discarded")
-                self.get_indel_score = self.not_found
+            self.scores.get_stop_scores()
 
     @staticmethod
     def is_frameshift(size):

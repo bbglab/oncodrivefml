@@ -8,6 +8,8 @@ The scores are read from a file.
 
 import logging
 import tabix
+
+import bgdata
 import numpy as np
 
 from typing import List
@@ -67,7 +69,7 @@ class Scores(object):
                     }
     """
 
-    def __init__(self, element: str, segments: list, config: dict, stops=False):
+    def __init__(self, element: str, segments: list, config: dict):
 
         self.element = element
         self.segments = segments
@@ -86,13 +88,9 @@ class Scores(object):
         # Scores to load
         self.scores_by_pos = defaultdict(list)
 
-        self.stops = stops
-
         # Initialize background scores
         self._load_scores()
 
-        if stops is not False:
-            self._get_stop_scores(stops)
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
         """
@@ -202,7 +200,31 @@ class Scores(object):
                 continue
 
 
-    def _get_stop_scores(self, stops):
+    def get_stop_scores(self):
+        stops = defaultdict(list)
+        #TODO get the scores file
+        # stops_file = '/home/iker/Desktop/cds_stop/cds_stops.bgz'
+        stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
+
+        tb = tabix.open(stops_file)
+        for region in self.segments:
+            try:
+                for row in tb.query(region['chrom'], region['start'] - 1, region['stop']):
+                    pos = int(row[1])
+                    ref = row[2]
+                    alt = row[3]
+                    element_id = row[4]
+
+                    if element_id != self.element:
+                        continue
+
+                    stops[pos].append(alt)
+
+            except tabix.TabixError:
+                logging.warning(
+                    "Tabix error at {}='{}:{}-{}'".format(self.element, region['chrom'], region['start'] - 1, region['stop']))
+                continue
+
         self.stop_scores = []
         if len(stops) > 3:
             # if more than 3 positions have stops we get the stop value from those

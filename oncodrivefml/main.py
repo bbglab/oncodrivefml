@@ -12,7 +12,7 @@ from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
-from oncodrivefml.load import load_and_map_variants, load_mutations, load_stops_file
+from oncodrivefml.load import load_and_map_variants, load_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations
@@ -64,7 +64,6 @@ class OncodriveFML(object):
 
         self.debug = False
 
-        self.stops = None
 
 
     def create_element_executor(self, element_id, muts_for_an_element):
@@ -88,8 +87,7 @@ class OncodriveFML(object):
             return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
 
         return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
-                                       self.configuration,
-                                       self.stops.get(element_id, {}) if self.stops is not None else None)
+                                       self.configuration)
 
     def run(self):
         """
@@ -121,10 +119,6 @@ class OncodriveFML(object):
         self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
                                          blacklist=self.blacklist, save_pickle=self.save_pickle)
 
-
-        if self.configuration['statistic']['indels'].get('method', None) == 'stop' and \
-            self.configuration['statistic']['indels'].get('stops_file', None) is not None:
-            self.stops = load_stops_file(self.configuration['statistic']['indels']['stops_file'], self.save_pickle)
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for

@@ -142,7 +142,7 @@ class GroupByMutationExecutor(ElementExecutor):
     Indels where the sequence is repeated a predefined number of times are
     discarded.
     """
-    def __init__(self, element_id, muts, segments, signature, config, stops=None):
+    def __init__(self, element_id, muts, segments, signature, config):
         # Input attributes
         self.name = element_id
         self.indels = config['statistic']['indels'].get('enabled', False)
@@ -174,8 +174,6 @@ class GroupByMutationExecutor(ElementExecutor):
         self.result = None
         self.scores = None
 
-        self.stops = stops
-
     def run(self):
         """
         Loads the scores and compute the statistics for the observed mutations.
@@ -193,8 +191,7 @@ class GroupByMutationExecutor(ElementExecutor):
         """
 
         # Load element scores
-        self.scores = Scores(self.name, self.segments, self.score_config,
-                             self.stops if self.stops is not None else False)
+        self.scores = Scores(self.name, self.segments, self.score_config)
 
         if self.indels:
             self.indels = Indel(self.scores, self.signature, self.signature_column,

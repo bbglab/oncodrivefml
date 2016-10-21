@@ -36,7 +36,6 @@ subs = boolean(default=True)
         weight_function = option('constant', 'linear', 'logistic', default='linear')
 
         stop_function = option('mean', 'median', 'random', 'random_choice', default='mean')
-        stops_file = string(default=None)
 
 [settings]
 cores = integer(default=None)

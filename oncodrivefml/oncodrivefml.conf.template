@@ -151,8 +151,6 @@ subs = True
         #stop_function = random
         #stop_function = random_choice
 
-        # File with the position and nucleotides of the stops
-        stops_file = path/to/file.txt
 
 
 
