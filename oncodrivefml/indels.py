@@ -306,6 +306,9 @@ class Indel:
                 indel_scores.append(s.value)
         return indel_scores, None
 
+    def get_stops_values(self):
+        return self.scores.stop_scores
+
     def not_found(self, mutation):
         return np.nan
 

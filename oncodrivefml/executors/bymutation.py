@@ -174,6 +174,9 @@ class GroupByMutationExecutor(ElementExecutor):
         self.result = None
         self.scores = None
 
+        self.p_subs = config['p_subs']
+        self.p_indels = config['p_indels']
+
     def run(self):
         """
         Loads the scores and compute the statistics for the observed mutations.
@@ -203,50 +206,94 @@ class GroupByMutationExecutor(ElementExecutor):
 
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
-            observed = []
-            background = []
+            # observed = []
+            # background = []
+            #
+            # for mut in self.result['mutations']:
+            #
+            #     simulation_scores = []
+            #     simulation_signature = []
+            #
+            #     if self.simulation_range is not None:
+            #         positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
+            #     else:
+            #         positions = self.scores.get_all_positions()
+            #
+            #     signature = self.signature
+            #
+            #     if mut['TYPE'] == 'subs':
+            #         for pos in positions:
+            #             for s in self.scores.get_score_by_position(pos):
+            #                 simulation_scores.append(s.value)
+            #                 #TODO KeyError
+            #                 if signature is not None:
+            #                     simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
+            #
+            #     else: #indels
+            #         sampling_positions = positions
+            #
+            #         simulation_scores, simulation_signature = self.indels.get_background_indel_scores(mut, sampling_positions)
+            #
+            #
+            #         if len(simulation_scores) < 100:
+            #             logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
+            #
+            #     simulation_scores = np.array(simulation_scores)
+            #
+            #     if signature is not None and simulation_signature is not None:
+            #         simulation_signature = np.array(simulation_signature)
+            #         simulation_signature = simulation_signature / simulation_signature.sum()
+            #     else:
+            #         simulation_signature = None
+            #
+            #     observed.append(mut['SCORE'])
+            #     background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
 
-            for mut in self.result['mutations']:
-
-                simulation_scores = []
-                simulation_signature = []
-
-                if self.simulation_range is not None:
-                    positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
-                else:
-                    positions = self.scores.get_all_positions()
-
-                signature = self.signature
-
-                if mut['TYPE'] == 'subs':
-                    for pos in positions:
-                        for s in self.scores.get_score_by_position(pos):
-                            simulation_scores.append(s.value)
-                            #TODO KeyError
-                            if signature is not None:
-                                simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
-
-                else: #indels
-                    sampling_positions = positions
-
-                    simulation_scores, simulation_signature = self.indels.get_background_indel_scores(mut, sampling_positions)
+            observed= []
+            subs_scores = []
+            subs_probs = []
+            indels_scores = []
+            indels_probs = []
 
 
-                    if len(simulation_scores) < 100:
-                        logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
+            if self.signature is not None:
+                signature_id = ''
+                for mut in self.result['mutations']:
+                    observed.append(mut['SCORE'])
+                    if signature_id == '':
+                        signature_id = mut.get(self.signature_column, self.signature_column)
+                    elif signature_id != mut.get(self.signature_column, self.signature_column):
+                        #TODO add support for multiple CANCER TYPES
+                        signature_id = None
+            else:
+                signature_id = None
 
-                simulation_scores = np.array(simulation_scores)
 
-                if signature is not None and simulation_signature is not None:
-                    simulation_signature = np.array(simulation_signature)
-                    simulation_signature = simulation_signature / simulation_signature.sum()
-                else:
-                    simulation_signature = None
+            positions = self.scores.get_all_positions()
+            for pos in positions:
+                for s in self.scores.get_score_by_position(pos):
+                    subs_scores.append(s.value)
+                    if signature_id is not None:
+                        subs_probs.append(self.signature[signature_id].get((s.ref_triplet, s.alt_triplet), 0.0))
 
-                observed.append(mut['SCORE'])
-                background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
+            indels_scores = self.indels.get_stops_values()
 
-            self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
+
+            if len(subs_probs) > 0:
+                tot = sum(subs_probs)
+                subs_probs = [v*self.p_subs/tot for v in subs_probs]
+            else:
+                subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores)
+            if len(indels_scores) > 0:
+                indels_probs = [ self.p_indels/len(indels_scores)] * len(indels_scores)
+
+            simulation_scores = subs_scores + indels_scores
+            simulation_probs = subs_probs + indels_probs
+
+            background = np.random.choice(simulation_scores, size=(self.sampling_size, len(self.result['mutations'])), p=simulation_probs, replace=True)
+
+
+            self.obs, self.neg_obs = statistic_test.calc_observed(background, np.array(observed))
 
         # Calculate p-values
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)

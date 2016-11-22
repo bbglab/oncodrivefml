@@ -12,7 +12,7 @@ from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
-from oncodrivefml.load import load_and_map_variants, load_mutations
+from oncodrivefml.load import load_and_map_variants, load_mutations, count_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations
@@ -106,6 +106,23 @@ class OncodriveFML(object):
                                                               self.elements_file,
                                                               blacklist=self.blacklist,
                                                               save_pickle=self.save_pickle)
+
+
+        # indels_counter = 0
+        # subs_counter = 0
+        # for elem, mutations  in self.mutations.items():
+        #     for m in mutations:
+        #         if m['TYPE'] == 'indel':
+        #             indels_counter += 1
+        #         else:
+        #             subs_counter += 1
+        subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
+
+        p_indels = indels_counter/(indels_counter + subs_counter)
+        p_subs = subs_counter/(subs_counter + indels_counter)
+
+        self.configuration['p_indels'] = p_indels
+        self.configuration['p_subs'] = p_subs
 
 
 

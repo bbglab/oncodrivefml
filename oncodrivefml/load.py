@@ -368,3 +368,47 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
 
     return variants_dict, elements
+
+
+
+def count_mutations(file, show_warnings=True, blacklist=None):
+    samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
+
+    subs = 0
+    indels = 0
+
+    reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA)
+    all_errors = []
+    for ix, (row, errors) in enumerate(reader, start=1):
+        if len(errors) > 0:
+            if reader.line_num == 1:
+                # Most probable this is a file with a header
+                continue
+            all_errors += errors
+            continue
+
+        if row.get('SAMPLE', None) in samples_blacklisted:
+            continue
+
+        if row.get('TYPE', None) is None:
+            if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) > 1 or len(row['ALT']) > 1:
+                row['TYPE'] = 'indel'
+            else:
+                row['TYPE'] = 'subs'
+
+        if row['TYPE'] == 'indel':
+            indels +=1
+        else:
+            subs += 1
+
+    if show_warnings and len(all_errors) > 0:
+        logging.warning("There are {} errors at {}. {}".format(
+            len(all_errors), os.path.basename(file),
+            " I show you only the ten first errors." if len(all_errors) > 10 else ""
+        ))
+        for e in all_errors[:10]:
+            logging.warning(e)
+
+    reader.fd.close()
+
+    return subs, indels
