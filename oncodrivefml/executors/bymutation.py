@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 
 import numpy as np
 from oncodrivefml.scores import Scores
@@ -147,12 +148,12 @@ class GroupByMutationExecutor(ElementExecutor):
         self.name = element_id
         self.indels = config['statistic']['indels'].get('enabled', False)
         self.indels_conf = config['statistic']['indels']
-        subs = config['statistic'].get('subs', False)
+        self.subs = config['statistic'].get('subs', False)
 
-        if subs and self.indels:
+        if self.subs and self.indels:
             self.muts = muts
         else:
-            if subs:
+            if self.subs:
                 self.muts = [m for m in muts if m['TYPE'] == 'subs']
             else:
                 self.muts =[m for m in muts if m['TYPE'] == 'indel']
@@ -174,8 +175,8 @@ class GroupByMutationExecutor(ElementExecutor):
         self.result = None
         self.scores = None
 
-        self.p_subs = config['p_subs']
-        self.p_indels = config['p_indels']
+        self.p_subs = config['p_subs'] if self.indels else 1
+        self.p_indels = config['p_indels'] if self.subs else 1
 
     def run(self):
         """
@@ -255,40 +256,49 @@ class GroupByMutationExecutor(ElementExecutor):
             indels_scores = []
             indels_probs = []
 
+            subs_probs_by_signature = {}
+            signature_ids = []
 
-            if self.signature is not None:
-                signature_id = ''
-                for mut in self.result['mutations']:
-                    observed.append(mut['SCORE'])
-                    if signature_id == '':
+
+            for mut in self.result['mutations']:
+                observed.append(mut['SCORE']) # Observed mutations
+                if self.signature is not None:
+                    if mut['TYPE'] == 'subs':
                         signature_id = mut.get(self.signature_column, self.signature_column)
-                    elif signature_id != mut.get(self.signature_column, self.signature_column):
-                        #TODO add support for multiple CANCER TYPES
-                        signature_id = None
-            else:
-                signature_id = None
+                        if signature_id not in signature_ids:
+                            subs_probs_by_signature.update({signature_id: []})
+                        signature_ids.append(signature_id)
 
 
-            positions = self.scores.get_all_positions()
-            for pos in positions:
-                for s in self.scores.get_score_by_position(pos):
-                    subs_scores.append(s.value)
-                    if signature_id is not None:
-                        subs_probs.append(self.signature[signature_id].get((s.ref_triplet, s.alt_triplet), 0.0))
+            if self.subs is not False:
+                positions = self.scores.get_all_positions()
+                for pos in positions:
+                    for s in self.scores.get_score_by_position(pos):
+                        subs_scores.append(s.value)
+                        for k, v in subs_probs_by_signature.items():
+                            v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
 
-            indels_scores = self.indels.get_stops_values()
+            if self.indels is not False:
+                indels_scores = self.indels.get_stops_values() if self.indels is not False else []
 
 
-            if len(subs_probs) > 0:
+            if len(subs_probs_by_signature) > 0:
+                signature_ids_counter = Counter(signature_ids)
+                total_ids = len(signature_ids)
+                subs_probs = np.array([0.0]*len(subs_scores))
+                for k,v in subs_probs_by_signature.items():
+                    subs_probs += (np.array(v)*signature_ids_counter[k]/total_ids)
                 tot = sum(subs_probs)
-                subs_probs = [v*self.p_subs/tot for v in subs_probs]
+                subs_probs = subs_probs*self.p_subs/tot
             else:
-                subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores)
-            if len(indels_scores) > 0:
-                indels_probs = [ self.p_indels/len(indels_scores)] * len(indels_scores)
+                subs_probs = np.array([self.p_subs / len(subs_scores)] * len(subs_scores)) if len(subs_probs) > 0 else []
+
+            indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []
+
 
             simulation_scores = subs_scores + indels_scores
-            simulation_probs = subs_probs + indels_probs
+            simulation_probs = list(subs_probs) + indels_probs
+
 
             background = np.random.choice(simulation_scores, size=(self.sampling_size, len(self.result['mutations'])), p=simulation_probs, replace=True)
 

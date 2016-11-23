@@ -372,6 +372,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
 
 
 def count_mutations(file, show_warnings=True, blacklist=None):
+    logging.info('Counting subs and indels')
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
 
     subs = 0
