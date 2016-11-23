@@ -117,7 +117,7 @@ class Indel:
             self.get_background_indel_scores = self.get_background_indel_scores_from_pattern
             self.get_indel_score = self.get_indel_score_from_pattern
         elif method == "stop":
-            self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions_without_signature
+            self.get_background_indel_scores = self.get_background_indel_scores_as_stops
             self.get_indel_score = self.get_indel_score_from_stop
             self.scores.get_stop_scores()
 
@@ -226,20 +226,24 @@ class Indel:
         cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
         return max(cleaned_scores) if cleaned_scores else math.nan
 
-    def get_background_indel_scores_from_pattern(self, mutation, positions):
+    def get_background_indel_scores_from_pattern(self, mutations):
         indel_scores = []
-        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
-        length = Indel.compute_window_size(indel_size)
-        mutation_pattern = self.get_pattern(mutation, length)
+        for mutation in mutations:
+            mut_scores = []
+            indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+            length = Indel.compute_window_size(indel_size)
+            mutation_pattern = self.get_pattern(mutation, length)
 
-        for pos in positions:
-            score = self.get_indel_score_for_background_from_pattern(pos, length, mutation['CHROMOSOME'], mutation_pattern,
-                                                        indel_size)
+            for pos in self.scores.get_all_positions():
+                score = self.get_indel_score_for_background_from_pattern(pos, length, mutation['CHROMOSOME'], mutation_pattern,
+                                                            indel_size)
 
-            if not math.isnan(score):
-                indel_scores.append(score)
+                if not math.isnan(score):
+                    mut_scores.append(score)
 
-        return indel_scores, None
+            indel_scores += mut_scores
+
+        return indel_scores
 
     @staticmethod
     def compute_pattern(reference, alternate, length):
@@ -268,7 +272,6 @@ class Indel:
             new_seq += pattern_change[pattern[i]](sequence[i])
         return new_seq
 
-
     def get_indel_score_from_stop(self, mutation):
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
         if Indel.is_frameshift(indel_size):
@@ -287,26 +290,26 @@ class Indel:
             return max(cleaned_scores) if cleaned_scores else math.nan
 
 
-    def get_background_indel_scores_as_substitutions(self, mutation, positions):
+    # def get_background_indel_scores_as_substitutions(self, mutation, positions):
+    #     indel_scores = []
+    #     signatures = []
+    #     for pos in positions:
+    #         for s in self.scores.get_score_by_position(pos):
+    #             indel_scores.append(s.value)
+    #             if self.signature is not None:
+    #                 signatures.append(
+    #                     self.signature[mutation.get(self.signature_id, self.signature_id)].get(
+    #                         (s.ref_triplet, s.alt_triplet), 0.0))
+    #     return indel_scores, signatures
+
+    def get_background_indel_scores_as_substitutions_without_signature(self, **kwargs):
         indel_scores = []
-        signatures = []
-        for pos in positions:
+        for pos in self.scores.get_all_positions():
             for s in self.scores.get_score_by_position(pos):
                 indel_scores.append(s.value)
-                if self.signature is not None:
-                    signatures.append(
-                        self.signature[mutation.get(self.signature_id, self.signature_id)].get(
-                            (s.ref_triplet, s.alt_triplet), 0.0))
-        return indel_scores, signatures
+        return indel_scores
 
-    def get_background_indel_scores_as_substitutions_without_signature(self, mutation, positions):
-        indel_scores = []
-        for pos in positions:
-            for s in self.scores.get_score_by_position(pos):
-                indel_scores.append(s.value)
-        return indel_scores, None
-
-    def get_stops_values(self):
+    def get_background_indel_scores_as_stops(self, **kwargs):
         return self.scores.stop_scores
 
     def not_found(self, mutation):

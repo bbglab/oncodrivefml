@@ -21,11 +21,12 @@ extra = integer(default=None)
 [background]
 sampling = integer
 recurrence = boolean
-range = integer(default=None)
 
 [statistic]
 method = option('amean', 'gmean', 'maxmean', 'amean_scoresmodif')
 subs = boolean(default=True)
+
+use_gene_mutations = boolean(default=True)
 
     [[indels]]
         enabled = boolean(default=False)

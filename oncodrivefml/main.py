@@ -108,21 +108,18 @@ class OncodriveFML(object):
                                                               save_pickle=self.save_pickle)
 
 
-        # indels_counter = 0
-        # subs_counter = 0
-        # for elem, mutations  in self.mutations.items():
-        #     for m in mutations:
-        #         if m['TYPE'] == 'indel':
-        #             indels_counter += 1
-        #         else:
-        #             subs_counter += 1
-        subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
+        if not self.configuration['statistic'].get('use_gene_mutations', True):
+            subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
 
-        p_indels = indels_counter/(indels_counter + subs_counter)
-        p_subs = subs_counter/(subs_counter + indels_counter)
+            p_indels = indels_counter/(indels_counter + subs_counter)
+            p_subs = subs_counter/(subs_counter + indels_counter)
 
-        self.configuration['p_indels'] = p_indels
-        self.configuration['p_subs'] = p_subs
+            self.configuration['p_indels'] = p_indels
+            self.configuration['p_subs'] = p_subs
+
+        else:
+            self.configuration['p_indels'] = None
+            self.configuration['p_subs'] = None
 
 
 
