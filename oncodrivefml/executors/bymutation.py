@@ -176,8 +176,8 @@ class GroupByMutationExecutor(ElementExecutor):
         self.result = None
         self.scores = None
 
-        self.p_subs = config.get('p_subs', None) if self.use_indels else 1
-        self.p_indels = config.get('p_indels', None) if self.use_subs else 1
+        self.p_subs = config['p_subs']
+        self.p_indels = config['p_indels']
 
     def run(self):
         """
@@ -235,7 +235,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
             # When the probabilities of subs and indels are None, they are taken from
             # mutations seen in the gene
-            if self.p_subs is None or self.p_indels is None: # use the probabilities based on obseved mutations
+            if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
                 self.p_subs = self.result['subs'] / len(self.result['mutations'])
                 self.p_indels = 1 - self.p_subs
 
@@ -262,6 +262,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
             if self.use_indels and self.p_indels > 0:
                 indels_scores = indels.get_background_indel_scores(mutations=[m for m in self.result['mutations'] if m['TYPE'] == 'indel'])
+
 
                 # All indels have the same probability
                 indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []

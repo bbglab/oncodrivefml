@@ -108,18 +108,25 @@ class OncodriveFML(object):
                                                               save_pickle=self.save_pickle)
 
 
-        if not self.configuration['statistic'].get('use_gene_mutations', True):
-            subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
-
-            p_indels = indels_counter/(indels_counter + subs_counter)
-            p_subs = subs_counter/(subs_counter + indels_counter)
-
-            self.configuration['p_indels'] = p_indels
-            self.configuration['p_subs'] = p_subs
-
-        else:
+        if self.configuration['statistic'].get('use_gene_mutations', True):
             self.configuration['p_indels'] = None
             self.configuration['p_subs'] = None
+
+        else:
+            if self.configuration['statistic'].get('subs', False) and\
+                self.configuration['statistic']['indels'].get('enabled', False):
+                # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
+                subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
+
+                p_indels = indels_counter/(indels_counter + subs_counter)
+                p_subs = subs_counter/(subs_counter + indels_counter)
+
+                self.configuration['p_indels'] = p_indels
+                self.configuration['p_subs'] = p_subs
+            else:
+                self.configuration['p_indels'] = 1
+                self.configuration['p_subs'] = 1
+
 
 
 

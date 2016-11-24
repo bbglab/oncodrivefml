@@ -243,6 +243,10 @@ class Indel:
 
             indel_scores += mut_scores
 
+        if indel_scores == []:#TODO decide the best way to hadle this
+            # When no mutations are given, simulate the results as substitutions
+            indel_scores = self.get_background_indel_scores_as_substitutions_without_signature()
+
         return indel_scores
 
     @staticmethod
@@ -311,6 +315,7 @@ class Indel:
 
     def get_background_indel_scores_as_stops(self, **kwargs):
         return self.scores.stop_scores
+
 
     def not_found(self, mutation):
         return np.nan
