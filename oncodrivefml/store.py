@@ -61,7 +61,7 @@ class QQPlot(object):
 
     def __load_values(self, input_file, rename_fields=None):
         """
-        Load the values for the plot as a :obj:`pandas.DataFrame`
+        Load the values for the plot as a :obj:`~pandas.DataFrame`
 
         Args:
             input_file: tsv file with data
@@ -351,7 +351,7 @@ def store_png(input_file, output_file, showit=False):
     Args:
         input_file: tsv file with the results
         output_file: file where to store the figure
-        showit (bool): calls :func:`matplotlib.pyplot.show` before returning.
+        showit (bool): calls :func:`~matplotlib.pyplot.show` before returning.
             Defaults to False.
 
     """
@@ -522,7 +522,7 @@ def store_html(input_file, output_path):
     Args:
         input_file: tsv filw with the data
         output_path: file where to store the graph
-        showit (bool): defaults to False. See :meth:`oncodrivefml.store.QQPlot.show`.
+        showit (bool): defaults to False. See :meth:`~oncodrivefml.store.QQPlot.show`.
 
     """
 
@@ -542,7 +542,7 @@ def store_tsv(results, result_file):
     Saves the results in a tsv file sorted by pvalue
 
     Args:
-        results (:obj:`pandas.DataFrame`): results of the analysis
+        results (:obj:`~pandas.DataFrame`): results of the analysis
         result_file: file where to store the results
 
     """

@@ -102,9 +102,9 @@ def load_mutations(file, show_warnings=True, blacklist=None):
     """
 
     Args:
-        file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
         show_warnings (bool, optional): Defaults to True.
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
+        blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
             Defaults to None.
 
     Yields:
@@ -232,9 +232,9 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     mutations grouped in the same way.
 
     Args:
-        variants_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
-        elements_file: elements file (see :class:`oncodrivefml.main.OncodriveFML`)
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
+        variants_file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
+        elements_file: elements file (see :class:`~oncodrivefml.main.OncodriveFML`)
+        blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:

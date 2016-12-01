@@ -26,8 +26,8 @@ class OncodriveFML(object):
     """
 
     Args:
-       mutations_file: Mutations input file (see :mod:`oncodrivefml.load` for details)
-       elements_file: Genomic element input file (see :mod:`oncodrivefml.load` for details)
+       mutations_file: Mutations input file (see :mod:`~oncodrivefml.load` for details)
+       elements_file: Genomic element input file (see :mod:`~oncodrivefml.load` for details)
        output_folder: Folder where the results will be store
        configuration_file: Configuration file (see :ref:`configuration <project configuration>`)
        blacklist: File with sample ids (one per line) to remove when loading the input file
@@ -69,17 +69,17 @@ class OncodriveFML(object):
     def create_element_executor(self, element_id, muts_for_an_element):
         """
         To enable paralelization, for each element ID,
-        one :class:`oncodrivefml.executors.bymutation.ElementExecutor` is created.
+        one :class:`~oncodrivefml.executors.bymutation.ElementExecutor` is created.
 
         Args:
             element_id (str): ID of the element
             muts_for_an_element (list): list with all the mutations observed in the element
 
         Returns:
-            :class:`oncodrivefml.executors.bymutation.ElementExecutor`:
-            returns :class:`oncodrivefml.executors.bymutation.GroupByMutationExecutor` if
+            :class:`~oncodrivefml.executors.bymutation.ElementExecutor`:
+            returns :class:`~oncodrivefml.executors.bymutation.GroupByMutationExecutor` if
             the statistic_method indicated in the configuration is not 'max-mean';
-            :class:`oncodrivefml.executors.bysamplen.GroupBySampleExecutor` otherwise.
+            :class:`~oncodrivefml.executors.bysamplen.GroupBySampleExecutor` otherwise.
 
 
         """
@@ -190,7 +190,7 @@ class OncodriveFML(object):
 
 def cmdline():
     """
-    Parses the command and runs the analysis. See :meth:`OncodriveFML.run`.
+    Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
 
     Required arguments:
 

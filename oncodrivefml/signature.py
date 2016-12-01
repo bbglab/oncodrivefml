@@ -216,10 +216,10 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False,
 
     Args:
         signature_function: function that yields one mutation each time
-        classifier (str): passed to :func:`oncodrivefml.load.load_mutations`
+        classifier (str): passed to :func:`~oncodrivefml.load.load_mutations`
             as parameter ``signature_classifier``.
-        blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
-            Used by :func:`oncodrivefml.load.load_mutations`
+        blacklist: file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
+            Used by :func:`~oncodrivefml.load.load_mutations`
         collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
 
     Returns:
@@ -278,8 +278,8 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
         mutations_file: mutations file
         signature_function: function that yields one mutation each time
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
-            Used by :func:`oncodrivefml.load.load_mutations`
+        blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
+            Used by :func:`~oncodrivefml.load.load_mutations`
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
