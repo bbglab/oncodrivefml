@@ -50,6 +50,24 @@ class ElementExecutor(object):
                         total_subs_score += 1
                         break
 
+            if m['TYPE'] == "MNP":
+                subs_counter += 1  #It is counted as a single substitution
+                pos = int(m['POSITION'])
+                mnp_scores = []
+                for index, nucleotides in enumerate(zip(m['REF'], m['ALT'])):
+                    ref_nucleotide, alt_nucleotide = nucleotides
+                    values = scores.get_score_by_position(pos+index)
+                    for v in values:
+                        if v.ref == ref_nucleotide and v.alt == alt_nucleotide:
+                            mnp_scores.append(v.value)
+                            break
+                    else:
+                        logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, m['CHROMOSOME']))
+                if not mnp_scores:
+                    continue
+                m['SCORE'] = max(mnp_scores)
+                m['POSITION'] = pos + mnp_scores.index(m['SCORE'])
+
             if indels is not False and m['TYPE'] == "indel":
 
                 # very long indels are discarded
@@ -148,14 +166,17 @@ class GroupByMutationExecutor(ElementExecutor):
         self.name = element_id
         self.use_indels = config['statistic']['indels'].get('enabled', False)
         self.indels_conf = config['statistic']['indels']
-        self.use_subs = config['statistic'].get('subs', False)
+        self.use_subs = config['statistic'].get('subs', True)
+        self.use_mnp = config['statistic'].get('mnp', True)
 
-        self.muts = []
-        if self.use_subs and self.use_indels:
+        if self.use_subs and self.use_indels and self.use_mnp:
             self.muts = muts
         else:
+            self.muts = []
             if self.use_subs:
                 self.muts += [m for m in muts if m['TYPE'] == 'subs']
+            if self.use_mnp:
+                self.muts += [m for m in muts if m['TYPE'] == 'MNP']
             if self.use_indels:
                 self.muts += [m for m in muts if m['TYPE'] == 'indel']
 
@@ -224,7 +245,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
             for mut in self.result['mutations']:
                 observed.append(mut['SCORE']) # Observed mutations
-                if mut['TYPE'] == 'subs':
+                if mut['TYPE'] == 'subs' or mut['TYPE']=='MNP':
                     if self.signature is not None:
                         # Count how many signature ids are and prepare a vector for each
                         # IMPORTANT: this implies that only the signature of the observed mutations is taken into account

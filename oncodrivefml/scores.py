@@ -202,7 +202,6 @@ class Scores(object):
 
     def get_stop_scores(self):
         stops = defaultdict(list)
-        #TODO get the scores file
         # stops_file = '/home/iker/Desktop/cds_stop/cds_stops.bgz'
         stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
 

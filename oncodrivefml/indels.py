@@ -120,6 +120,10 @@ class Indel:
             self.get_background_indel_scores = self.get_background_indel_scores_as_stops
             self.get_indel_score = self.get_indel_score_from_stop
             self.scores.get_stop_scores()
+        elif method == 'max':
+            self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions_without_signature
+            self.get_indel_score = self.get_indel_score_max_of_subs
+
 
     @staticmethod
     def is_frameshift(size):
@@ -198,11 +202,28 @@ class Indel:
 
         indel_scores = self.compute_scores(ref, alt, init_pos, indel_window_size)
 
+        cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
+        return max(cleaned_scores) if cleaned_scores else math.nan
+
+    def get_indel_score_max_of_subs(self, mutation):
+        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+        position = int(mutation['POSITION'])
+
+        indel_window_size = indel_size
+
+        ref, alt = self.get_mutation_sequences(mutation, indel_window_size)
+
+        if self.has_positive_strand:
+            init_pos = position
+        else:
+            init_pos = position - indel_window_size
+
+        indel_scores = self.compute_scores(ref, alt, init_pos, indel_window_size)
+
         indel_scores = self.weight(indel_scores, indel_size, indel_window_size)
 
         cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
         return max(cleaned_scores) if cleaned_scores else math.nan
-
 
     def get_indel_score_substitutions(self, mutation, mutation_position):
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
