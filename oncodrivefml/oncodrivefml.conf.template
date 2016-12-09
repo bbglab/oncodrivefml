@@ -26,6 +26,13 @@ method = full
 # or leave it empty to use the whole dataset
 
 
+# Include MNP mutation in the signature
+# include_mnp = True
+
+# Do not include MNP mutations
+include_mnp = False
+
+
 # Choose if the signature must be computed using only the elements
 # that fall into the regions you are analysing:
 
@@ -39,13 +46,15 @@ method = full
 # Choose if the signature you want to correct the signature
 # by the number of sites:
 
-# True: correct the signature (if the use_only_mapped_mutations flag is used
-# the signature is corrected using the counts of triplets of the segments in the
-# regions file)
-# correct_signature_by_sites = True
+# genomic: correct the signature for the whole genome counts
+# correct_signature_by_sites = genomic
 
-# False: do not correct
-# correct_signature_by_sites = False
+# coding: correct the signature for counts in coding regions
+# use this option if your mutations file contains only mutations from coding regions
+# correct_signature_by_sites = coding
+
+# None: do not correct
+# comment the option
 
 
 
@@ -103,9 +112,6 @@ score = 5
 # Size of the sampling
 sampling = 100000
 
-# Randomization range. Maximum distance where do you want to simulate a mutation
-range = 1000
-
 # If true all the recurrent mutations will be use, if false only one mutation per position will be use.
 recurrence = True
 
@@ -124,21 +130,56 @@ subs = True
 # Do not compute the substitutions
 #subs = False
 
+# Compute the MNP mutations
+# Must be used in conjunction with subs=True
+mnp = True
+
+# Do not compute the MNP mutations
+#mnp = False
+
     # Insertions and deletions
     [[indels]]
         # Use indels
         enabled = True
 
+        # Method to compute and simulate the indels
+        # Use the pattern of changes produced by the indel to
+        # compute the substitutions and simlate the same type of changes
+        method = pattern
+
+        # Use the stops scores to compute the scores of the indels in the gene
+        # Indels are simulated as substitutions
+        #method = stop
+
+        # Use the max of the substitution in the indel as the score
+        # Indels are simulated as substitutions without signature
+        #method = max
+
+
+        # Distinguish between frame shift and in frame indels (for coding regions)
+        #enable_frame = True
+        enable_frame = False
+
+
+        # Pattern method configuration
         # Widow size
         window_size = 10
 
         # Function to weight the scores within the window size but outside the indel size
         weight_function = 'constant'
-        weight_function = 'linear'
-        weight_function = 'logistic'
+        #weight_function = 'linear'
+        #weight_function = 'logistic'
 
-        # In frame shifts considered
-        in_frame_shift = boolean(default=False)
+        # Stop method configuration
+        # Function used on the scores of the stops to compute the indel scores
+        stop_function = mean
+        #stop_function = median
+        #stop_function = random
+        #stop_function = random_choice
+
+
+
+
 
 [settings]
 

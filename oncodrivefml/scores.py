@@ -9,6 +9,9 @@ The scores are read from a file.
 import logging
 import tabix
 
+import bgdata
+import numpy as np
+
 from typing import List
 from collections import defaultdict, namedtuple
 from oncodrivefml.signature import get_ref_triplet
@@ -76,8 +79,8 @@ class Scores(object):
         self.conf_score = config['score']
         self.conf_chr = config['chr']
         self.conf_chr_prefix = config['chr_prefix']
-        self.conf_ref = config['ref']
-        self.conf_alt = config['alt']
+        self.conf_ref = config.get('ref', None)
+        self.conf_alt = config.get('alt', None)
         self.conf_pos = config['pos']
         self.conf_element = config.get('element', None)
         self.conf_extra = config.get('extra', None)
@@ -87,6 +90,7 @@ class Scores(object):
 
         # Initialize background scores
         self._load_scores()
+
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
         """
@@ -161,13 +165,24 @@ class Scores(object):
                         if row[self.conf_element] != self.element:
                             continue
 
-                    value = self._read_score(row)
+                    try:
+                        value = self._read_score(row)
+                    except IndexError:
+                        continue
 
-                    ref = row[self.conf_ref]
-                    alt = row[self.conf_alt]
+                    if self.conf_alt is None:
+                        alt = None
+                    else:
+                        alt = row[self.conf_alt]
+
                     pos = int(row[self.conf_pos])
 
                     ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
+
+                    if self.conf_ref is None:
+                        ref = ref_triplet[1]
+                    else:
+                        ref = row[self.conf_ref]
 
                     if ref is not None and ref_triplet[1] != ref:
                         logging.warning("Background mismatch at position %d at '%s'", int(row[self.conf_pos]), self.element)
@@ -179,6 +194,50 @@ class Scores(object):
                         alt_triplet = ref_triplet[0] + a + ref_triplet[2]
                         self.scores_by_pos[pos].append(ScoreValue(ref, a, value, ref_triplet, alt_triplet))
 
+
             except tabix.TabixError:
                 logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.conf_chr_prefix, region['chrom'], region['start']-1, region['stop']))
                 continue
+
+
+    def get_stop_scores(self):
+        stops = defaultdict(list)
+        # stops_file = '/home/iker/Desktop/cds_stop/cds_stops.bgz'
+        stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
+
+        tb = tabix.open(stops_file)
+        for region in self.segments:
+            try:
+                for row in tb.query(region['chrom'], region['start'] - 1, region['stop']):
+                    pos = int(row[1])
+                    ref = row[2]
+                    alt = row[3]
+                    element_id = row[4]
+
+                    if element_id != self.element:
+                        continue
+
+                    stops[pos].append(alt)
+
+            except tabix.TabixError:
+                logging.warning(
+                    "Tabix error at {}='{}:{}-{}'".format(self.element, region['chrom'], region['start'] - 1, region['stop']))
+                continue
+
+        self.stop_scores = []
+        if len(stops) > 3:
+            # if more than 3 positions have stops we get the stop value from those
+            for pos, alts in stops.items():
+                for s in self.get_score_by_position(pos):
+                    if s.alt in alts:
+                        self.stop_scores.append(s.value)
+        if len(self.stop_scores) < 3:
+            A = 8.9168668946147314
+            B = 0.082688007694096191
+            all_scores = []
+            positions = self.get_all_positions()
+            for pos in positions:
+                for s in self.get_score_by_position(pos):
+                    all_scores.append(s.value)
+            mean = np.mean(all_scores)
+            self.stop_scores = [A * np.exp(B * mean)]

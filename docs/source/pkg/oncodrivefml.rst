@@ -27,6 +27,14 @@ oncodrivefml.config module
     :undoc-members:
     :show-inheritance:
 
+oncodrivefml.indels module
+--------------------------
+
+.. automodule:: oncodrivefml.indels
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 oncodrivefml.load module
 ------------------------
 

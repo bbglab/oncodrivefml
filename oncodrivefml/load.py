@@ -91,7 +91,7 @@ MUTATIONS_SCHEMA = {
         'POSITION':   {'reader': 'int(x)', 'validator': 'x > 0'},
         'REF':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
         'ALT':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
-        'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel"]'},
+        'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel", "MNP"]'},
         'SAMPLE':     {'reader': 'str(x)'},
         'SIGNATURE':  {'reader': 'str(x)'}
     }
@@ -102,9 +102,9 @@ def load_mutations(file, show_warnings=True, blacklist=None):
     """
 
     Args:
-        file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
+        file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
         show_warnings (bool, optional): Defaults to True.
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
+        blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
             Defaults to None.
 
     Yields:
@@ -130,8 +130,10 @@ def load_mutations(file, show_warnings=True, blacklist=None):
             continue
 
         if row.get('TYPE', None) is None:
-            if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) > 1 or len(row['ALT']) > 1:
+            if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) != len(row['ALT']):
                 row['TYPE'] = 'indel'
+            elif len(row['REF']) == len(row['ALT']) and len(row['REF']) > 1:
+                row['TYPE'] = 'MNP'
             else:
                 row['TYPE'] = 'subs'
 
@@ -230,9 +232,9 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     mutations grouped in the same way.
 
     Args:
-        variants_file: mutations file (see :class:`oncodrivefml.main.OncodriveFML`)
-        elements_file: elements file (see :class:`oncodrivefml.main.OncodriveFML`)
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
+        variants_file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
+        elements_file: elements file (see :class:`~oncodrivefml.main.OncodriveFML`)
+        blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
@@ -368,3 +370,16 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
 
     return variants_dict, elements
+
+
+
+def count_mutations(file, show_warnings=True, blacklist=None):
+    logging.info('Counting subs and indels')
+    subs = 0
+    indels = 0
+    for mut in load_mutations(file, blacklist=blacklist):
+        if mut['TYPE'] == 'indel':
+            indels += 1
+        else:
+            subs += 1
+    return subs, indels

@@ -35,4 +35,3 @@ qvalue_neg
 
 symbol
     HGNC Symbol
-

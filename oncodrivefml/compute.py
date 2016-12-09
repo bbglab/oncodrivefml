@@ -1,13 +1,6 @@
-import gzip
-import logging
-import os
 import numpy as np
-import tabix
 from scipy import stats
 
-from collections import Counter, defaultdict
-from oncodrivefml.signature import get_ref_triplet
-from oncodrivefml.utils import defaultdict_list
 
 
 def gmean(a):
