@@ -1,4 +1,5 @@
 import logging
+from collections import Counter
 from collections import defaultdict
 
 import numpy as np
@@ -13,14 +14,14 @@ import math
 class ElementExecutor(object):
 
     @staticmethod
-    def compute_muts_statistics(muts, scores, indels=False, positive_strand=True, only_max_per_sample=False):
+    def compute_muts_statistics(muts, scores, indels=False, only_max_per_sample=False):
         """
         Gets the score of each mutation
 
         Args:
             muts (list): list of mutations
             scores (dict): scores for all possible substitutions
-            indels (bool): are indels taken into account or not. Default to False.
+            indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise.
             positive_strand (bool): the element where the mutations occur has positive strand or not. Defaults to True.
 
         Returns:
@@ -49,13 +50,30 @@ class ElementExecutor(object):
                         m['SCORE'] = v.value
                         break
 
-            if indels and m['TYPE'] == "indel":
+            if m['TYPE'] == "MNP":
+                pos = int(m['POSITION'])
+                mnp_scores = []
+                for index, nucleotides in enumerate(zip(m['REF'], m['ALT'])):
+                    ref_nucleotide, alt_nucleotide = nucleotides
+                    values = scores.get_score_by_position(pos+index)
+                    for v in values:
+                        if v.ref == ref_nucleotide and v.alt == alt_nucleotide:
+                            mnp_scores.append(v.value)
+                            break
+                    else:
+                        logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, m['CHROMOSOME']))
+                if not mnp_scores:
+                    continue
+                m['SCORE'] = max(mnp_scores)
+                m['POSITION'] = pos + mnp_scores.index(m['SCORE'])
+
+            if indels is not False and m['TYPE'] == "indel":
 
                 # very long indels are discarded
                 if max(len(m['REF']), len(m['ALT'])) > 20:
                     continue
 
-                score = Indel.get_indel_score(m, scores, int(m['POSITION']), positive_strand)
+                score = indels.get_indel_score(m)
 
                 m['SCORE'] = score if not math.isnan(score) else None
 
@@ -66,7 +84,7 @@ class ElementExecutor(object):
 
                 if only_max_per_sample:
 
-                    if sample not in scores_by_sample.keys() or m['SCORE'] > max(scores_by_sample[sample]):
+                    if sample not in mut_per_sample.keys() or m['SCORE'] > mut_per_sample[sample]['SCORE']:
                         mut_per_sample[sample] = m
 
                 else:
@@ -75,7 +93,7 @@ class ElementExecutor(object):
 
                     scores_list.append(m['SCORE'])
 
-                    if m['TYPE'] == "subs":
+                    if m['TYPE'] == "subs" or m['TYPE'] == "MNP":
                         amount_of_subs += 1
                     elif m['TYPE'] == "indel":
                         amount_of_indels += 1
@@ -89,7 +107,7 @@ class ElementExecutor(object):
 
                 scores_list.append(m['SCORE'])
 
-                if m['TYPE'] == "subs":
+                if m['TYPE'] == "subs" or m['TYPE'] == "MNP":
                     amount_of_subs += 1
                 elif m['TYPE'] == "indel":
                     amount_of_indels += 1
@@ -164,16 +182,21 @@ class GroupByMutationExecutor(ElementExecutor):
     def __init__(self, element_id, muts, segments, signature, config):
         # Input attributes
         self.name = element_id
-        self.indels = config['statistic']['indels'].get('enabled', False)
-        subs = config['statistic'].get('subs', False)
+        self.use_indels = config['statistic']['indels'].get('enabled', False)
+        self.indels_conf = config['statistic']['indels']
+        self.use_subs = config['statistic'].get('subs', True)
+        self.use_mnp = config['statistic'].get('mnp', True)
 
-        if subs and self.indels:
+        if self.use_subs and self.use_indels and self.use_mnp:
             self.muts = muts
         else:
-            if subs:
-                self.muts = [m for m in muts if m['TYPE'] == 'subs']
-            else:
-                self.muts =[m for m in muts if m['TYPE'] == 'indel']
+            self.muts = []
+            if self.use_subs:
+                self.muts += [m for m in muts if m['TYPE'] == 'subs']
+            if self.use_mnp:
+                self.muts += [m for m in muts if m['TYPE'] == 'MNP']
+            if self.use_indels:
+                self.muts += [m for m in muts if m['TYPE'] == 'indel']
 
         self.signature = signature
         self.segments = segments
@@ -192,6 +215,9 @@ class GroupByMutationExecutor(ElementExecutor):
         self.neg_obs = 0
         self.result = None
         self.scores = None
+
+        self.p_subs = config['p_subs']
+        self.p_indels = config['p_indels']
 
     def run(self):
         """
@@ -212,68 +238,84 @@ class GroupByMutationExecutor(ElementExecutor):
         # Load element scores
         self.scores = Scores(self.name, self.segments, self.score_config)
 
-        # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels,
-                                                   positive_strand=self.is_positive_strand,
-                                                   only_max_per_sample=self.only_max_per_sample)
+        if self.use_indels:
+            indels = Indel(self.scores, self.signature, self.signature_column,
+                                self.indels_conf['method'], self.is_positive_strand)
+        else:
+            indels = False
 
+        # Compute observed mutations statistics and scores
+        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=indels,
+                                                   only_max_per_sample=self.only_max_per_sample)
 
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
+
+            positions = self.scores.get_all_positions()
+
             observed = []
-            background = []
+            subs_scores = []
+            subs_probs = []
+            indels_scores = []
+            indels_probs = []
+
+            subs_probs_by_signature = {}
+            signature_ids = []
+
 
             for mut in self.result['mutations']:
+                observed.append(mut['SCORE']) # Observed mutations
+                if mut['TYPE'] == 'subs' or mut['TYPE']=='MNP':
+                    if self.signature is not None:
+                        # Count how many signature ids are and prepare a vector for each
+                        # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
+                        signature_id = mut.get(self.signature_column, self.signature_column)
+                        if signature_id not in signature_ids:
+                            subs_probs_by_signature.update({signature_id: []})
+                        signature_ids.append(signature_id)
 
-                simulation_scores = []
-                simulation_signature = []
+            # When the probabilities of subs and indels are None, they are taken from
+            # mutations seen in the gene
+            if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
+                self.p_subs = self.result['subs'] / len(self.result['mutations'])
+                self.p_indels = 1 - self.p_subs
 
-                if self.simulation_range is not None:
-                    positions = range(mut['POSITION'] - self.simulation_range, mut['POSITION'] + self.simulation_range)
-                else:
-                    positions = self.scores.get_all_positions()
 
-                signature = self.signature
+            # Compute the values for the substitutions
+            if self.use_subs and self.p_subs > 0:
+                for pos in positions:
+                    for s in self.scores.get_score_by_position(pos):
+                        subs_scores.append(s.value)
+                        for k, v in subs_probs_by_signature.items():
+                            v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
 
-                if mut['TYPE'] == 'subs':
-                    for pos in positions:
-                        for s in self.scores.get_score_by_position(pos):
-                            simulation_scores.append(s.value)
-                            #TODO KeyError
-                            if signature is not None:
-                                simulation_signature.append(self.signature[mut.get(self.signature_column, self.signature_column)].get((s.ref_triplet, s.alt_triplet), 0.0))
+                if len(subs_probs_by_signature) > 0:
+                    signature_ids_counter = Counter(signature_ids)
+                    total_ids = len(signature_ids)
+                    subs_probs = np.array([0.0] * len(subs_scores))
+                    for k, v in subs_probs_by_signature.items():
+                        subs_probs += (np.array(v) * signature_ids_counter[k] / total_ids)
+                    tot = sum(subs_probs)
+                    subs_probs = subs_probs * self.p_subs / tot
+                    subs_probs = list(subs_probs)
+                else: # Same prob for all values (according to the prob of substitutions
+                    subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []
 
-                else: #indels
-                    #TODO change the method to compute first the position and then the scores only for those
-                    indel_size = max(len(mut['REF']), len(mut['ALT']))
-                    length = Indel.compute_window_size(indel_size)
+            if self.use_indels and self.p_indels > 0:
+                indels_scores = indels.get_background_indel_scores(mutations=[m for m in self.result['mutations'] if m['TYPE'] == 'indel'])
 
-                    mutation_pattern = Indel.get_pattern(mut, self.is_positive_strand, length)
-                    signature = None
 
-                    sampling_positions = positions
+                # All indels have the same probability
+                indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []
 
-                    for pos in sampling_positions:
-                        score = Indel.get_indel_score_for_background(self.scores, pos, length, mut['CHROMOSOME'],
-                                                                     mutation_pattern, indel_size, self.is_positive_strand)
-                        if not math.isnan(score):
-                            simulation_scores.append(score)
+            simulation_scores = subs_scores + indels_scores
+            simulation_probs = subs_probs + indels_probs
 
-                    if len(simulation_scores) < 100:
-                        logging.warning("Element {} and mutation {} has only {} valid background scores".format(self.name, mut, len(simulation_scores)))
 
-                simulation_scores = np.array(simulation_scores)
+            background = np.random.choice(simulation_scores, size=(self.sampling_size, len(self.result['mutations'])), p=simulation_probs, replace=True)
 
-                if signature is not None:
-                    simulation_signature = np.array(simulation_signature)
-                    simulation_signature = simulation_signature / simulation_signature.sum()
-                else:
-                    simulation_signature = None
 
-                observed.append(mut['SCORE'])
-                background.append(np.random.choice(simulation_scores, size=self.sampling_size, p=simulation_signature, replace=True))
-
-            self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
+            self.obs, self.neg_obs = statistic_test.calc_observed(background, np.array(observed))
 
         # Calculate p-values
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)

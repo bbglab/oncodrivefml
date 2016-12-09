@@ -1,7 +1,9 @@
 [signature]
 method = option('none', 'full', 'complement', 'bysample', 'file')
-classifier = string(default='none')
+classifier = string(default='CANCER_TYPE')
 use_only_mapped_elements = boolean(default=False)
+include_mnp = boolean(default=True)
+correct_signature_by_sites = option('genome', 'coding', default=None)
 path = string(default=None)
 column_ref = string(default=None)
 column_alt = string(default=None)
@@ -21,18 +23,24 @@ extra = integer(default=None)
 [background]
 sampling = integer
 recurrence = boolean
-range = integer(default=None)
 
 [statistic]
 method = option('amean', 'gmean', 'maxmean', 'amean_scoresmodif')
 one_mut_per_sample = boolean(default=False)
 subs = boolean(default=True)
+mnp = boolean(default=True)
+
+use_gene_mutations = boolean(default=False)
 
     [[indels]]
         enabled = boolean(default=False)
+        method = option('pattern', 'stop', 'max', default='max')
+        enable_frame = boolean(default=False)
+
         window_size = integer(default=10)
         weight_function = option('constant', 'linear', 'logistic', default='linear')
-        in_frame_shift = boolean(default=False)
+
+        stop_function = option('mean', 'median', 'random', 'random_choice', default='mean')
 
 [settings]
 cores = integer(default=None)

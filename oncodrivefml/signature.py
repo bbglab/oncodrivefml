@@ -40,6 +40,7 @@ signature (:obj:`dict`)
 """
 
 import gzip
+import json
 import logging
 import os
 import mmap
@@ -191,7 +192,7 @@ def collapse_complementaries(signature):
     return comp_sig
 
 
-def signature_probability(signature_counts):
+def sum2one_dict(signature_counts):
     """
     Associates to each key (tuple(reference_tripet, altered_triplet)) the value divided by the total amount
 
@@ -206,7 +207,7 @@ def signature_probability(signature_counts):
     return {k: v/total for k, v in signature_counts.items()}
 
 
-def compute_signature(signature_function, classifier, blacklist, collapse=False):
+def compute_signature(signature_function, classifier, blacklist, collapse=False, include_mnp=False):
     """
     Gets the probability of each substitution that occurs for a certain signature_id.
 
@@ -216,10 +217,10 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False)
 
     Args:
         signature_function: function that yields one mutation each time
-        classifier (str): passed to :func:`oncodrivefml.load.load_mutations`
+        classifier (str): passed to :func:`~oncodrivefml.load.load_mutations`
             as parameter ``signature_classifier``.
-        blacklist: file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`).
-            Used by :func:`oncodrivefml.load.load_mutations`
+        blacklist: file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
+            Used by :func:`~oncodrivefml.load.load_mutations`
         collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
 
     Returns:
@@ -240,21 +241,31 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False)
     """
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in signature_function():
-        if mut['TYPE'] != 'subs':
+        if mut['TYPE'] == 'subs':
+            signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
+            signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
+
+            signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
+        elif include_mnp and mut['TYPE'] == 'MNP':
+            pos = mut['POSITION']
+            for index, nucleotides in enumerate(zip(mut['REF'], mut['ALT'])):
+                ref_nucleotide, alt_nucleotide = nucleotides
+                signature_ref = get_ref_triplet(mut['CHROMOSOME'], pos - 1 + index)
+                if signature_ref[1] != ref_nucleotide:
+                    logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, mut['CHROMOSOME']))
+                    continue
+                signature_alt = signature_ref[0] + alt_nucleotide + signature_ref[2]
+
+                signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
+        else:
             continue
-
-        signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
-        signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
-
-        signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
 
     signature = {}
     for k, v in signature_count.items():
         if collapse:
-            signature[k] = signature_probability(collapse_complementaries(v))
+            signature[k] = sum2one_dict(collapse_complementaries(v))
         else:
-            signature[k] = signature_probability(v)
-
+            signature[k] = sum2one_dict(v)
 
     return signature
 
@@ -267,8 +278,8 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
         mutations_file: mutations file
         signature_function: function that yields one mutation each time
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
-        blacklist (optional): file with blacklisted samples (see :class:`oncodrivefml.main.OncodriveFML`). Defaults to None.
-            Used by :func:`oncodrivefml.load.load_mutations`
+        blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
+            Used by :func:`~oncodrivefml.load.load_mutations`
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
@@ -291,6 +302,8 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
     column_ref = signature_config.get('column_ref', None)
     column_alt = signature_config.get('column_alt', None)
     column_probability = signature_config.get('column_probability', None)
+    include_mnp = signature_config.get('include_mnp', False)
+    correct_signature_by_sites = signature_config.get('correct_signature_by_sites', None)
 
     if path is not None and path.endswith(".pickle.gz"):
         with gzip.open(path, 'rb') as fd:
@@ -310,9 +323,10 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
             signature_probabilities = pd.read_csv(path, sep='\t')
             signature_probabilities.set_index([column_ref, column_alt], inplace=True)
             signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
+            return signature_dict
 
     elif method == "full" or method == "complement":
-        if classifier == 'none' or classifier == 'SAMPLE':
+        if classifier == 'CANCER_TYPE' or classifier == 'SAMPLE':
             signature_dict_precomputed = mutations_file + '_signature_' + method +'_' + classifier + ".pickle.gz"
         else:
             signature_dict_precomputed = None
@@ -328,7 +342,7 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
                 collapse = True
             else:
                 collapse = False
-            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse)
+            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse, include_mnp)
             if save_pickle:
                 try:
                     # Try to store as precomputed
@@ -337,6 +351,14 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
                 except OSError:
                     logging.debug(
                         "Imposible to write precomputed signature here: {}".format(signature_dict_precomputed))
+
+        if signature_dict is not None and correct_signature_by_sites is not None:  # correct the signature
+
+            triplets_probabilities = load_regions_signature(correct_signature_by_sites, collapse)
+
+            logging.info('Correcting signatures')
+
+            signature_dict = correct_signature_by_triplets_frequencies(signature_dict, triplets_probabilities)
 
     return signature_dict
 
@@ -356,3 +378,59 @@ def yield_mutations(mutations):
     for elem, mutations_list in mutations.items():
         for mutation in mutations_list:
             yield mutation
+
+
+
+def correct_signature_by_triplets_frequencies(signature, triplets_frequencies):
+    """
+    Normalized de signature by the frequency of the triplets
+
+    Args:
+        signature (dict): see :ref:`signature dict`
+        triplets_frequencies (dict): {triplet: frequency}
+
+    Returns:
+        dict. Normalized signature
+
+    """
+    if signature is None:
+        return None
+    corrected_signature = {}
+    for k,v in signature.items():
+        corrected_signature[k] = get_normalized_frequencies(v, triplets_frequencies)
+
+    return corrected_signature
+
+
+
+def get_normalized_frequencies(signature, triplets_frequencies):
+    """
+    Divides the frequency of each triplet alteration by the
+    frequency of the reference triplet to get the normalized
+    signature
+
+    Args:
+        signature (dict): {(ref_triplet, alt_triplet): counts}
+        triplets_frequencies (dict): {triplet: frequency}
+
+    Returns:
+        dict. Normalized signature
+
+    """
+    corrected_signature = {}
+    for triplet_pair, frequency in signature.items():
+        ref_triplet = triplet_pair[0]
+        corrected_signature[triplet_pair] = frequency/triplets_frequencies[ref_triplet]
+    return sum2one_dict(corrected_signature)
+
+
+def load_regions_signature(region, collapse):
+
+    file = bgdata.get_path('datasets', region+'signature', 'hg19')
+    with open(file) as fd:
+        triplets_counts = json.load(fd)
+
+    if collapse:
+        triplets_counts = collapse_complementaries(triplets_counts)
+
+    return sum2one_dict(triplets_counts)

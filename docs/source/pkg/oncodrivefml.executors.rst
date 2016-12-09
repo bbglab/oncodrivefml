@@ -20,14 +20,6 @@ oncodrivefml.executors.bysample module
     :undoc-members:
     :show-inheritance:
 
-oncodrivefml.executors.indels module
-------------------------------------
-
-.. automodule:: oncodrivefml.executors.indels
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

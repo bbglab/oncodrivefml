@@ -16,7 +16,7 @@ class ArithmeticMean(object):
         Computes the arithmetic mean
 
         Args:
-            values (:obj:`list`, :obj:`numpy.array`): array of values
+            values (:obj:`list`, :obj:`~numpy.array`): array of values
 
         Returns:
             float: mean value
@@ -30,8 +30,8 @@ class ArithmeticMean(object):
         Measure how many times the mean of the values is higher than the mean of the observed values
 
         Args:
-            values (:obj:`numpy.array`):  m x n matrix with scores (m: number of randomizations; n: number of mutations)
-            observed (list, :obj:`numpy.array`): n size vector with the observed scores (n: number of mutations)
+            values (:obj:`~numpy.array`):  m x n matrix with scores (m: number of randomizations; n: number of mutations)
+            observed (list, :obj:`~numpy.array`): n size vector with the observed scores (n: number of mutations)
 
         Returns:
             tuple: the number of times that the mean value of a randomization is greater or equal than the mean observed value
@@ -68,7 +68,7 @@ class GeometricMean(object):
         Computes the geometric mean of a set of values.
 
         Args:
-            values (:obj:`list`, :obj:`numpy.array`): set of values
+            values (:obj:`list`, :obj:`~numpy.array`): set of values
 
         Returns:
             (float): geometric mean
@@ -83,8 +83,8 @@ class GeometricMean(object):
          Measure how many times the geometric mean of the values is higher than the geometric mean of the observed values
 
         Args:
-            values (:obj:`numpy.array`):  m x n matrix with scores (m: number of randomizations; n: number of mutations)
-            observed (list, :obj:`numpy.array`): n size vector with the observed scores (n: number of mutations)
+            values (:obj:`~numpy.array`):  m x n matrix with scores (m: number of randomizations; n: number of mutations)
+            observed (list, :obj:`~numpy.array`): n size vector with the observed scores (n: number of mutations)
 
         Returns:
             tuple: the number of times that the mean value of a randomization is greater or equal than the mean observed value

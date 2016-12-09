@@ -12,7 +12,7 @@ from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
-from oncodrivefml.load import load_and_map_variants, load_mutations
+from oncodrivefml.load import load_and_map_variants, load_mutations, count_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations
@@ -26,8 +26,8 @@ class OncodriveFML(object):
     """
 
     Args:
-       mutations_file: Mutations input file (see :mod:`oncodrivefml.load` for details)
-       elements_file: Genomic element input file (see :mod:`oncodrivefml.load` for details)
+       mutations_file: Mutations input file (see :mod:`~oncodrivefml.load` for details)
+       elements_file: Genomic element input file (see :mod:`~oncodrivefml.load` for details)
        output_folder: Folder where the results will be store
        configuration_file: Configuration file (see :ref:`configuration <project configuration>`)
        blacklist: File with sample ids (one per line) to remove when loading the input file
@@ -61,30 +61,33 @@ class OncodriveFML(object):
         self.mutations = None
         self.elements = None
         self.signatures = None
+
         self.debug = False
+
 
 
     def create_element_executor(self, element_id, muts_for_an_element):
         """
         To enable paralelization, for each element ID,
-        one :class:`oncodrivefml.executors.bymutation.ElementExecutor` is created.
+        one :class:`~oncodrivefml.executors.bymutation.ElementExecutor` is created.
 
         Args:
             element_id (str): ID of the element
             muts_for_an_element (list): list with all the mutations observed in the element
 
         Returns:
-            :class:`oncodrivefml.executors.bymutation.ElementExecutor`:
-            returns :class:`oncodrivefml.executors.bymutation.GroupByMutationExecutor` if
+            :class:`~oncodrivefml.executors.bymutation.ElementExecutor`:
+            returns :class:`~oncodrivefml.executors.bymutation.GroupByMutationExecutor` if
             the statistic_method indicated in the configuration is not 'max-mean';
-            :class:`oncodrivefml.executors.bysamplen.GroupBySampleExecutor` otherwise.
+            :class:`~oncodrivefml.executors.bysamplen.GroupBySampleExecutor` otherwise.
 
 
         """
         if self.statistic_method == 'maxmean':
             return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
 
-        return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
+        return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
+                                       self.configuration)
 
     def run(self):
         """
@@ -105,6 +108,27 @@ class OncodriveFML(object):
                                                               save_pickle=self.save_pickle)
 
 
+        if self.configuration['statistic'].get('use_gene_mutations', True):
+            self.configuration['p_indels'] = None
+            self.configuration['p_subs'] = None
+
+        else:
+            if self.configuration['statistic'].get('subs', False) and\
+                self.configuration['statistic']['indels'].get('enabled', False):
+                # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
+                subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
+
+                p_indels = indels_counter/(indels_counter + subs_counter)
+                p_subs = subs_counter/(subs_counter + indels_counter)
+
+                self.configuration['p_indels'] = p_indels
+                self.configuration['p_subs'] = p_subs
+            else:
+                self.configuration['p_indels'] = 1
+                self.configuration['p_subs'] = 1
+
+
+
 
         if self.configuration['signature'].get('use_only_mapped_elements', False):
             signature_function = lambda: yield_mutations(self.mutations)
@@ -115,6 +139,7 @@ class OncodriveFML(object):
         # Load signatures
         self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
                                          blacklist=self.blacklist, save_pickle=self.save_pickle)
+
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for
@@ -129,10 +154,7 @@ class OncodriveFML(object):
         # initialize the indels module
         indels_config = self.configuration['statistic']['indels']
         if indels_config.get('enabled', False):
-
-            _init_indels(indels_config.get('window_size', 10),
-                         indels_config.get('weight_function','linear'),
-                         indels_config.get('in_frame_shift', False) )
+            _init_indels(indels_config)
 
         # Run the executors
         with Pool(self.cores) as pool:
@@ -168,7 +190,7 @@ class OncodriveFML(object):
 
 def cmdline():
     """
-    Parses the command and runs the analysis. See :meth:`OncodriveFML.run`.
+    Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
 
     Required arguments:
 
