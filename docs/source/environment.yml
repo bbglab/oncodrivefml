@@ -8,13 +8,13 @@ channels: !!python/tuple
 dependencies:
 - alabaster=0.7.9=py35_0
 - babel=2.3.4=py35_0
-- bbglab::ago=0.0.8=py35_0
-- bbglab::bgconfig=0.3.0=py35_0
-- bbglab::bgdata=0.18.0=py35_0
-- bbglab::bgqmap=1.0.0=py35_0
-- bbglab::itab=0.9.0=py35_0
-- bioconda::intervaltree=2.1.0=py35_0
-- bioconda::sortedcontainers=1.5.3=py35_0
+- ago=0.0.8=py35_0
+- bgconfig=0.3.0=py35_0
+- bgdata=0.18.0=py35_0
+- bgqmap=1.0.0=py35_0
+- itab=0.9.0=py35_0
+- intervaltree=2.1.0=py35_0
+- sortedcontainers=1.5.3=py35_0
 - bokeh=0.12.3=py35_0
 - configobj=5.0.6=py35_0
 - cycler=0.10.0=py35_0
