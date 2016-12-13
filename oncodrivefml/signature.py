@@ -43,64 +43,14 @@ import gzip
 import json
 import logging
 import os
-import mmap
 import pickle
-
 import bgdata
 import pandas as pd
-from os.path import join, exists
-from oncodrivefml.load import load_mutations
+from os.path import exists
 from collections import defaultdict
-
-HG19 = None
-"""
-Path to the reference genome file.
-See: :func:`get_hg19_dataset`.
-"""
-
-HG19_MMAP_FILES = {}
-"""
-Dictionary with chromosome as keys and memory maps with the reference genome as values.
-See: :func:`get_hg19_mmap`.
-"""
+from bgreference import hg19 as get_ref
 
 __CB = {"A": "T", "T": "A", "G": "C", "C": "G"}
-
-
-def get_hg19_dataset():
-    """
-    Sets the path to the reference genome
-
-    Returns:
-        :attr:`HG19`
-
-    """
-    global HG19
-
-    if HG19 is None:
-        HG19 = bgdata.get_path('datasets', 'genomereference', 'hg19')
-
-    return HG19
-
-
-def get_hg19_mmap(chromosome):
-    """
-    Get a memory map with the reference genome of the chromosome.
-
-    Args:
-        chromosome (str): chromosome identifier (number or X or Y)
-
-    Returns:
-        mmap: memory map with the reference genome of the chromosome
-
-
-    If the chromosome was not in :attr:`HG19_MMAP_FILES` before, it is added.
-    """
-    if chromosome not in HG19_MMAP_FILES:
-        fd = open(join(get_hg19_dataset(), "chr{0}.txt".format(chromosome)), 'rb')
-        HG19_MMAP_FILES[chromosome] = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
-    return HG19_MMAP_FILES[chromosome]
-
 
 def get_ref_triplet(chromosome, start):
     """
@@ -114,23 +64,6 @@ def get_ref_triplet(chromosome, start):
 
     """
     return get_ref(chromosome, start, size=3)
-
-
-def get_ref(chromosome, start, size=1):
-    """
-
-    Args:
-        chromosome (str): chromosome identifier
-        start (int): starting position
-        size (int): amount of bases. Default to 1.
-
-    Returns:
-        str: bases in the reference genome
-
-    """
-    mm_file = get_hg19_mmap(chromosome)
-    mm_file.seek(start - 1)
-    return mm_file.read(size).decode().upper()
 
 
 def get_reference_signature(line):
