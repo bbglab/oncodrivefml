@@ -220,7 +220,7 @@ def cmdline():
     parser.add_argument('-o', '--output', dest='output_folder', default=None, help="Output folder. Default to regions file name without extensions.")
     parser.add_argument('-c', '--configuration', dest='config_file', default=None, help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
     parser.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
-    parser.add_argument('--save-pickle', dest='save_pickle', default=False, action='store_true', help="Save intermediate information as pickle files.")
+    parser.add_argument('--save-pickle', dest='save_pickle', default=False, help="Save intermediate information as pickle files.")
     parser.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
 
     # Parse arguments
