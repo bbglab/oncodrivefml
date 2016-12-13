@@ -48,9 +48,43 @@ import bgdata
 import pandas as pd
 from os.path import exists
 from collections import defaultdict
-from bgreference import hg19 as get_ref
+from bgreference import refseq
+
+ref_build = 'hg19'
+"""
+Build of the Reference Genome
+"""
 
 __CB = {"A": "T", "T": "A", "G": "C", "C": "G"}
+
+
+def change_ref_build(build):
+    """
+    Modify the default build fo the reference genome
+
+    Args:
+        build (str): genome reference build
+
+    """
+    global ref_build
+    ref_build = build
+
+
+def get_ref(chromosome, start, size=1):
+    """
+    Gets a sequence from the reference genome
+
+    Args:
+        chromosome (str): chromosome
+        start (int): start position where to look
+        size (int): number of bases to retrieve
+
+    Returns:
+        str. Sequence from the reference genome
+
+    """
+    logging.info(ref_build)
+    return refseq(ref_build, chromosome, start, size)
 
 def get_ref_triplet(chromosome, start):
     """

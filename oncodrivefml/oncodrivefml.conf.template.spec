@@ -1,3 +1,6 @@
+[genome]
+build = option('hg18', 'hg19', 'hg38', default='hg19')
+
 [signature]
 method = option('none', 'full', 'complement', 'bysample', 'file')
 classifier = string(default='CANCER_TYPE')

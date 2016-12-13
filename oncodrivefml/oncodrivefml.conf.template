@@ -1,4 +1,9 @@
 
+[genome]
+
+# Build of the reference genome
+# Currently supported: HG19, HG38 and HG18
+
 [signature]
 
 # Choose the method to calculate the trinuclotide singature:
