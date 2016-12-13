@@ -36,6 +36,7 @@ use_gene_mutations = boolean(default=False)
         enabled = boolean(default=False)
         method = option('pattern', 'stop', 'max', default='max')
         enable_frame = boolean(default=False)
+        max_repeats = integer(default=0)
 
         window_size = integer(default=10)
         weight_function = option('constant', 'linear', 'logistic', default='linear')

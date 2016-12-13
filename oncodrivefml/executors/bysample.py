@@ -2,9 +2,20 @@ from collections import defaultdict
 
 import numpy as np
 
-from oncodrivefml.executors.bymutation import ElementExecutor, detect_repeatitive_seq
+from oncodrivefml.executors.bymutation import ElementExecutor
 from oncodrivefml.scores import Scores
+from oncodrivefml.signature import get_ref
 from oncodrivefml.stats import STATISTIC_TESTS
+
+
+def detect_repeatitive_seq(chrom, seq, pos):
+    size = len(seq)
+    repeats = 0
+    while seq == get_ref(chrom, pos, size=size):
+        pos += size
+        repeats += 1
+    return repeats
+
 
 
 class GroupBySampleExecutor(ElementExecutor):

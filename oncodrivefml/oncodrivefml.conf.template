@@ -167,6 +167,10 @@ mnp = True
         #enable_frame = True
         enable_frame = False
 
+        # Detect and discard indels that fall into repetitive regions
+        # max_repeats = number of times the sequence of the indel should appear in the region to be considered repetitive
+        # use max_repeats = 0 to not discard indels
+
 
         # Pattern method configuration
         # Widow size
