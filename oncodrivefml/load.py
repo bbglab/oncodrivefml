@@ -14,12 +14,12 @@ elements (:obj:`dict`)
         { element_id:
             [
                 {
-                'chr': chromosome,
-                'start': start_position_of_the_segment,
-                'stop': end_position_of_the_segment,
-                'strand': strand (+ -> positive, - -> negative, . -> unknown)
-                'element_id': element_id,
-                'segment': segment_id
+                'CHROMOSOME': chromosome,
+                'START': start_position_of_the_segment,
+                'STOP': end_position_of_the_segment,
+                'STRAND': strand (+ -> positive, - -> negative, . -> unknown)
+                'FEATURE': element_id,
+                'SEGMENT': segment_id
                 }
             ]
         }
@@ -38,8 +38,8 @@ mutations (:obj:`dict`)
         { element_id:
             [
                 {
-                'CHR': chromosome,
-                'POS': position_where_the_mutation_occurs,
+                'CHROMOSOME': chromosome,
+                'POSITION': position_where_the_mutation_occurs,
                 'SAMPLE': sample_id,
                 'TYPE': type_of_the_mutation,
                 'REF': reference_sequence,
@@ -63,26 +63,25 @@ from os.path import exists
 
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
-REGIONS_HEADER = ['chrom', 'start', 'stop', 'strand', 'feature', 'segment', 'other']
+REGIONS_HEADER = ['CHROMOSOME', 'START', 'STOP', 'STRAND', 'FEATURE', 'SEGMENT']
 """
-Headers of the data expected in the elements file (see :class:`oncodrivefml.main.OncodriveFML`).
+Headers of the data expected in the elements file (see :class:`~oncodrivefml.main.OncodriveFML`).
 """
 
 REGIONS_SCHEMA = {
     'fields': {
-        'chrom': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
-        'start': {'reader': 'int(x)', 'validator': 'x > 0'},
-        'stop': {'reader': 'int(x)', 'validator': 'x > 0'},
-        'strand': {'reader': 'str(x)', 'validator': "x in ['.', '+', '-']"},
-        'feature': {'reader': 'str(x)'},
-        'segment': {'reader': 'str(x)', 'nullable': 'True'},
-        'other': {'reader': 'str(x)', 'nullable': 'True'}
+        'CHROMOSOME': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
+        'START': {'reader': 'int(x)', 'validator': 'x > 0'},
+        'STOP': {'reader': 'int(x)', 'validator': 'x > 0'},
+        'STRAND': {'reader': 'str(x)', 'validator': "x in ['.', '+', '-']"},
+        'FEATURE': {'reader': 'str(x)'},
+        'SEGMENT': {'reader': 'str(x)', 'nullable': 'True'}
 }}
 
 
 MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
 """
-Headers of the data expected in the mutations file file (see :class:`oncodrivefml.main.OncodriveFML`).
+Headers of the data expected in the mutations file file (see :class:`~oncodrivefml.main.OncodriveFML`).
 """
 
 MUTATIONS_SCHEMA = {
@@ -91,9 +90,8 @@ MUTATIONS_SCHEMA = {
         'POSITION':   {'reader': 'int(x)', 'validator': 'x > 0'},
         'REF':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
         'ALT':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
-        'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel", "MNP"]'},
-        'SAMPLE':     {'reader': 'str(x)'},
-        'SIGNATURE':  {'reader': 'str(x)'}
+        'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel", "mnp"]'},
+        'SAMPLE':     {'reader': 'str(x)'}
     }
 }
 
@@ -117,6 +115,7 @@ def load_mutations(file, show_warnings=True, blacklist=None):
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
 
     reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA)
+    # TODO add the header
     all_errors = []
     for ix, (row, errors) in enumerate(reader, start=1):
         if len(errors) > 0:
@@ -133,7 +132,7 @@ def load_mutations(file, show_warnings=True, blacklist=None):
             if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) != len(row['ALT']):
                 row['TYPE'] = 'indel'
             elif len(row['REF']) == len(row['ALT']) and len(row['REF']) > 1:
-                row['TYPE'] = 'MNP'
+                row['TYPE'] = 'mnp'
             else:
                 row['TYPE'] = 'subs'
 
@@ -173,15 +172,10 @@ def load_regions(file):
                 continue
 
             # If there are no segments use the feature as randomization segment
-            if r['segment'] is None:
-                r['segment'] = r['feature']
+            if r['SEGMENT'] is None:
+                r['SEGMENT'] = r['FEATURE']
 
-            if r['strand'] is None:
-                #TODO
-                pass
-
-
-            regions[r['feature']].append(r)
+            regions[r['FEATURE']].append(r)
 
         if len(all_errors) > 0:
             logging.warning("There are {} errors at {}. {}".format(
@@ -220,7 +214,7 @@ def build_regions_tree(regions):
             logging.info("[{} of {}]".format(i+1, len(regions)))
 
         for r in allr:
-            regions_tree[r['chrom']][r['start']:(r['stop']+1)] = (r['feature'], r['segment'])
+            regions_tree[r['CHROMOSOME']][r['START']:(r['STOP']+1)] = (r['FEATURE'], r['SEGMENT'])
 
     logging.info("[{} of {}]".format(i+1, len(regions)))
     return regions_tree

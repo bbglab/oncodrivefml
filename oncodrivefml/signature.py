@@ -212,7 +212,7 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False,
             signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
 
             signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
-        elif include_mnp and mut['TYPE'] == 'MNP':
+        elif include_mnp and mut['TYPE'] == 'mnp':
             pos = mut['POSITION']
             for index, nucleotides in enumerate(zip(mut['REF'], mut['ALT'])):
                 ref_nucleotide, alt_nucleotide = nucleotides

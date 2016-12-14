@@ -158,7 +158,7 @@ class Scores(object):
             try:
                 # get all rows with certain chromosome and start and stop
                 # between the element start -1 and stop
-                for row in tb.query("{}{}".format(self.conf_chr_prefix, region['chrom']), region['start']-1, region['stop']):
+                for row in tb.query("{}{}".format(self.conf_chr_prefix, region['CHROMOSOME']), region['START']-1, region['STOP']):
 
                     if self.conf_element is not None:
                         # Check that is the element we want
@@ -196,7 +196,7 @@ class Scores(object):
 
 
             except tabix.TabixError:
-                logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.conf_chr_prefix, region['chrom'], region['start']-1, region['stop']))
+                logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.conf_chr_prefix, region['CHROMOSOME'], region['START']-1, region['STOP']))
                 continue
 
 
@@ -208,7 +208,7 @@ class Scores(object):
         tb = tabix.open(stops_file)
         for region in self.segments:
             try:
-                for row in tb.query(region['chrom'], region['start'] - 1, region['stop']):
+                for row in tb.query(region['CHROMOSOME'], region['START'] - 1, region['STOP']):
                     pos = int(row[1])
                     ref = row[2]
                     alt = row[3]
@@ -221,7 +221,7 @@ class Scores(object):
 
             except tabix.TabixError:
                 logging.warning(
-                    "Tabix error at {}='{}:{}-{}'".format(self.element, region['chrom'], region['start'] - 1, region['stop']))
+                    "Tabix error at {}='{}:{}-{}'".format(self.element, region['CHROMOSOME'], region['START'] - 1, region['STOP']))
                 continue
 
         self.stop_scores = []

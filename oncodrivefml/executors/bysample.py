@@ -65,7 +65,7 @@ class GroupBySampleExecutor(ElementExecutor):
                         self.muts.append(m)
         '''
 
-        self.is_positive_strand = True if segments[0].get('strand', '+') == '+' else False
+        self.is_positive_strand = True if segments[0].get('STRAND', '+') == '+' else False
 
         # Configuration parameters
         self.score_config = config['score']

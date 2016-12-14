@@ -50,7 +50,7 @@ class ElementExecutor(object):
                         m['SCORE'] = v.value
                         break
 
-            if m['TYPE'] == "MNP":
+            if m['TYPE'] == "mnp":
                 pos = int(m['POSITION'])
                 mnp_scores = []
                 for index, nucleotides in enumerate(zip(m['REF'], m['ALT'])):
@@ -93,7 +93,7 @@ class ElementExecutor(object):
 
                     scores_list.append(m['SCORE'])
 
-                    if m['TYPE'] == "subs" or m['TYPE'] == "MNP":
+                    if m['TYPE'] == "subs" or m['TYPE'] == "mnp":
                         amount_of_subs += 1
                     elif m['TYPE'] == "indel":
                         amount_of_indels += 1
@@ -107,7 +107,7 @@ class ElementExecutor(object):
 
                 scores_list.append(m['SCORE'])
 
-                if m['TYPE'] == "subs" or m['TYPE'] == "MNP":
+                if m['TYPE'] == "subs" or m['TYPE'] == "mnp":
                     amount_of_subs += 1
                 elif m['TYPE'] == "indel":
                     amount_of_indels += 1
@@ -172,14 +172,16 @@ class GroupByMutationExecutor(ElementExecutor):
             if self.use_subs:
                 self.muts += [m for m in muts if m['TYPE'] == 'subs']
             if self.use_mnp:
-                self.muts += [m for m in muts if m['TYPE'] == 'MNP']
+                self.muts += [m for m in muts if m['TYPE'] == 'mnp']
             if self.use_indels:
                 self.muts += [m for m in muts if m['TYPE'] == 'indel']
 
 
         self.signature = signature
         self.segments = segments
-        self.is_positive_strand = True if segments[0].get('strand', '+') == '+' else False
+        self.is_positive_strand = False if segments[0].get('STRAND', '+') == '-' else True
+        # When the strand is unknown is considered the same as positive
+        #TODO fix
 
         # Configuration parameters
         self.score_config = config['score']
@@ -244,7 +246,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
             for mut in self.result['mutations']:
                 observed.append(mut['SCORE']) # Observed mutations
-                if mut['TYPE'] == 'subs' or mut['TYPE']=='MNP':
+                if mut['TYPE'] == 'subs' or mut['TYPE']=='mnp':
                     if self.signature is not None:
                         # Count how many signature ids are and prepare a vector for each
                         # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
