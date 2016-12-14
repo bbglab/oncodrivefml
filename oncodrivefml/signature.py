@@ -83,7 +83,6 @@ def get_ref(chromosome, start, size=1):
         str. Sequence from the reference genome
 
     """
-    logging.info(ref_build)
     return refseq(ref_build, chromosome, start, size)
 
 def get_ref_triplet(chromosome, start):
