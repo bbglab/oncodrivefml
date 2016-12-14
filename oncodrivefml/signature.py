@@ -304,6 +304,7 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
     column_probability = signature_config.get('column_probability', None)
     include_mnp = signature_config.get('include_mnp', False)
     correct_signature_by_sites = signature_config.get('correct_signature_by_sites', None)
+    use_only_mapped_elements = signature_config.get('use_only_mapped_elements', False)
 
     if path is not None and path.endswith(".pickle.gz"):
         with gzip.open(path, 'rb') as fd:
@@ -331,6 +332,13 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
         else:
             signature_dict_precomputed = None
             save_pickle = False
+
+        if use_only_mapped_elements:
+            # Do not save any pickle and do not correct by the number of sites
+            signature_dict_precomputed = None
+            save_pickle = False
+            correct_signature_by_sites = None
+
 
         if signature_dict_precomputed is not None and exists(signature_dict_precomputed):
             logging.info("Using precomputed signatures")
