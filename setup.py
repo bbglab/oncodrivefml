@@ -28,7 +28,8 @@ setup(
         'intervaltree >= 2.1.0',
         'bgqmap >= 1.0.0',
         'bgdata >= 0.6.0',
-        'itab >= 0.3.0'
+        'itab >= 0.3.0',
+        'bgreference >= 0.1.1'
     ],
 
     entry_points={

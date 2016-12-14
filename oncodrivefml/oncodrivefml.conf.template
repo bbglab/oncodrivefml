@@ -1,4 +1,9 @@
 
+[genome]
+
+# Build of the reference genome
+# Currently supported: HG19, HG38 and HG18
+
 [signature]
 
 # Choose the method to calculate the trinuclotide singature:
@@ -166,6 +171,10 @@ mnp = True
         # Distinguish between frame shift and in frame indels (for coding regions)
         #enable_frame = True
         enable_frame = False
+
+        # Detect and discard indels that fall into repetitive regions
+        # max_repeats = number of times the sequence of the indel should appear in the region to be considered repetitive
+        # use max_repeats = 0 to not discard indels
 
 
         # Pattern method configuration

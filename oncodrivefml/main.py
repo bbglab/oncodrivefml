@@ -15,10 +15,9 @@ from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.load import load_and_map_variants, load_mutations, count_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
-from oncodrivefml.signature import load_signature, yield_mutations
+from oncodrivefml.signature import load_signature, yield_mutations, change_ref_build
 from multiprocessing.pool import Pool
 from oncodrivefml.utils import executor_run, loop_logging
-
 from oncodrivefml.indels import _init_indels
 
 
@@ -44,6 +43,10 @@ class OncodriveFML(object):
         self.configuration = load_configuration(configuration_file)
         self.blacklist = blacklist
         self.save_pickle = pickle_save
+
+        genome_reference_build = self.configuration['genome'].get('build', 'hg19')
+        change_ref_build(genome_reference_build)
+
         self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()

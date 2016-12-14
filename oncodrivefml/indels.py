@@ -12,6 +12,7 @@ window_size = 10
 weight = None
 weighting_function = lambda x: 1
 frame_length = 1
+indels_max_repeats = 0
 
 stop_function = None
 
@@ -25,7 +26,7 @@ transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T", 'N': 'N'}
 
 
 def _init_indels(indels_config):
-    global window_size, weight, weighting_function, frame_length, stop_function
+    global window_size, weight, weighting_function, frame_length, stop_function, indels_max_repeats
     if indels_config['method'] == 'pattern':
         window_size = indels_config.get('window_size', 10)
         function = indels_config.get('weight_function', 'constant')
@@ -38,6 +39,8 @@ def _init_indels(indels_config):
 
     if indels_config.get('enable_frame', False):
         frame_length = 3
+
+    indels_max_repeats = indels_config.get('max_repeats',0)
 
 
 class Weight:
@@ -105,6 +108,8 @@ class StopsScore:
 
 
 
+
+
 class Indel:
 
     def __init__(self, scores, signature, signature_id, method, has_positive_strand=True):
@@ -142,6 +147,26 @@ class Indel:
             size = indel_size
 
         return size
+
+
+    @staticmethod
+    def is_in_repetitive_region(mutation):
+
+        if indels_max_repeats == 0:
+            # 0 means do not search for repetitive regions
+            return False
+
+        chrom = mutation['CHROMOSOME']
+        ref = mutation['REF']
+        alt = mutation['ALT']
+        pos = mutation['POSITION']
+
+        # Check if it's repeated
+        seq = alt if '-' in ref else ref
+        size = indels_max_repeats * 2 * len(seq)
+        ref = get_ref(chrom, pos - size // 2, size)
+        return ref.count(seq) >= indels_max_repeats
+
 
     def get_mutation_sequences(self, mutation, size):
         # TODO pass indel_size as parameter because it is already computed in the get_indel_score method
@@ -188,6 +213,10 @@ class Indel:
         return computed_scores
 
     def get_indel_score_from_pattern(self, mutation):
+
+        if Indel.is_in_repetitive_region(mutation):
+            return math.nan
+
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
         position = int(mutation['POSITION'])
 
@@ -206,6 +235,10 @@ class Indel:
         return max(cleaned_scores) if cleaned_scores else math.nan
 
     def get_indel_score_max_of_subs(self, mutation):
+
+        if Indel.is_in_repetitive_region(mutation):
+            return math.nan
+
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
         position = int(mutation['POSITION'])
 
@@ -298,6 +331,10 @@ class Indel:
         return new_seq
 
     def get_indel_score_from_stop(self, mutation):
+
+        if Indel.is_in_repetitive_region(mutation):
+            return math.nan
+
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
         if Indel.is_frameshift(indel_size):
             return stop_function(self.scores.stop_scores)

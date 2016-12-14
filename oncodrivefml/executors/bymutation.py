@@ -142,28 +142,6 @@ class ElementExecutor(object):
         raise RuntimeError("The classes that extend ElementExecutor must override the run() method")
 
 
-def detect_repeatitive_seq(chrom, seq, pos):
-    """
-    How many times a sequences is repeated (in the reference genome)
-    starting in a certain position
-
-    Args:
-        chrom (str): chromosome ID
-        seq (str): sequence of bases to be detected
-        pos (int): position  where to start looking
-
-    Returns:
-        int: how many consequitive times the sequence appears
-
-    """
-    size = len(seq)
-    repeats = 0
-    while seq == get_ref(chrom, pos, size=size):
-        pos += size
-        repeats += 1
-    return repeats
-
-
 class GroupByMutationExecutor(ElementExecutor):
     """
     Excutor to simulate each mutation in a set. The simulation parameters are taken from the
@@ -197,6 +175,7 @@ class GroupByMutationExecutor(ElementExecutor):
                 self.muts += [m for m in muts if m['TYPE'] == 'MNP']
             if self.use_indels:
                 self.muts += [m for m in muts if m['TYPE'] == 'indel']
+
 
         self.signature = signature
         self.segments = segments
