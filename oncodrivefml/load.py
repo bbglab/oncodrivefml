@@ -18,8 +18,9 @@ elements (:obj:`dict`)
                 'START': start_position_of_the_segment,
                 'STOP': end_position_of_the_segment,
                 'STRAND': strand (+ -> positive | - -> negative | . -> unknown)
-                'FEATURE': element_id,
-                'SEGMENT': segment_id
+                'ELEMENT': element_id,
+                'SEGMENT': segment_id,
+                'SYMBOL': symbol_id
                 }
             ]
         }
@@ -40,11 +41,11 @@ mutations (:obj:`dict`)
                 {
                 'CHROMOSOME': chromosome,
                 'POSITION': position_where_the_mutation_occurs,
-                'SAMPLE': sample_id,
-                'TYPE': type_of_the_mutation,
                 'REF': reference_sequence,
                 'ALT': alteration_sequence,
-                'SIGNATURE': group to which the mutation belongs to,
+                'SAMPLE': sample_id,
+                'TYPE': type_of_the_mutation,
+                'CANCER_TYPE': group to which the mutation belongs to,
                 'SEGMENT': segment_id
                 }
             ]
@@ -64,7 +65,7 @@ from intervaltree import IntervalTree
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
 
-REGIONS_HEADER = ['CHROMOSOME', 'START', 'STOP', 'STRAND', 'FEATURE', 'SEGMENT']
+REGIONS_HEADER = ['CHROMOSOME', 'START', 'STOP', 'STRAND', 'ELEMENT', 'SEGMENT', 'SYMBOL']
 """
 Headers of the data expected in the elements file (see :class:`~oncodrivefml.main.OncodriveFML`).
 """
@@ -75,12 +76,13 @@ REGIONS_SCHEMA = {
         'START': {'reader': 'int(x)', 'validator': 'x > 0'},
         'STOP': {'reader': 'int(x)', 'validator': 'x > 0'},
         'STRAND': {'reader': 'str(x)', 'validator': "x in ['.', '+', '-']"},
-        'FEATURE': {'reader': 'str(x)'},
-        'SEGMENT': {'reader': 'str(x)', 'nullable': 'True'}
+        'ELEMENT': {'reader': 'str(x)'},
+        'SEGMENT': {'reader': 'str(x)', 'nullable': 'True'},
+        'SYMBOL': {'reader': 'str(x)', 'nullable': 'True'}
 }}
 
 
-MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", 'CANCER_TYPE']
+MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "CANCER_TYPE"]
 """
 Headers of the data expected in the mutations file file (see :class:`~oncodrivefml.main.OncodriveFML`).
 """
@@ -93,7 +95,7 @@ MUTATIONS_SCHEMA = {
         'ALT':         {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
         'SAMPLE':      {'reader': 'str(x)'},
         'TYPE':        {'nullable': 'True', 'validator': 'x in ["subs", "indel", "mnp"]'},
-        'CANCER_TYPE': {'reader': 'str(x)', 'nullable': 'True'}
+        'CANCER_TYPE': {'reader': 'str(x)', 'nullable': 'True'},
     }
 }
 
@@ -156,11 +158,11 @@ def load_regions(file):
     Parse an elements file compliant with :attr:`REGIONS_HEADER`
 
     Args:
-        file: elements file. If 'segment' field is not present, the value of the 'feature'
+        file: elements file. If 'SEGMENT' field is not present, the value of the 'ELEMENT'
             is used instead.
 
     Returns:
-        dict: elements where the element_id is the 'feature' (see :ref:`elements <elements dict>`).
+        dict: elements' (see :ref:`elements <elements dict>`).
 
     """
 
@@ -173,11 +175,11 @@ def load_regions(file):
                 all_errors += errors
                 continue
 
-            # If there are no segments use the feature as randomization segment
+            # If there are no segments use the element_id as randomization segment
             if r['SEGMENT'] is None:
-                r['SEGMENT'] = r['FEATURE']
+                r['SEGMENT'] = r['ELEMENT']
 
-            regions[r['FEATURE']].append(r)
+            regions[r['ELEMENT']].append(r)
 
         if len(all_errors) > 0:
             logging.warning("There are {} errors at {}. {}".format(
@@ -200,13 +202,13 @@ def build_regions_tree(regions):
     Returns:
         :obj:`dict` of :obj:`IntervalTree`: for each chromosome, it get one :obj:`IntervalTree` which
         is a binary tree. The leafs are intervals [low limit, high limit) and the value associated with each interval
-        is the :obj:`tuple` (feature, segment).
+        is the :obj:`tuple` (element, segment).
         It can be interpreted as:
 
         .. code-block:: python
 
             { chromosome:
-                (start_position, stop_position +1): (feature, segment)
+                (start_position, stop_position +1): (element, segment)
             }
 
     """
@@ -217,7 +219,7 @@ def build_regions_tree(regions):
             logging.info("[{} of {}]".format(i+1, len(regions)))
 
         for r in allr:
-            regions_tree[r['CHROMOSOME']][r['START']:(r['STOP']+1)] = (r['FEATURE'], r['SEGMENT'])
+            regions_tree[r['CHROMOSOME']][r['START']:(r['STOP']+1)] = (r['ELEMENT'], r['SEGMENT'])
 
     logging.info("[{} of {}]".format(i+1, len(regions)))
     return regions_tree

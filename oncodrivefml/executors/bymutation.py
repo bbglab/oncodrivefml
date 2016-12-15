@@ -177,6 +177,7 @@ class GroupByMutationExecutor(ElementExecutor):
 
         self.signature = signature
         self.segments = segments
+        self.symbol = self.segments[0].get('SYMBOL', None)
         self.is_positive_strand = False if segments[0].get('STRAND', '+') == '-' else True
         # When the strand is unknown is considered the same as positive
         #TODO fix
@@ -295,5 +296,7 @@ class GroupByMutationExecutor(ElementExecutor):
         # Calculate p-values
         self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
         self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
+
+        self.result['symbol'] = self.symbol
 
         return self

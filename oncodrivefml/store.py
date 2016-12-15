@@ -338,7 +338,8 @@ def add_symbol(df):
     ensemble_file = os.path.join(__location__, "ensembl_genes_75.txt.gz")
     gene_conversion = {line.split("\t")[0]: line.strip().split("\t")[-1]
                        for line in gzip.open(ensemble_file, 'rt').readlines()}
-    df.loc[:, 'symbol'] = df[df.columns[0]].apply(lambda e: gene_conversion.get(e, e))
+    gene_symbols = df.GENE_ID.apply(lambda e: gene_conversion.get(e, e))
+    df.SYMBOL.fillna(gene_symbols, inplace=True)
     return df
 
 
@@ -526,7 +527,7 @@ def store_html(input_file, output_path):
 
     search_by_fields = ['HugoID', 'EnsemblID']
 
-    qqp = QQPlot(input_file = input_file, rename_fields = {'samples_mut': 'num_samples','symbol': 'HugoID', 'index': 'EnsemblID'}, extra_fields=search_by_fields, cutoff=True)
+    qqp = QQPlot(input_file = input_file, rename_fields = {'SAMPLES': 'num_samples','SYMBOL': 'HugoID', 'GENE_ID': 'EnsemblID'}, extra_fields=search_by_fields, cutoff=True)
 
     qqp.add_tooltip_enhanced()
 
@@ -544,11 +545,15 @@ def store_tsv(results, result_file):
         result_file: file where to store the results
 
     """
-
+    results.index.names = ['GENE_ID']
     results.sort_values(by='pvalue', inplace=True)
-    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'subs', 'indels']
+    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'subs', 'indels', 'symbol']
     df = results[fields].copy()
     df.reset_index(inplace=True)
+    df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE', 'samples_mut': 'SAMPLES',
+                       'pvalue': 'P_VALUE', 'qvalue': 'Q_VALUE','pvalue_neg': 'P_VALUE_NEG',
+                       'qvalue_neg': 'Q_VALUE_NEG', 'subs': 'SUBSTITUTIONS', 'indels': 'INDELS',
+                       'symbol': 'SYMBOL'}, inplace=True)
     df = add_symbol(df)
 
     with open(result_file, 'wt') as fd:
