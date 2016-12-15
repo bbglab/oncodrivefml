@@ -135,7 +135,8 @@ class OncodriveFML(object):
 
         # Load signatures
         self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
-                                         blacklist=self.blacklist, save_pickle=self.save_pickle)
+                                         save_pickle=self.save_pickle if self.blacklist is None else False,
+                                         load_pickle=True if self.blacklist is None else False)
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for

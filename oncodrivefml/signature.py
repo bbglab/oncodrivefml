@@ -168,7 +168,7 @@ def sum2one_dict(signature_counts):
     return {k: v/total for k, v in signature_counts.items()}
 
 
-def compute_signature(signature_function, classifier, blacklist, collapse=False, include_mnp=False):
+def compute_signature(signature_function, classifier, collapse=False, include_mnp=False):
     """
     Gets the probability of each substitution that occurs for a certain signature_id.
 
@@ -180,8 +180,6 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False,
         signature_function: function that yields one mutation each time
         classifier (str): passed to :func:`~oncodrivefml.load.load_mutations`
             as parameter ``signature_classifier``.
-        blacklist: file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
-            Used by :func:`~oncodrivefml.load.load_mutations`
         collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
 
     Returns:
@@ -231,7 +229,7 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False,
     return signature
 
 
-def load_signature(mutations_file, signature_function, signature_config, blacklist=None, save_pickle=False):
+def load_signature(mutations_file, signature_function, signature_config, save_pickle=False, load_pickle=True):
     """
     Computes the probability that certain mutation occurs.
 
@@ -239,8 +237,6 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
         mutations_file: mutations file
         signature_function: function that yields one mutation each time
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
-        blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
-            Used by :func:`~oncodrivefml.load.load_mutations`
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
@@ -301,7 +297,7 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
             correct_signature_by_sites = None
 
 
-        if signature_dict_precomputed is not None and exists(signature_dict_precomputed):
+        if signature_dict_precomputed is not None and exists(signature_dict_precomputed) and load_pickle:
             logging.info("Using precomputed signatures")
             with gzip.open(signature_dict_precomputed, 'rb') as fd:
                 signature_dict = pickle.load(fd)
@@ -311,7 +307,7 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
                 collapse = True
             else:
                 collapse = False
-            signature_dict = compute_signature(signature_function, classifier, blacklist, collapse, include_mnp)
+            signature_dict = compute_signature(signature_function, classifier, collapse, include_mnp)
             if save_pickle:
                 try:
                     # Try to store as precomputed

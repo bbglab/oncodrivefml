@@ -232,6 +232,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
         variants_file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
         elements_file: elements file (see :class:`~oncodrivefml.main.OncodriveFML`)
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
+           If the blacklist option is passed, the mutations are not loaded from / saved to a pickle file.
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
@@ -296,7 +297,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
 
     # Check if it's already done
     variants_dict_precomputed = variants_file + "_mapping_" + get_name(elements_file) + '.pickle.gz'
-    if exists(variants_dict_precomputed):
+    if exists(variants_dict_precomputed) and blacklist is None:
         try:
             logging.info("Using precomputed mutations mapping")
             with gzip.open(variants_dict_precomputed, 'rb') as fd:
@@ -358,7 +359,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     if i > show_small_progress_at:
         print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)
 
-    if save_pickle:
+    if save_pickle and blacklist is None:
         # Try to store as precomputed
         try:
             with gzip.open(variants_dict_precomputed, 'wb') as fd:
