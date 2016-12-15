@@ -1,26 +1,21 @@
 """
-This module contatins information related with the signature.
+This module contains information related with the signature.
 
 The signature is a way of assigning probabilities to certain mutations that have some
 relation amongst them (e.g. cancer type, sample...).
 
 This relation is identified by the **signature_id**.
-It uses the *SIGNATURE* field in the `mutations dict`_.
-
-.. warning::
-
-    The value of the *SIGNATURE* in the `mutations dict`_ can be different than the value
-     in the *SIGNATURE* column of the mutations file (see :class:`oncodrivefml.OncodriveFML`).
 
 The ``classifier`` parameter in the :ref:`configuration <project configuration>` of the signature
-specifies which column of the mutations file (:data:`oncodrivefml.load.MUTATIONS_HEADER`) is used to replace the
-*SIGNATURE* column. If the column does not exist the ``classifier`` itself is used as value for the
-*SIGNATURE*.
+specifies which column of the mutations file (:data:`~oncodrivefml.load.MUTATIONS_HEADER`) is used as
+the identifier for the different signature groups.
+If the column does not exist the ``classifier`` itself is used as value for the
+*signature_id*.
 
-The probabilities are taken using only substitutions. For them, the two bases that
+The probabilities are taken only from substitutions. For them, the two bases that
 surround the mutated one are taken into account. This is called the triplet.
 For a certain mutation in a position *x* the reference triplet is the base in the
-refernce genome in position *x-1, the base in *x* and the base in the *x+1*. The altered triplet
+reference genome in position *x-1*, the base in *x* and the base in the *x+1*. The altered triplet
 of the same mutation is equal for the bases in *x-1* and *x+1* but the base in *x* is the one
 observed in the mutation.
 
@@ -179,7 +174,7 @@ def compute_signature(signature_function, classifier, blacklist, collapse=False,
 
     Each substitution is identified by the pair (reference_triplet, altered_triplet).
 
-    The signature_id is taken from the mutations ``SIGNATURE`` field.
+    The signature_id is taken from the mutations field corresponding to the classifier.
 
     Args:
         signature_function: function that yields one mutation each time
@@ -264,13 +259,13 @@ def load_signature(mutations_file, signature_function, signature_config, blackli
     """
     method = signature_config['method']
     classifier = signature_config['classifier']
-    path = signature_config.get('path', None)
-    column_ref = signature_config.get('column_ref', None)
-    column_alt = signature_config.get('column_alt', None)
-    column_probability = signature_config.get('column_probability', None)
-    include_mnp = signature_config.get('include_mnp', False)
-    correct_signature_by_sites = signature_config.get('correct_signature_by_sites', None)
-    use_only_mapped_elements = signature_config.get('use_only_mapped_elements', False)
+    path = signature_config['path']
+    column_ref = signature_config['column_ref']
+    column_alt = signature_config['column_alt']
+    column_probability = signature_config['column_probability']
+    include_mnp = signature_config['include_mnp']
+    correct_signature_by_sites = signature_config['correct_signature_by_sites']
+    use_only_mapped_elements = signature_config['use_only_mapped_elements']
 
     if path is not None and path.endswith(".pickle.gz"):
         with gzip.open(path, 'rb') as fd:
@@ -360,7 +355,7 @@ def correct_signature_by_triplets_frequencies(signature, triplets_frequencies):
     Normalized de signature by the frequency of the triplets
 
     Args:
-        signature (dict): see :ref:`signature dict`
+        signature (dict): see :ref:`signature <signature dict>`
         triplets_frequencies (dict): {triplet: frequency}
 
     Returns:
@@ -399,8 +394,18 @@ def get_normalized_frequencies(signature, triplets_frequencies):
 
 
 def load_regions_signature(region, collapse):
+    """
+    Get the trinucleotides counts for a certain region
 
-    file = bgdata.get_path('datasets', region+'signature', 'hg19')
+    Args:
+        region (str): whole genome or coding regions
+        collapse (bool): collapse complementaries
+
+    Returns:
+        dict. Frequency of presence of the different triplets
+
+    """
+    file = bgdata.get_path('datasets', region+'signature', ref_build)
     with open(file) as fd:
         triplets_counts = json.load(fd)
 

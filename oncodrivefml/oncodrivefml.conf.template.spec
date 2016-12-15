@@ -28,7 +28,7 @@ sampling = integer
 recurrence = boolean
 
 [statistic]
-method = option('amean', 'gmean', 'maxmean', 'amean_scoresmodif')
+method = option('amean', 'gmean', 'amean_scoresmodif', default='amean')
 one_mut_per_sample = boolean(default=False)
 subs = boolean(default=True)
 mnp = boolean(default=True)
@@ -36,7 +36,7 @@ mnp = boolean(default=True)
 use_gene_mutations = boolean(default=False)
 
     [[indels]]
-        enabled = boolean(default=False)
+        enabled = boolean(default=True)
         method = option('pattern', 'stop', 'max', default='max')
         enable_frame = boolean(default=False)
         max_repeats = integer(default=0)

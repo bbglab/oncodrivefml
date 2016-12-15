@@ -2,13 +2,14 @@
 Contains the command line parsing and the main class of the method
 """
 
-import argparse
 
-import logging
 import os
 import sys
-
+import argparse
+import logging
+from multiprocessing.pool import Pool
 from os.path import join, exists
+
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
@@ -16,7 +17,6 @@ from oncodrivefml.load import load_and_map_variants, load_mutations, count_mutat
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations, change_ref_build
-from multiprocessing.pool import Pool
 from oncodrivefml.utils import executor_run, loop_logging
 from oncodrivefml.indels import _init_indels
 
@@ -27,7 +27,7 @@ class OncodriveFML(object):
     Args:
        mutations_file: Mutations input file (see :mod:`~oncodrivefml.load` for details)
        elements_file: Genomic element input file (see :mod:`~oncodrivefml.load` for details)
-       output_folder: Folder where the results will be store
+       output_folder: Folder where the results will be stored
        configuration_file: Configuration file (see :ref:`configuration <project configuration>`)
        blacklist: File with sample ids (one per line) to remove when loading the input file
        pickle_save (bool): save pickle files
@@ -35,7 +35,6 @@ class OncodriveFML(object):
     """
 
     def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist, pickle_save):
-        #TODO set defaults for output_folder, configuration_file and blacklist
 
         # Required parameters
         self.mutations_file = file_exists_or_die(mutations_file)
@@ -44,7 +43,7 @@ class OncodriveFML(object):
         self.blacklist = blacklist
         self.save_pickle = pickle_save
 
-        genome_reference_build = self.configuration['genome'].get('build', 'hg19')
+        genome_reference_build = self.configuration['genome']['build']
         change_ref_build(genome_reference_build)
 
         self.cores = self.configuration['settings']['cores']
@@ -95,9 +94,9 @@ class OncodriveFML(object):
     def run(self):
         """
         Run the OncodriveFML analysis.
-        Reads the elements and mutations from the corresponding files.
-        Loads the signatures
         """
+
+        # TODO add explanation
 
         # Skip if done
         if exists(self.output_file_prefix + '.tsv'):
@@ -110,14 +109,12 @@ class OncodriveFML(object):
                                                               blacklist=self.blacklist,
                                                               save_pickle=self.save_pickle)
 
-
-        if self.configuration['statistic'].get('use_gene_mutations', True):
+        if self.configuration['statistic']['use_gene_mutations']:
             self.configuration['p_indels'] = None
             self.configuration['p_subs'] = None
 
         else:
-            if self.configuration['statistic'].get('subs', False) and\
-                self.configuration['statistic']['indels'].get('enabled', False):
+            if self.configuration['statistic']['subs'] and self.configuration['statistic']['indels']['enabled']:
                 # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
                 subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
 
@@ -131,18 +128,14 @@ class OncodriveFML(object):
                 self.configuration['p_subs'] = 1
 
 
-
-
-        if self.configuration['signature'].get('use_only_mapped_elements', False):
+        if self.configuration['signature']['use_only_mapped_elements']:
             signature_function = lambda: yield_mutations(self.mutations)
         else:
             signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
 
-
         # Load signatures
         self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
                                          blacklist=self.blacklist, save_pickle=self.save_pickle)
-
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for
@@ -156,7 +149,7 @@ class OncodriveFML(object):
 
         # initialize the indels module
         indels_config = self.configuration['statistic']['indels']
-        if indels_config.get('enabled', False):
+        if indels_config['enabled']:
             _init_indels(indels_config)
 
         # Run the executors
@@ -167,7 +160,6 @@ class OncodriveFML(object):
             for executor in loop_logging(map_func(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
                 if len(executor.result['mutations']) > 0:
                     results[executor.name] = executor.result
-        #For each element, you get the p values and more info
 
         if results == {}:
             logging.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")

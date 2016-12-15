@@ -3,17 +3,36 @@ This module contains the methods associated with the
 scores that are assigned to the mutations.
 
 The scores are read from a file.
+
+
+Information about the stop scores.
+
+As of December 2016, we have only measured
+the stops using CADD1.0.
+
+The stops of a gene retrieved only if there are
+ast least 3 stops in the regions being analysed.
+If not, a formula is applied to derived the
+value of the stops from the rest of the
+values.
+
+.. note::
+
+    This formula was obtained using the CADD scores
+    of the coding regions. Using a different regions
+    or scores files will make the function to return
+    totally nonsense values.
+
 """
 
 
 import logging
 import tabix
-
 import bgdata
 import numpy as np
-
 from typing import List
 from collections import defaultdict, namedtuple
+
 from oncodrivefml.signature import get_ref_triplet
 
 ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'ref_triplet', 'alt_triplet'])
@@ -79,11 +98,11 @@ class Scores(object):
         self.conf_score = config['score']
         self.conf_chr = config['chr']
         self.conf_chr_prefix = config['chr_prefix']
-        self.conf_ref = config.get('ref', None)
-        self.conf_alt = config.get('alt', None)
+        self.conf_ref = config['ref']
+        self.conf_alt = config['alt']
         self.conf_pos = config['pos']
-        self.conf_element = config.get('element', None)
-        self.conf_extra = config.get('extra', None)
+        self.conf_element = config['element']
+        self.conf_extra = config['extra']
 
         # Scores to load
         self.scores_by_pos = defaultdict(list)
@@ -146,12 +165,13 @@ class Scores(object):
     def _load_scores(self):
         """
         For each position get all possible substitutions and for each
+        obtatins the assigned score
 
         Returns:
             dict: for each positions get a list of ScoreValue
             (see :attr:`scores_by_pos`)
         """
-        tb = tabix.open(self.conf_file)#conf_file is the file with the scores
+        tb = tabix.open(self.conf_file)  # conf_file is the file with the scores
 
         #Loop through a list of dictionaries from the elements dictionary
         for region in self.segments:
@@ -201,6 +221,12 @@ class Scores(object):
 
 
     def get_stop_scores(self):
+        """
+        Get the scores of the stops in a gene that fall in the regions
+        being analized
+        """
+        # TODO add other scores
+        # TODO note that is only for coding
         stops = defaultdict(list)
         # stops_file = '/home/iker/Desktop/cds_stop/cds_stops.bgz'
         stops_file = bgdata.get_path('datasets', 'genestops', 'cds')

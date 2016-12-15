@@ -5,7 +5,6 @@ This module contains some useful methods
 import logging
 from collections import defaultdict
 from datetime import datetime
-
 from ago import human
 
 from oncodrivefml.executors.bymutation import ElementExecutor

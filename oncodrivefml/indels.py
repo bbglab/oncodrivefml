@@ -1,19 +1,61 @@
-import math
-from enum import Enum
-import numpy as np
-import random
+"""
+This module contains all utilities to process
+insertions and deletions.
 
-import logging
+Currently 3 methods have been implemented to compute
+the impact of the indels.
+
+
+.. _indels methods:
+
+1. As a set of substitutions ('max'):
+
+   The indel is treated as set of substitutions.
+   It is used for non-coding regions
+
+   The functional impact of the observed mutation is the maximum
+   of all the substitutions.
+   The background is simulated as substitutions are.
+
+#. As a stop ('stop'):
+
+   The indel is expected to produce a stop in the genome,
+   unless it is a frame-shift indel.
+   It is used for coding regions.
+
+   The functional impact is derived from the function impact
+   of the stops of the gene.
+   The background is simulated also as stops.
+
+#. Using the pattern ('pattern'):
+
+   The indel produces a set of changes with a limited impact (in space).
+   To do so, a window size is specified, and the changes within that
+   window are analysed.
+
+   The functional impact of the observed indel is taken as if it was a
+   set of substitutions.
+   For the background, the same pattern is applied to all possible position
+   and a functional impact derived from the changes it produces.
+
+
+"""
+
+import math
+import random
+import numpy as np
+from math import exp
+from enum import Enum
 
 from oncodrivefml.signature import get_ref
-from math import exp
 
+
+# Global variables
 window_size = 10
 weight = None
 weighting_function = lambda x: 1
 frame_length = 1
 indels_max_repeats = 0
-
 stop_function = None
 
 
@@ -26,32 +68,45 @@ transversion_dict = {"A": "C", "C": "A", "T": "G", "G": "T", 'N': 'N'}
 
 
 def _init_indels(indels_config):
+    """
+    Initialize the indels module
+
+    Args:
+        indels_config (dict): configuration of how to compute the impact of indels
+
+    """
     global window_size, weight, weighting_function, frame_length, stop_function, indels_max_repeats
     if indels_config['method'] == 'pattern':
-        window_size = indels_config.get('window_size', 10)
-        function = indels_config.get('weight_function', 'constant')
+        window_size = indels_config['window_size']
+        function = indels_config['weight_function']
         weight = Weight(window_size, function)
         weighting_function = weight.function
 
     elif indels_config['method'] == 'stop':
-        stop = StopsScore(indels_config.get('stop_function', 'mean'))
+        stop = StopsScore(indels_config['mean'])
         stop_function = stop.function
 
-    if indels_config.get('enable_frame', False):
+    if indels_config['enable_frame']:
         frame_length = 3
 
-    indels_max_repeats = indels_config.get('max_repeats',0)
+    indels_max_repeats = indels_config['max_repeats']
 
 
 class Weight:
     """
+    Contain the function that weights the score of the indel
+    when the pattern method is used
+
+    Args:
+        length (int): expected length of the window
+        type (str): function identifier
+
     Functions are implemented to work on the interval between 0 and the window length.
     This means that the function is close to 1 at x=0 and close to 0 at x=length.
 
     If x = actual position of the element in the window you get the original function value
     If x = actual position of the element in the window - indel_size you get the function value starting at the first element outside the indel size
     If x = actual position of the element in the window - indel_size +1 you get the function value starting at the last element of the indel_size
-
     """
     def __init__(self, length, type):
         self.length = length
@@ -80,6 +135,14 @@ class Weight:
 
 class StopsScore:
     def __init__(self, type):
+        """
+        Contain the function that operates on the scores of the stops
+        when the indel is treated as stop
+
+        Args:
+            type (str): indentifier of the function
+
+        """
         if type == 'mean':
             self.funct = self.mean
         elif type =='median':
@@ -111,6 +174,18 @@ class StopsScore:
 
 
 class Indel:
+    """
+    Methods to compute the impact of indels
+    for the observed and the background
+
+    Args:
+        scores (:class:`~oncodrivefml.scores.Scores`): functional impact per position
+        signature (dict): see :ref:`signature <signature dict>`
+        signature_id (str): classifier for the signatures
+        method (str): identifies which method to use to compute the functional impact
+            (see :ref:`methods <indels methods>`)
+        has_positive_strand (bool): if the element being analysed has positive strand
+    """
 
     def __init__(self, scores, signature, signature_id, method, has_positive_strand=True):
         self.scores = scores
@@ -132,12 +207,33 @@ class Indel:
 
     @staticmethod
     def is_frameshift(size):
+        """
+
+        Args:
+            size (int): length of the indel
+
+        Returns:
+            bool. Whether the size is multiple of 3 (in the frames have been
+            enabled in the configuration)
+
+        """
         if frame_length != 1 and (size % frame_length) == 0:
             return False
         return True
 
     @staticmethod
     def compute_window_size(indel_size):
+        """
+        From an size of an indel compute size of the
+        window frame to analyse
+
+        Args:
+            indel_size (int): length of the indel
+
+        Returns:
+            int.
+
+        """
         size = window_size
 
         if not Indel.is_frameshift(indel_size):  # in-frame
@@ -151,6 +247,22 @@ class Indel:
 
     @staticmethod
     def is_in_repetitive_region(mutation):
+        """
+        Check if  an indel falls in a repetitive region
+
+        Looking in the window with the indel in the middle, check if the
+        same sequence of the indel appears at least a certain number of times
+        specified in the configuration.
+        The window where to look has twice the size of the indel multiplied by
+        the number of times already mentioned.
+
+        Args:
+            mutation (dict): a mutation object as in :ref:`here <mutations dict>`
+
+        Returns:
+            bool. Whether the indel falls in a repetitive region or to
+
+        """
 
         if indels_max_repeats == 0:
             # 0 means do not search for repetitive regions
@@ -169,6 +281,18 @@ class Indel:
 
 
     def get_mutation_sequences(self, mutation, size):
+        """
+        Get the reference and altered sequence of the indel
+        along the window size
+
+        Args:
+            mutation (dict): a mutation object as in :ref:`here <mutations dict>`
+            size (int): window length
+
+        Returns:
+            tuple. Reference and alterned sequences
+
+        """
         # TODO pass indel_size as parameter because it is already computed in the get_indel_score method
         position = mutation['POSITION']
         is_insertion = True if '-' in mutation['REF'] else False
@@ -190,12 +314,26 @@ class Indel:
             return reference[-size:], alteration[-size:]  # return only last size elements
 
     def weight(self, score_values, indel_size, total_size):
-        if Indel.is_frameshift(indel_size):
+        """
+        Apply the weight function to the measured scores
 
+        The function is only applied to values beyond the lenght of the indel
+        if the indel is a frameshift
+
+        Args:
+            score_values (list): scores of the indel pattern
+            indel_size (int): length of the indel
+            total_size (int): length of the window
+
+        Returns:
+            list. Values with the function applied
+
+        """
+        if Indel.is_frameshift(indel_size):
             if self.has_positive_strand:
                 for i in range(indel_size, total_size):  # if indel_size is bigger than the window it is an empty range
                     # We can pass to the weight function the value i or the value i-indel_size+1. The first means using the value of the function as it starts in 0, the second as it start when the indel ends
-                    score_values[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1 TODO check
+                    score_values[i] *= weighting_function(i - indel_size + 1)  # first element has x = 1
             else:
                 for i in range(total_size - indel_size):
                     score_values[i] *= weighting_function((total_size - indel_size) - i)
@@ -203,6 +341,20 @@ class Indel:
         return score_values
 
     def compute_scores(self, reference, alternation, initial_position, size):
+        """
+        Compute the scores of all substitution between the reference and altered sequences
+
+        Args:
+            reference (str): sequence
+            alternation (str): sequence
+            initial_position (int): position where the indel occurs
+            size (int): number of position to look
+
+        Returns:
+            list. Scores of the substitution in the indel. :obj:`~math.nan` when it is not possible
+            to compute a value.
+
+        """
         computed_scores = [math.nan] * size
         for index, position in enumerate(range(initial_position, initial_position + size)):
             scores_in_position = self.scores.get_score_by_position(position)
@@ -213,6 +365,16 @@ class Indel:
         return computed_scores
 
     def get_indel_score_from_pattern(self, mutation):
+        """
+        Compute the score of an indel from its pattern
+
+        Args:
+            mutation (dict): a mutation object as in :ref:`here <mutations dict>`
+
+        Returns:
+            float. Impact of the indel
+
+        """
 
         if Indel.is_in_repetitive_region(mutation):
             return math.nan
@@ -235,6 +397,20 @@ class Indel:
         return max(cleaned_scores) if cleaned_scores else math.nan
 
     def get_indel_score_max_of_subs(self, mutation):
+        """
+        Compute the score of an indel by treating each alteration as
+        a substitution.
+
+        Is similar to :meth:`get_indel_score_from_pattern` but forcing the window size
+        to be the same as the indel length.
+
+        Args:
+            mutation (dict): a mutation object as in :ref:`here <mutations dict>`
+
+        Returns:
+            float. Maximum value of all substitution
+
+        """
 
         if Indel.is_in_repetitive_region(mutation):
             return math.nan
@@ -268,6 +444,19 @@ class Indel:
         return max(indel_scores)
 
     def get_indel_score_for_background_from_pattern(self, position, length, chromosome, pattern, indel_size):
+        """
+        Compute the background score applying the pattern of the mutation to a position
+
+        Args:
+            position (int): position where the mutation is simulated
+            length (int): window size
+            chromosome (str): chromosome
+            pattern (dict): dict with the changes
+            indel_size (int): size of the indel
+
+        Returns:
+
+        """
         # position is the starting position of the sequence where to apply the pattern
         # no matter if it is positve or negative strand
         reference = get_ref(chromosome, position, length)
@@ -281,6 +470,17 @@ class Indel:
         return max(cleaned_scores) if cleaned_scores else math.nan
 
     def get_background_indel_scores_from_pattern(self, mutations):
+        """
+        Compute the background score (:meth:`get_indel_score_for_background_from_pattern`)
+        for all possible positions
+
+        Args:
+            mutations (dict): a mutation object as in :ref:`here <mutations dict>`
+
+        Returns:
+            list. Indel scores
+
+        """
         indel_scores = []
         for mutation in mutations:
             mut_scores = []
@@ -305,6 +505,18 @@ class Indel:
 
     @staticmethod
     def compute_pattern(reference, alternate, length):
+        """
+        Obtain the pattenr of changes in a sequence
+
+        Args:
+            reference (str):
+            alternate (str):
+            length (int):
+
+        Returns:
+            list.
+
+        """
         pattern = []
 
         for i in range(length):
@@ -320,17 +532,51 @@ class Indel:
         return pattern
 
     def get_pattern(self, mutation, length):
+        """
+        Obtain the pattern that an indel produces
+
+        Args:
+            mutation (dict): a mutation object as in :ref:`here <mutations dict>`
+            length (int): window
+
+        Returns:
+            list.
+
+        """
         ref, alt = self.get_mutation_sequences(mutation, length)
         return Indel.compute_pattern(ref, alt, length)
 
     @staticmethod
     def apply_pattern(sequence, pattern):
+        """
+        Apply a pattern to a sequence
+
+        Args:
+            sequence (str): genome sequence
+            pattern (list):
+
+        Returns:
+            str. Altered sequence
+
+        """
         new_seq = ''
         for i in range(len(sequence)):
             new_seq += pattern_change[pattern[i]](sequence[i])
         return new_seq
 
     def get_indel_score_from_stop(self, mutation):
+        """
+        Compute the indel score as a stop
+
+        A function is applied to the values of the scores in the gene
+
+        Args:
+            mutation (dict): a mutation object as in :ref:`here <mutations dict>`
+
+        Returns:
+            float. Score value. :obj:`~math.nan` if is not possible to compute it
+
+        """
 
         if Indel.is_in_repetitive_region(mutation):
             return math.nan
@@ -365,6 +611,16 @@ class Indel:
     #     return indel_scores, signatures
 
     def get_background_indel_scores_as_substitutions_without_signature(self, **kwargs):
+        """
+        Return the values of scores of all possible substitutions
+
+        Args:
+            **kwargs:
+
+        Returns:
+            list.
+
+        """
         indel_scores = []
         for pos in self.scores.get_all_positions():
             for s in self.scores.get_score_by_position(pos):
@@ -372,6 +628,14 @@ class Indel:
         return indel_scores
 
     def get_background_indel_scores_as_stops(self, **kwargs):
+        """
+        Args:
+            **kwargs:
+
+        Returns:
+            list. Values of the stop scores of the gene
+
+        """
         return self.scores.stop_scores
 
 

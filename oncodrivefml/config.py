@@ -6,7 +6,6 @@ Additionally, it includes other file realted code, specially from :mod:`bgconfig
 
 import logging
 import os
-
 import sys
 from bgconfig import BGConfig, _file_name, _file_exists_or_die
 

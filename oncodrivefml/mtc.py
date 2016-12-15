@@ -1,8 +1,24 @@
+"""
+Module containing functions related to
+multiple test correction
+"""
+
 import pandas as pd
 import numpy as np
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
 
 def multiple_test_correction(results, num_significant_samples=2):
+    """
+    Performs a multiple test correction on the analysis results
+
+    Args:
+        results (dict): dictionary with the results
+        num_significant_samples (int): mininum samples that a gene must have in order to perform the correction
+
+    Returns:
+        :obj:`~pandas.DataFrame`. DataFrame with the q-values obtained from a multiple test correction
+
+    """
 
     results_all = pd.DataFrame.from_dict(results, orient='index')
 

@@ -17,7 +17,7 @@ elements (:obj:`dict`)
                 'CHROMOSOME': chromosome,
                 'START': start_position_of_the_segment,
                 'STOP': end_position_of_the_segment,
-                'STRAND': strand (+ -> positive, - -> negative, . -> unknown)
+                'STRAND': strand (+ -> positive | - -> negative | . -> unknown)
                 'FEATURE': element_id,
                 'SEGMENT': segment_id
                 }
@@ -51,17 +51,18 @@ mutations (:obj:`dict`)
         }
 
 """
-from collections import defaultdict
+
 import gzip
 import logging
 import os
 import pickle
-from intervaltree import IntervalTree
 import itab
-
 from os.path import exists
+from collections import defaultdict
+from intervaltree import IntervalTree
 
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
+
 
 REGIONS_HEADER = ['CHROMOSOME', 'START', 'STOP', 'STRAND', 'FEATURE', 'SEGMENT']
 """
@@ -79,25 +80,27 @@ REGIONS_SCHEMA = {
 }}
 
 
-MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "SIGNATURE"]
+MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", 'CANCER_TYPE']
 """
 Headers of the data expected in the mutations file file (see :class:`~oncodrivefml.main.OncodriveFML`).
 """
 
 MUTATIONS_SCHEMA = {
     'fields': {
-        'CHROMOSOME': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
-        'POSITION':   {'reader': 'int(x)', 'validator': 'x > 0'},
-        'REF':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
-        'ALT':        {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
-        'TYPE':       {'nullable': 'True', 'validator': 'x in ["subs", "indel", "mnp"]'},
-        'SAMPLE':     {'reader': 'str(x)'}
+        'CHROMOSOME':  {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
+        'POSITION':    {'reader': 'int(x)', 'validator': 'x > 0'},
+        'REF':         {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
+        'ALT':         {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
+        'SAMPLE':      {'reader': 'str(x)'},
+        'TYPE':        {'nullable': 'True', 'validator': 'x in ["subs", "indel", "mnp"]'},
+        'CANCER_TYPE': {'reader': 'str(x)', 'nullable': 'True'}
     }
 }
 
 
 def load_mutations(file, show_warnings=True, blacklist=None):
     """
+    Parsed the mutations file
 
     Args:
         file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
@@ -114,8 +117,7 @@ def load_mutations(file, show_warnings=True, blacklist=None):
     # Set of samples to blacklist
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
 
-    reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA)
-    # TODO add the header
+    reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA) # TODO add the header and switch SAMPLE and TYPE?
     all_errors = []
     for ix, (row, errors) in enumerate(reader, start=1):
         if len(errors) > 0:
@@ -190,6 +192,7 @@ def load_regions(file):
 
 def build_regions_tree(regions):
     """
+    Generates a binary tree with the intervals of the regions
 
     Args:
         regions (dict): segments grouped by :ref:`elements <elements dict>`.
@@ -368,6 +371,20 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
 
 
 def count_mutations(file, show_warnings=True, blacklist=None):
+    """
+    Count subs and indels in the mutations file
+    using :meth:`load_mutations`.
+
+    Args:
+        file:
+        show_warnings (bool):
+        blacklist:
+
+    Returns:
+        tuple. Amount of subs and amount of indels
+
+    """
+    # TODO add option to not read the file twice
     logging.info('Counting subs and indels')
     subs = 0
     indels = 0

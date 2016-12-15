@@ -16,9 +16,7 @@ import matplotlib.pyplot as plt
 import logging
 import pandas as pd
 import numpy as np
-from math import pi
 from bokeh import __version__ as bokeh_version
-from bokeh.io import vform, reset_output
 from bokeh.plotting import output_notebook
 from bokeh.embed import components
 from bokeh.plotting import figure, output_file, show, ColumnDataSource

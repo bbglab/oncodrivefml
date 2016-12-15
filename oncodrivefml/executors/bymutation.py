@@ -1,14 +1,12 @@
 import logging
+import math
+import numpy as np
 from collections import Counter
 from collections import defaultdict
 
-import numpy as np
 from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
-from oncodrivefml.signature import get_ref
-
 from oncodrivefml.indels import Indel
-import math
 
 
 class ElementExecutor(object):
@@ -22,7 +20,8 @@ class ElementExecutor(object):
             muts (list): list of mutations
             scores (dict): scores for all possible substitutions
             indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise.
-            positive_strand (bool): the element where the mutations occur has positive strand or not. Defaults to True.
+            only_max_per_sample (bool): flag indicating if the mutations from the same sample must be filtered and
+                remove all but the one which gives the highest score
 
         Returns:
             dict: several information about the mutations and a list of them with the scores
@@ -160,10 +159,10 @@ class GroupByMutationExecutor(ElementExecutor):
     def __init__(self, element_id, muts, segments, signature, config):
         # Input attributes
         self.name = element_id
-        self.use_indels = config['statistic']['indels'].get('enabled', False)
         self.indels_conf = config['statistic']['indels']
-        self.use_subs = config['statistic'].get('subs', True)
-        self.use_mnp = config['statistic'].get('mnp', True)
+        self.use_indels = self.indels_conf['enabled']
+        self.use_subs = config['statistic']['subs']
+        self.use_mnp = config['statistic']['mnp']
 
         if self.use_subs and self.use_indels and self.use_mnp:
             self.muts = muts
@@ -176,7 +175,6 @@ class GroupByMutationExecutor(ElementExecutor):
             if self.use_indels:
                 self.muts += [m for m in muts if m['TYPE'] == 'indel']
 
-
         self.signature = signature
         self.segments = segments
         self.is_positive_strand = False if segments[0].get('STRAND', '+') == '-' else True
@@ -186,10 +184,9 @@ class GroupByMutationExecutor(ElementExecutor):
         # Configuration parameters
         self.score_config = config['score']
         self.sampling_size = config['background'].get('sampling', 100000)
-        self.statistic_name = config['statistic'].get('method', 'amean')
-        self.simulation_range = config['background'].get('range', None)
+        self.statistic_name = config['statistic']['method']
         self.signature_column = config['signature']['classifier']
-        self.only_max_per_sample = config['statistic'].get('one_mut_per_sample', False)
+        self.only_max_per_sample = config['statistic']['one_mut_per_sample']
 
         # Output attributes
         self.obs = 0
@@ -285,16 +282,13 @@ class GroupByMutationExecutor(ElementExecutor):
             if self.use_indels and self.p_indels > 0:
                 indels_scores = indels.get_background_indel_scores(mutations=[m for m in self.result['mutations'] if m['TYPE'] == 'indel'])
 
-
                 # All indels have the same probability
                 indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []
 
             simulation_scores = subs_scores + indels_scores
             simulation_probs = subs_probs + indels_probs
 
-
             background = np.random.choice(simulation_scores, size=(self.sampling_size, len(self.result['mutations'])), p=simulation_probs, replace=True)
-
 
             self.obs, self.neg_obs = statistic_test.calc_observed(background, np.array(observed))
 

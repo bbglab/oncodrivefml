@@ -1,5 +1,6 @@
 import sys
 from setuptools import setup, find_packages
+
 from oncodrivefml import __version__
 
 if sys.hexversion < 0x03000000:
