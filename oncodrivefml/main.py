@@ -49,7 +49,7 @@ class OncodriveFML(object):
         self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
-        self.samples_statistic_method = self.configuration['statistic']['samples_method']
+        self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
         if self.configuration['signature']['method'] == 'bysample':
             self.configuration['signature']['method'] = 'complement'
