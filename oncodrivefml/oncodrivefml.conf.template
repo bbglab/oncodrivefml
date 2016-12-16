@@ -129,12 +129,21 @@ method = amean
 # Gemoetric mean
 # method = gmean
 
-# Use only one mutation per sample in each gene
-# Use all the mutation from the same sample
-one_mut_per_sample = False
+# The default option is to simulate the same number of mutations
+# that it is observed.
+# However, there is available an option to simulate only one mutation per sample.
+# To enable it, assign one of the possible statstical methods to samples_method the variable:
 
-# Use only the mutation whit the maximum score
-one_mut_per_sample = True
+#samples_method = amean
+#samples_method = gmean
+#samples_method = max
+
+# This only has effect on the score, for the rest of parameters (e.g. POSITION)
+# the mutation with the highest score is used.
+# This is important when simulating indels with the pattern method
+# or when mutation from the same sample have different signatures.
+
+
 
 # Compute the substitutions
 subs = True

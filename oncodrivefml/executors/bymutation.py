@@ -10,159 +10,29 @@ from oncodrivefml.indels import Indel
 
 
 class ElementExecutor(object):
-
-    @staticmethod
-    def compute_muts_statistics(muts, scores, indels=False, only_max_per_sample=False):
-        """
-        Gets the score of each mutation
-
-        Args:
-            muts (list): list of mutations
-            scores (dict): scores for all possible substitutions
-            indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise.
-            only_max_per_sample (bool): flag indicating if the mutations from the same sample must be filtered and
-                remove all but the one which gives the highest score
-
-        Returns:
-            dict: several information about the mutations and a list of them with the scores
-
-        """
-
-        # Add scores to the element mutations
-        scores_by_sample = defaultdict(list)
-        scores_list = []
-        positions = []
-        mutations = []
-        amount_of_subs = 0
-        amount_of_indels = 0
-
-        mut_per_sample = {}
-
-        for m in muts:
-
-            # Get substitutions scores
-            if m['TYPE'] == "subs":
-                m['POSITION'] = int(m['POSITION'])
-                values = scores.get_score_by_position(m['POSITION'])
-                for v in values:
-                    if v.ref == m['REF'] and v.alt == m['ALT']:
-                        m['SCORE'] = v.value
-                        break
-
-            if m['TYPE'] == "mnp":
-                pos = int(m['POSITION'])
-                mnp_scores = []
-                for index, nucleotides in enumerate(zip(m['REF'], m['ALT'])):
-                    ref_nucleotide, alt_nucleotide = nucleotides
-                    values = scores.get_score_by_position(pos+index)
-                    for v in values:
-                        if v.ref == ref_nucleotide and v.alt == alt_nucleotide:
-                            mnp_scores.append(v.value)
-                            break
-                    else:
-                        logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, m['CHROMOSOME']))
-                if not mnp_scores:
-                    continue
-                m['SCORE'] = max(mnp_scores)
-                m['POSITION'] = pos + mnp_scores.index(m['SCORE'])
-
-            if indels is not False and m['TYPE'] == "indel":
-
-                # very long indels are discarded
-                if max(len(m['REF']), len(m['ALT'])) > 20:
-                    continue
-
-                score = indels.get_indel_score(m)
-
-                m['SCORE'] = score if not math.isnan(score) else None
-
-            # Update scores
-            if m.get('SCORE', None) is not None:
-
-                sample = m['SAMPLE']
-
-                if only_max_per_sample:
-
-                    if sample not in mut_per_sample.keys() or m['SCORE'] > mut_per_sample[sample]['SCORE']:
-                        mut_per_sample[sample] = m
-
-                else:
-
-                    scores_by_sample[sample].append(m['SCORE'])
-
-                    scores_list.append(m['SCORE'])
-
-                    if m['TYPE'] == "subs" or m['TYPE'] == "mnp":
-                        amount_of_subs += 1
-                    elif m['TYPE'] == "indel":
-                        amount_of_indels += 1
-
-                    positions.append(m['POSITION'])
-                    mutations.append(m)
-
-        if only_max_per_sample:
-            for sample, m in mut_per_sample.items():
-                scores_by_sample[sample].append(m['SCORE'])
-
-                scores_list.append(m['SCORE'])
-
-                if m['TYPE'] == "subs" or m['TYPE'] == "mnp":
-                    amount_of_subs += 1
-                elif m['TYPE'] == "indel":
-                    amount_of_indels += 1
-
-                positions.append(m['POSITION'])
-                mutations.append(m)
-
-
-        # Aggregate scores
-        num_samples = len(scores_by_sample)
-
-        item = {
-            'samples_mut': num_samples,
-            'muts': len(scores_list),
-            'muts_recurrence': len(set(positions)),
-            'subs': amount_of_subs,
-            'indels': amount_of_indels,
-            'scores': scores_list,
-            'positions': positions,
-            'mutations': mutations
-        }
-
-        return item
-
-    def run(self):
-        """
-
-        Raises:
-            RuntimeError: method must be implemented
-
-        """
-        raise RuntimeError("The classes that extend ElementExecutor must override the run() method")
-
-
-class GroupByMutationExecutor(ElementExecutor):
     """
-    Excutor to simulate each mutation in a set. The simulation parameters are taken from the
-    configuration file.
+    Executor that simulates the mutations to compute a p_value
+    by comparing the functional impact of the observed mutations
+    and the expected.
+    The simulation parameters are taken from the configuration file.
 
     Args:
         element_id (str): element ID
         muts (list): list of mutations belonging to that element (see :ref:`mutations <mutations dict>` inner items)
         segments (list): list of segments belonging to that element (see :ref:`elements <elements dict>` inner items)
-        signature (dict): probabilites of each mutation (see :ref:`signatures <signature dict>`)
+        signature (dict): probabilities of each mutation (see :ref:`signatures <signature dict>`)
         config (dict): configurations
 
-    Indels where the sequence is repeated a predefined number of times are
-    discarded.
     """
+
     def __init__(self, element_id, muts, segments, signature, config):
         # Input attributes
         self.name = element_id
         self.indels_conf = config['statistic']['indels']
         self.use_indels = self.indels_conf['enabled']
         self.use_subs = config['statistic']['subs']
-        self.use_mnp = config['statistic']['mnp']
+        self.use_mnp = config['statistic']['mnp'] and self.use_subs
+        # MNP mutations are only used if subs are enabled
 
         if self.use_subs and self.use_indels and self.use_mnp:
             self.muts = muts
@@ -187,7 +57,7 @@ class GroupByMutationExecutor(ElementExecutor):
         self.sampling_size = config['background'].get('sampling', 100000)
         self.statistic_name = config['statistic']['method']
         self.signature_column = config['signature']['classifier']
-        self.only_max_per_sample = config['statistic']['one_mut_per_sample']
+        self.samples_method = config['statistic']['samples_method']
 
         # Output attributes
         self.obs = 0
@@ -197,6 +67,62 @@ class GroupByMutationExecutor(ElementExecutor):
 
         self.p_subs = config['p_subs']
         self.p_indels = config['p_indels']
+
+    def compute_muts_statistics(self, indels=False):
+        """
+        Assigns scores to the mutations and retreive the ones that are going
+        to be simulated
+
+        Args:
+            indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise
+
+        Returns:
+            dict: several information about the mutations and a list of them with the scores
+
+        """
+        raise RuntimeError("The classes that extend ElementExecutor must override, at least the compute_muts_statistics() method")
+
+
+    def compute_mutation_score(self, mutation, indels):
+
+        # Get substitutions scores
+        if mutation['TYPE'] == "subs":
+            mutation['POSITION'] = int(mutation['POSITION'])
+            values = self.scores.get_score_by_position(mutation['POSITION'])
+            for v in values:
+                if v.ref == mutation['REF'] and v.alt == mutation['ALT']:
+                    mutation['SCORE'] = v.value
+                    break
+            else:
+                logging.warning('Discrepancy in SUBS at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
+
+        if mutation['TYPE'] == "mnp":
+            pos = int(mutation['POSITION'])
+            mnp_scores = []
+            for index, nucleotides in enumerate(zip(mutation['REF'], mutation['ALT'])):
+                ref_nucleotide, alt_nucleotide = nucleotides
+                values = self.scores.get_score_by_position(pos + index)
+                for v in values:
+                    if v.ref == ref_nucleotide and v.alt == alt_nucleotide:
+                        mnp_scores.append(v.value)
+                        break
+                else:
+                    logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
+            if not mnp_scores:
+                return
+            mutation['SCORE'] = max(mnp_scores)
+            mutation['POSITION'] = pos + mnp_scores.index(mutation['SCORE'])
+
+        if indels is not False and mutation['TYPE'] == "indel":
+
+            # very long indels are discarded
+            if max(len(mutation['REF']), len(mutation['ALT'])) > 20:
+                return
+
+            score = indels.get_indel_score(mutation)
+
+            mutation['SCORE'] = score if not math.isnan(score) else None
+
 
     def run(self):
         """
@@ -224,8 +150,7 @@ class GroupByMutationExecutor(ElementExecutor):
             indels = False
 
         # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=indels,
-                                                   only_max_per_sample=self.only_max_per_sample)
+        self.result = self.compute_muts_statistics(indels=indels)
 
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
@@ -300,3 +225,79 @@ class GroupByMutationExecutor(ElementExecutor):
         self.result['symbol'] = self.symbol
 
         return self
+
+
+class GroupByMutationExecutor(ElementExecutor):
+    """
+    Executor that simulates the same number of mutations as the ones
+    observed in the element.
+    The simulation parameters are taken from the configuration file.
+
+    Args:
+        element_id (str): element ID
+        muts (list): list of mutations belonging to that element (see :ref:`mutations <mutations dict>` inner items)
+        segments (list): list of segments belonging to that element (see :ref:`elements <elements dict>` inner items)
+        signature (dict): probabilities of each mutation (see :ref:`signatures <signature dict>`)
+        config (dict): configurations
+
+    """
+    def __init__(self, element_id, muts, segments, signature, config):
+        super(GroupByMutationExecutor, self).__init__(element_id, muts, segments, signature, config)
+
+    def compute_muts_statistics(self, indels=False):
+        """
+        Gets the score of each mutation
+
+        Args:
+            indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise.
+
+        Returns:
+            dict: several information about the mutations and a list of them with the scores
+
+        """
+
+        # Add scores to the element mutations
+        scores_by_sample = defaultdict(list)
+        scores_list = []
+        positions = []
+        mutations = []
+        amount_of_subs = 0
+        amount_of_indels = 0
+
+        for m in self.muts:
+
+            self.compute_mutation_score(m, indels)
+
+            # Update scores
+            if m.get('SCORE', None) is not None:
+
+                sample = m['SAMPLE']
+
+                scores_by_sample[sample].append(m['SCORE'])
+
+                scores_list.append(m['SCORE'])
+
+                if m['TYPE'] == "subs" or m['TYPE'] == "mnp":
+                    amount_of_subs += 1
+                elif m['TYPE'] == "indel":
+                    amount_of_indels += 1
+
+                positions.append(m['POSITION'])
+                mutations.append(m)
+
+
+        # Aggregate scores
+        num_samples = len(scores_by_sample)
+
+        item = {
+            'samples_mut': num_samples,
+            'muts': len(scores_list),
+            'muts_recurrence': len(set(positions)),
+            'subs': amount_of_subs,
+            'indels': amount_of_indels,
+            'scores': scores_list,
+            'positions': positions,
+            'mutations': mutations
+        }
+
+        return item

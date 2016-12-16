@@ -49,7 +49,7 @@ class OncodriveFML(object):
         self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
-        self.statistic_method = self.configuration['statistic']['method']
+        self.samples_statistic_method = self.configuration['statistic']['samples_method']
 
         if self.configuration['signature']['method'] == 'bysample':
             self.configuration['signature']['method'] = 'complement'
@@ -80,13 +80,14 @@ class OncodriveFML(object):
         Returns:
             :class:`~oncodrivefml.executors.bymutation.ElementExecutor`:
             returns :class:`~oncodrivefml.executors.bymutation.GroupByMutationExecutor` if
-            the statistic_method indicated in the configuration is not 'max-mean';
+            the there is no method to apply to the samples;
             :class:`~oncodrivefml.executors.bysamplen.GroupBySampleExecutor` otherwise.
 
 
         """
-        if self.statistic_method == 'maxmean':
-            return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures, self.configuration)
+        if self.samples_statistic_method is not None:
+            return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
+                                         self.configuration)
 
         return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
                                        self.configuration)

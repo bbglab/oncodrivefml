@@ -46,11 +46,19 @@ class ArithmeticMean(object):
         return obs, neg_obs
 
 
-class MaximumAndArithmeticMean(ArithmeticMean):
+class Maximum(object):
 
     @staticmethod
     def calc(values):
         return np.max(values)
+
+    @staticmethod
+    def calc_observed(values, observed):
+        observed_value = np.max(observed)
+        values = np.max(values, axis=1)
+        obs = len(values[values >= observed_value])
+        neg_obs = len(values[values <= observed_value])
+        return obs, neg_obs
 
 
 class GeometricMean(object):
@@ -123,7 +131,7 @@ class ArithmeticMeanHeteroscedasticScores(object):
 
 STATISTIC_TESTS = {
     'amean': ArithmeticMean(),
-    'maxmean': MaximumAndArithmeticMean(),
+    'max': Maximum(),
     'gmean': GeometricMean(),
     'amean_scoresmodif': ArithmeticMeanHeteroscedasticScores()
 }

@@ -1,129 +1,102 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 
+import logging
 import numpy as np
 
 from oncodrivefml.executors.bymutation import ElementExecutor
+from oncodrivefml.indels import Indel
 from oncodrivefml.scores import Scores
 from oncodrivefml.signature import get_ref
 from oncodrivefml.stats import STATISTIC_TESTS
 
 
-def detect_repeatitive_seq(chrom, seq, pos):
-    size = len(seq)
-    repeats = 0
-    while seq == get_ref(chrom, pos, size=size):
-        pos += size
-        repeats += 1
-    return repeats
-
-
 
 class GroupBySampleExecutor(ElementExecutor):
     """
-    The scores within an element are grouped by the sample_id.
-    Within all the mutations with the same sample_id, the max is taken
-    and used for the scores list.
+    Executor that simulates one mutation per sample (if the sample exists in the observed mutations).
+    The simulation parameters are taken from the configuration file.
 
     Args:
-        name:
-        muts:
-        segments:
-        signature:
-        config:
+        element_id (str): element ID
+        muts (list): list of mutations belonging to that element (see :ref:`mutations <mutations dict>` inner items)
+        segments (list): list of segments belonging to that element (see :ref:`elements <elements dict>` inner items)
+        signature (dict): probabilities of each mutation (see :ref:`signatures <signature dict>`)
+        config (dict): configurations
+
     """
 
-    def __init__(self, name, muts, segments, signature, config):
+    def __init__(self, element_id, muts, segments, signature, config):
+        super(GroupBySampleExecutor, self).__init__(element_id, muts, segments, signature, config)
 
-        # Input attributes
-        self.name = name
-        self.signature = signature
-        self.segments = segments
-        subs = config['statistic']['subs'] != 'none'
-        if subs:
-            self.muts = [m for m in muts if m['TYPE'] == 'subs']
-        else:
-            self.muts = []
-        '''
-        self.indels = config['statistic']['indels'] != 'none'
-        if self.indels:
-            indels_max_repeats = config['statistic']['indels_max_repeats']
-            indels_set = set()
-            for m in [m for m in muts if m['TYPE'] == 'indel']:
-                chrom = m['CHROMOSOME']
-                ref = m['REF']
-                alt = m['ALT']
-                pos = m['POSITION']
+    def compute_muts_statistics(self, indels=False):
+        """
+        Gets the score of each mutation.
+        The mutation (per sample) with the highest score is used as a reference for the simulation.
+        It means that this mutation is used to get the signature, position...
 
-                # Skip recurrent indels
-                if (chrom, pos, ref, alt) not in indels_set:
-                    indels_set.add((chrom, pos, ref, alt))
+        Args:
+            indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise
 
-                    # Check if it's repeated
-                    seq = alt if '-' in ref else ref
-                    repeats = detect_repeatitive_seq(chrom, seq, pos)
-                    if repeats <= indels_max_repeats:
-                        self.muts.append(m)
-        '''
+        Returns:
+            dict: several information about the mutations and a list of them with the scores
 
-        self.is_positive_strand = True if segments[0].get('STRAND', '+') == '+' else False
+        """
 
-        # Configuration parameters
-        self.score_config = config['score']
-        self.sampling_size = config['background'].get('sampling', 100000)
-        self.statistic_name = config['statistic'].get('method', 'amean')
-        self.simulation_range = config['background'].get('range', None)
-        self.signature_column = config['signature']['classifier']
+        samples_statistic_test = STATISTIC_TESTS.get(self.samples_method)
 
-        # Output attributes
-        self.obs = 0
-        self.neg_obs = 0
-        self.result = None
-        self.scores = None
+        # Add scores to the element mutations
+        scores_by_sample = defaultdict(list)
+        scores_list = []
+        positions = []
+        mutations = []
+        amount_of_subs = 0
+        amount_of_indels = 0
 
-    def run(self):
+        mut_per_sample = {}
 
-        # Load element scores
-        self.scores = Scores(self.name, self.segments, self.signature, self.score_config)
+        for m in self.muts:
 
-        # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(self.muts, self.scores, indels=self.indels, positive_strand=self.is_positive_strand)
+            self.compute_mutation_score(m, indels)
 
-        if len(self.result['mutations']) > 0:
-            statistic_test = STATISTIC_TESTS.get(self.statistic_name)
-            observed = []
-            background = []
+            # Update scores
+            if m.get('SCORE', None) is not None:
 
-            scores_by_signature = defaultdict(list)
-            for mut in self.result['mutations']:
-                scores_by_signature[mut.get(self.signature_column, self.signature_column)].append(mut['SCORE'])
+                sample = m['SAMPLE']
 
-            for sample, scores in scores_by_signature.items():
+                if sample not in mut_per_sample.keys() or m['SCORE'] > mut_per_sample[sample]['SCORE']:
+                    mut_per_sample[sample] = m
 
-                simulation_scores = []
-                simulation_signature = []
+                scores_by_sample[sample].append(m['SCORE'])
 
-                positions = self.scores.get_all_positions()
+        for sample, m in mut_per_sample.items():
 
-                signature = self.signature
+            m['SCORE'] = samples_statistic_test.calc(scores_by_sample[sample])
+            # Create an imaginary mutation with the same parameters as the one with the maximum score
+            # and the score result from the statistical test on all the scores for all mutation in that sample
 
-                for pos in positions:
-                    for s in self.scores.get_score_by_position(pos):
-                        simulation_scores.append(s.value)
-                        simulation_signature.append(self.signature[sample].get((s.ref_triplet, s.alt_triplet), 0.0))
+            scores_list.append(m['SCORE'])
 
-                simulation_scores = np.array(simulation_scores)
-                simulation_signature = np.array(simulation_signature)
-                simulation_signature = simulation_signature / simulation_signature.sum()
+            if m['TYPE'] == "subs" or m['TYPE'] == "mnp":
+                amount_of_subs += 1
+            elif m['TYPE'] == "indel":
+                amount_of_indels += 1
 
-                observed.append(statistic_test.calc(scores))
-                random_scores = np.random.choice(simulation_scores, size=(self.sampling_size, len(scores)), p=simulation_signature, replace=True)
-                # matrix sampling_size, len(scores)
-                background.append(np.max(random_scores, axis=1))  # gets the max of each row
+            positions.append(m['POSITION'])
+            mutations.append(m)
 
-            self.obs, self.neg_obs = statistic_test.calc_observed(np.array(background).transpose(), np.array(observed))
+        # Aggregate scores
+        num_samples = len(scores_by_sample)
 
-        # Calculate p-values
-        self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
-        self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
+        item = {
+            'samples_mut': num_samples,
+            'muts': len(scores_list),
+            'muts_recurrence': len(set(positions)),
+            'subs': amount_of_subs,
+            'indels': amount_of_indels,
+            'scores': scores_list,
+            'positions': positions,
+            'mutations': mutations,
+            'scores_by_sample': scores_by_sample
+        }
 
-        return self
+        return item

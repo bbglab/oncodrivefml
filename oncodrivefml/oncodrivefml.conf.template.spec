@@ -28,8 +28,8 @@ sampling = integer
 recurrence = boolean
 
 [statistic]
-method = option('amean', 'gmean', 'amean_scoresmodif', default='amean')
-one_mut_per_sample = boolean(default=False)
+method = option('amean', 'gmean', 'max' default='amean')
+samples_method = option('amean', 'gmean', 'max' default=None)
 subs = boolean(default=True)
 mnp = boolean(default=True)
 
