@@ -2,11 +2,11 @@
 build = option('hg18', 'hg19', 'hg38', default='hg19')
 
 [signature]
-method = option('none', 'full', 'complement', 'bysample', 'file')
+method = option('none', 'full', 'complement', 'bysample', 'file', default='full')
 classifier = string(default='CANCER_TYPE')
-use_only_mapped_elements = boolean(default=False)
+use_only_mapped_mutations = boolean(default=False)
 include_mnp = boolean(default=True)
-correct_signature_by_sites = option('genome', 'coding', default=None)
+correct_by_sites = option('genome', 'coding', default=None)
 path = string(default=None)
 column_ref = string(default=None)
 column_alt = string(default=None)
@@ -23,12 +23,9 @@ score = integer
 element = integer(default=None)
 extra = integer(default=None)
 
-[background]
-sampling = integer
-recurrence = boolean
-
 [statistic]
 method = option('amean', 'gmean', 'max' default='amean')
+sampling = integer(default=100000)
 samples_method = option('amean', 'gmean', 'max' default=None)
 subs = boolean(default=True)
 mnp = boolean(default=True)

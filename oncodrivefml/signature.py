@@ -260,8 +260,8 @@ def load_signature(mutations_file, signature_function, signature_config, save_pi
     column_alt = signature_config['column_alt']
     column_probability = signature_config['column_probability']
     include_mnp = signature_config['include_mnp']
-    correct_signature_by_sites = signature_config['correct_signature_by_sites']
-    use_only_mapped_elements = signature_config['use_only_mapped_elements']
+    correct_by_sites = signature_config['correct_by_sites']
+    use_only_mapped_mutations = signature_config['use_only_mapped_mutations']
 
     if path is not None and path.endswith(".pickle.gz"):
         with gzip.open(path, 'rb') as fd:
@@ -290,11 +290,13 @@ def load_signature(mutations_file, signature_function, signature_config, save_pi
             signature_dict_precomputed = None
             save_pickle = False
 
-        if use_only_mapped_elements:
+        if use_only_mapped_mutations:
             # Do not save any pickle and do not correct by the number of sites
             signature_dict_precomputed = None
             save_pickle = False
-            correct_signature_by_sites = None
+            if correct_by_sites is not None:
+                logging.warning('Signature not corrected because the use_only_mapped_mutations flag was set to True')
+            correct_by_sites = None
 
 
         if signature_dict_precomputed is not None and exists(signature_dict_precomputed) and load_pickle:
@@ -317,9 +319,9 @@ def load_signature(mutations_file, signature_function, signature_config, save_pi
                     logging.debug(
                         "Imposible to write precomputed signature here: {}".format(signature_dict_precomputed))
 
-        if signature_dict is not None and correct_signature_by_sites is not None:  # correct the signature
+        if signature_dict is not None and correct_by_sites is not None:  # correct the signature
 
-            triplets_probabilities = load_regions_signature(correct_signature_by_sites, collapse)
+            triplets_probabilities = load_regions_signature(correct_by_sites, collapse)
 
             logging.info('Correcting signatures')
 
