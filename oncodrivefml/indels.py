@@ -276,7 +276,7 @@ class Indel:
         # Check if it's repeated
         seq = alt if '-' in ref else ref
         size = indels_max_repeats * 2 * len(seq)
-        ref = get_ref(chrom, pos - size // 2, size)
+        ref = get_ref(chrom, pos-(size//2)-1, size+1)
         return ref.count(seq) >= indels_max_repeats
 
 
@@ -621,6 +621,8 @@ class Indel:
             list.
 
         """
+        # TODO if these values have already been computed for the subs, we can optimize the
+        # code avoiding this second loop
         indel_scores = []
         for pos in self.scores.get_all_positions():
             for s in self.scores.get_score_by_position(pos):
