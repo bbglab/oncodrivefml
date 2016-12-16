@@ -133,10 +133,14 @@ class OncodriveFML(object):
         else:
             signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
 
+
+        save_signature_pickle = self.save_pickle if self.blacklist is None and not self.configuration['signature']['use_only_mapped_elements']  else False
+        load_signature_pickle = True if self.blacklist is None and not self.configuration['signature']['use_only_mapped_elements']  else False
+
         # Load signatures
         self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
-                                         save_pickle=self.save_pickle if self.blacklist is None else False,
-                                         load_pickle=True if self.blacklist is None else False)
+                                         save_pickle=save_signature_pickle,
+                                         load_pickle=load_signature_pickle)
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for
