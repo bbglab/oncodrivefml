@@ -113,7 +113,6 @@ class OncodriveFML(object):
         if self.configuration['statistic']['use_gene_mutations']:
             self.configuration['p_indels'] = None
             self.configuration['p_subs'] = None
-
         else:
             if self.configuration['statistic']['subs'] and self.configuration['statistic']['indels']['enabled']:
                 # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
@@ -131,11 +130,17 @@ class OncodriveFML(object):
 
         if self.configuration['signature']['use_only_mapped_elements']:
             signature_function = lambda: yield_mutations(self.mutations)
+
         else:
             signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
 
 
-        save_signature_pickle = self.save_pickle if self.blacklist is None and not self.configuration['signature']['use_only_mapped_elements']  else False
+        save_signature_pickle = self.save_pickle
+        if save_signature_pickle:
+            if self.blacklist is not None or self.configuration['signature']['use_only_mapped_elements']:
+                save_signature_pickle = False
+                logging.warning('Signature pickle not saved because a blacklist for the mutations was provided or the use_only_mapped_mutations flag was set to true')
+
         load_signature_pickle = True if self.blacklist is None and not self.configuration['signature']['use_only_mapped_elements']  else False
 
         # Load signatures
