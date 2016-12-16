@@ -1,14 +1,7 @@
-from collections import defaultdict, Counter
-
-import logging
-import numpy as np
+from collections import defaultdict
 
 from oncodrivefml.executors.bymutation import ElementExecutor
-from oncodrivefml.indels import Indel
-from oncodrivefml.scores import Scores
-from oncodrivefml.signature import get_ref
 from oncodrivefml.stats import STATISTIC_TESTS
-
 
 
 class GroupBySampleExecutor(ElementExecutor):
