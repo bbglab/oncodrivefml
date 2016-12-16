@@ -142,6 +142,8 @@ method = amean
 # the mutation with the highest score is used.
 # This is important when simulating indels with the pattern method
 # or when mutation from the same sample have different signatures.
+# It also makes a difference when simulating the indels and subs
+# following the amount in the gene
 
 
 

@@ -43,6 +43,9 @@ use_gene_mutations = boolean(default=False)
 
         stop_function = option('mean', 'median', 'random', 'random_choice', default='mean')
 
+        count_in_frame_as_subs = boolean(default=False)
+        indels_simulated_with_signature =  boolean(default=False)
+
 [settings]
 cores = integer(default=None)
 drmaa = integer(default=None)

@@ -192,6 +192,7 @@ class Indel:
         self.signature = signature
         self.signature_id = signature_id
         self.has_positive_strand = has_positive_strand
+        self.simulated_as_subs = False
 
         if method == 'pattern':
             self.get_background_indel_scores = self.get_background_indel_scores_from_pattern
@@ -201,6 +202,7 @@ class Indel:
             self.get_indel_score = self.get_indel_score_from_stop
             self.scores.get_stop_scores()
         elif method == 'max':
+            self.simulated_as_subs = True
             self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions_without_signature
             self.get_indel_score = self.get_indel_score_max_of_subs
 

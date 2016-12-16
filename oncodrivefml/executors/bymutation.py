@@ -54,7 +54,7 @@ class ElementExecutor(object):
 
         # Configuration parameters
         self.score_config = config['score']
-        self.sampling_size = config['background'].get('sampling', 100000)
+        self.sampling_size = config['statistic']['sampling']
         self.statistic_name = config['statistic']['method']
         self.signature_column = config['signature']['classifier']
         self.samples_method = config['statistic']['samples_method']
@@ -166,6 +166,8 @@ class ElementExecutor(object):
             subs_probs_by_signature = {}
             signature_ids = []
 
+            indels_simulated_as_subs = 0
+
 
             for mut in self.result['mutations']:
                 observed.append(mut['SCORE']) # Observed mutations
@@ -173,15 +175,33 @@ class ElementExecutor(object):
                     if self.signature is not None:
                         # Count how many signature ids are and prepare a vector for each
                         # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
-                        signature_id = mut.get(self.signature_column, self.signature_column)
-                        if signature_id not in signature_ids:
-                            subs_probs_by_signature.update({signature_id: []})
-                        signature_ids.append(signature_id)
+                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
+
+                # Indels treated as subs also count for the subs probs
+                elif mut['TYPE'] == 'indel' and indels.simulated_as_subs:
+                    indels_simulated_as_subs += 1
+                    if self.indels_conf['indels_simulated_with_signature']:
+                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
+                    else:
+                        signature_ids.append('indels_having_no_signature')
+                elif mut['TYPE'] == 'indel' and self.indels_conf['count_in_frame_as_subs']:
+                    if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
+                        indels_simulated_as_subs += 1
+                    if self.indels_conf['indels_simulated_with_signature']:
+                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
+                    else:
+                        signature_ids.append('indels_having_no_signature')
+
+
+            for signature_id in set(signature_ids):
+                subs_probs_by_signature.update({signature_id: []})
+
+
 
             # When the probabilities of subs and indels are None, they are taken from
             # mutations seen in the gene
             if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
-                self.p_subs = self.result['subs'] / len(self.result['mutations'])
+                self.p_subs = (self.result['subs'] + indels_simulated_as_subs) / len(self.result['mutations'])
                 self.p_indels = 1 - self.p_subs
 
 
@@ -191,7 +211,10 @@ class ElementExecutor(object):
                     for s in self.scores.get_score_by_position(pos):
                         subs_scores.append(s.value)
                         for k, v in subs_probs_by_signature.items():
-                            v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
+                            if k in self.signature.keys():
+                                v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
+                            else:
+                                v.append(1/192)
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)

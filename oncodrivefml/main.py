@@ -118,6 +118,19 @@ class OncodriveFML(object):
                 # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
                 subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
 
+                if self.configuration['indels']['count_in_frame_as_subs']:
+                    logging.info('Indels identified as in frame, are going to be simulated as subs')
+                    # count how many indels are frameshift
+                    discarded = 0
+                    for element, mutations in self.mutations.items():
+                        for mut in mutations:
+                            if mut['TYPE'] == 'indel':
+                                indel_size = max(len(mut['REF']), len(mut['ALT']))
+                                if indel_size % 3 == 0:
+                                    discarded +=1
+                indels_counter -= discarded
+                subs_counter += discarded
+
                 p_indels = indels_counter/(indels_counter + subs_counter)
                 p_subs = subs_counter/(subs_counter + indels_counter)
 
@@ -128,7 +141,7 @@ class OncodriveFML(object):
                 self.configuration['p_subs'] = 1
 
 
-        if self.configuration['signature']['use_only_mapped_elements']:
+        if self.configuration['signature']['use_only_mapped_mutations']:
             signature_function = lambda: yield_mutations(self.mutations)
 
         else:
@@ -137,11 +150,11 @@ class OncodriveFML(object):
 
         save_signature_pickle = self.save_pickle
         if save_signature_pickle:
-            if self.blacklist is not None or self.configuration['signature']['use_only_mapped_elements']:
+            if self.blacklist is not None or self.configuration['signature']['use_only_mapped_mutations']:
                 save_signature_pickle = False
                 logging.warning('Signature pickle not saved because a blacklist for the mutations was provided or the use_only_mapped_mutations flag was set to true')
 
-        load_signature_pickle = True if self.blacklist is None and not self.configuration['signature']['use_only_mapped_elements']  else False
+        load_signature_pickle = True if self.blacklist is None and not self.configuration['signature']['use_only_mapped_mutations']  else False
 
         # Load signatures
         self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
