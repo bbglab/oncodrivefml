@@ -63,6 +63,7 @@ def change_ref_build(build):
     """
     global ref_build
     ref_build = build
+    logging.info('Using {} as reference genome'.format(ref_build.upper()))
 
 
 def get_ref(chromosome, start, size=1):
@@ -270,7 +271,7 @@ def load_signature(mutations_file, signature_function, signature_config, save_pi
     signature_dict = None
     if method == "none":
         # We don't use signature
-        logging.warning("We are not using any signature")
+        logging.warning("No signature is being used")
 
     elif method == "file":
         if not os.path.exists(path):

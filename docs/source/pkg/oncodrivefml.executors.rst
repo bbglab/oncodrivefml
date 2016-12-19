@@ -20,6 +20,14 @@ oncodrivefml.executors.bysample module
     :undoc-members:
     :show-inheritance:
 
+oncodrivefml.executors.element module
+-------------------------------------
+
+.. automodule:: oncodrivefml.executors.element
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------
