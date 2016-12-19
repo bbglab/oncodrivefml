@@ -354,8 +354,8 @@ def store_png(input_file, output_file, showit=False):
             Defaults to False.
 
     """
-    pvalue='pvalue'
-    qvalue='qvalue'
+    pvalue='P_VALUE'
+    qvalue='Q_VALUE'
     min_samples=2
     draw_greys=True
     annotate=True
@@ -381,11 +381,11 @@ def store_png(input_file, output_file, showit=False):
 
     colors = ['royalblue', 'blue']
     obs_pvalues = df[pvalue].map(lambda x: -np.log10(x) if x > 0 else -np.log10(1 / MIN_PVALUE))
-    #gens with samples_mut >= min_samples have different values for color and alpha
-    obs_color = df['samples_mut'].map(lambda x: colors[1] if x >= min_samples else colors[0])
-    obs_alpha = df['samples_mut'].map(lambda x: 0.7 if x >= min_samples else 0.3)
+    #gens with num_samples >= min_samples have different values for color and alpha
+    obs_color = df['SAMPLES'].map(lambda x: colors[1] if x >= min_samples else colors[0])
+    obs_alpha = df['SAMPLES'].map(lambda x: 0.7 if x >= min_samples else 0.3)
 
-    data = pd.DataFrame({'HugoID': df['symbol'],
+    data = pd.DataFrame({'HugoID': df['SYMBOL'],
                          'observed': obs_pvalues,
                          'color': obs_color,
                          'alpha': obs_alpha,
@@ -527,7 +527,7 @@ def store_html(input_file, output_path):
 
     search_by_fields = ['HugoID', 'EnsemblID']
 
-    qqp = QQPlot(input_file = input_file, rename_fields = {'SAMPLES': 'num_samples','SYMBOL': 'HugoID', 'GENE_ID': 'EnsemblID'}, extra_fields=search_by_fields, cutoff=True)
+    qqp = QQPlot(input_file = input_file, rename_fields = {'SAMPLES': 'num_samples','SYMBOL': 'HugoID', 'GENE_ID': 'EnsemblID', 'P_VALUE': 'pvalue', 'Q_VALUE': 'qvalue'}, extra_fields=search_by_fields, cutoff=True)
 
     qqp.add_tooltip_enhanced()
 

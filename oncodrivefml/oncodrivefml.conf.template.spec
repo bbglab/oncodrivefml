@@ -25,9 +25,9 @@ element = integer(default=None)
 extra = integer(default=None)
 
 [statistic]
-method = option('amean', 'gmean', 'max' default='amean')
+method = option('amean', 'gmean', 'max', default='amean')
 sampling = integer(default=100000)
-per_sample_analysis = option('amean', 'gmean', 'max' default=None)
+per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 
 subs = boolean(default=True)
 mnp = boolean(default=True)
@@ -46,7 +46,6 @@ use_gene_mutations = boolean(default=False)
 
         stop_function = option('mean', 'median', 'random', 'random_choice', default='mean')
 
-        count_in_frame_as_subs = boolean(default=False)
         indels_simulated_with_signature =  boolean(default=False)
 
 [settings]
