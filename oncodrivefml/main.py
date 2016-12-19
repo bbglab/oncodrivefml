@@ -118,7 +118,7 @@ class OncodriveFML(object):
                 # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
                 subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
 
-                if self.configuration['indels']['count_in_frame_as_subs']:
+                if self.configuration['statistic']['indels']['method'] == 'stop' and self.configuration['statistic']['indels']['enable_frame']:
                     logging.info('Indels identified as in frame, are going to be simulated as subs')
                     # count how many indels are frameshift
                     discarded = 0
@@ -128,8 +128,8 @@ class OncodriveFML(object):
                                 indel_size = max(len(mut['REF']), len(mut['ALT']))
                                 if indel_size % 3 == 0:
                                     discarded +=1
-                indels_counter -= discarded
-                subs_counter += discarded
+                    indels_counter -= discarded
+                    subs_counter += discarded
 
                 p_indels = indels_counter/(indels_counter + subs_counter)
                 p_subs = subs_counter/(subs_counter + indels_counter)

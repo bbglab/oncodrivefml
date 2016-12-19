@@ -170,7 +170,7 @@ class ElementExecutor(object):
 
             for mut in self.result['mutations']:
                 observed.append(mut['SCORE'])  # Observed mutations
-                if mut['TYPE'] == 'subs' or mut['TYPE']=='mnp':
+                if mut['TYPE'] == 'subs' or mut['TYPE'] == 'mnp':
                     if self.signature is not None:
                         # Count how many signature ids are and prepare a vector for each
                         # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
@@ -178,18 +178,22 @@ class ElementExecutor(object):
 
                 # Indels treated as subs also count for the subs probs
                 elif mut['TYPE'] == 'indel' and indels.simulated_as_subs:
-                    indels_simulated_as_subs += 1
-                    if self.indels_conf['indels_simulated_with_signature']:
-                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
-                    else:
-                        signature_ids.append('indels_having_no_signature')
-                elif mut['TYPE'] == 'indel' and self.indels_conf['count_in_frame_as_subs']:
+                    self.p_subs = 1
+                    self.p_indels = 0
+                    if self.signature is not None:
+                        if self.indels_conf['indels_simulated_with_signature']:
+                            signature_ids.append(mut.get(self.signature_column, self.signature_column))
+                        else:
+                            signature_ids.append('indels_having_no_signature')
+                # When only in frame indels are simulated as subs
+                elif mut['TYPE'] == 'indel' and indels.in_frame_simulated_as_subs:
                     if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
                         indels_simulated_as_subs += 1
-                    if self.indels_conf['indels_simulated_with_signature']:
-                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
-                    else:
-                        signature_ids.append('indels_having_no_signature')
+                    if self.signature is not None:
+                        if self.indels_conf['indels_simulated_with_signature']:
+                            signature_ids.append(mut.get(self.signature_column, self.signature_column))
+                        else:
+                            signature_ids.append('indels_having_no_signature')
 
 
             for signature_id in set(signature_ids):

@@ -83,7 +83,7 @@ def _init_indels(indels_config):
         weighting_function = weight.function
 
     elif indels_config['method'] == 'stop':
-        stop = StopsScore(indels_config['mean'])
+        stop = StopsScore(indels_config['stop_function'])
         stop_function = stop.function
 
     if indels_config['enable_frame']:
@@ -193,11 +193,14 @@ class Indel:
         self.signature_id = signature_id
         self.has_positive_strand = has_positive_strand
         self.simulated_as_subs = False
+        self.in_frame_simulated_as_subs = False
 
         if method == 'pattern':
             self.get_background_indel_scores = self.get_background_indel_scores_from_pattern
             self.get_indel_score = self.get_indel_score_from_pattern
         elif method == "stop":
+            if frame_length == 3:
+                self.in_frame_simulated_as_subs = True
             self.get_background_indel_scores = self.get_background_indel_scores_as_stops
             self.get_indel_score = self.get_indel_score_from_stop
             self.scores.get_stop_scores()
