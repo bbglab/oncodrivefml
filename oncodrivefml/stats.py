@@ -83,7 +83,7 @@ class GeometricMean(object):
             (array): geometric mean by columns (if the input is a matrix)
 
         """
-        return stats.gmean(values + 1.0) - 1.0
+        return stats.gmean(np.array(values) + 1.0) - 1.0
 
     @staticmethod
     def calc_observed(values, observed):
