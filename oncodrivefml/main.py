@@ -13,6 +13,7 @@ from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
+from oncodrivefml.executors.element import flatten_partitions, compute_sampling, partitions_list
 from oncodrivefml.load import load_and_map_variants, load_mutations, count_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
@@ -161,6 +162,11 @@ class OncodriveFML(object):
                                          save_pickle=save_signature_pickle,
                                          load_pickle=load_signature_pickle)
 
+        # TODO move to config file
+        #self.configuration['statistic']['sampling_min_obs'] = 3
+        #self.configuration['statistic']['sampling_chunk'] = 50000000
+        #self.configuration['statistic']['sampling_max'] = self.configuration['statistic']['sampling'] * 100
+
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for
                              element_id, muts in self.mutations.items()]
@@ -184,6 +190,43 @@ class OncodriveFML(object):
             for executor in loop_logging(map_func(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
                 if len(executor.result['mutations']) > 0:
                     results[executor.name] = executor.result
+
+            # Flatten partitions
+            partitions = list(flatten_partitions(results))
+
+            i = 0
+            while len(partitions) > 0 or i == 0:
+
+                i += 1
+                logging.info("Parallel sampling. Iteration {}, partitions {}".format(i, len(partitions)))
+
+                # Pending sampling execution
+                for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=18*self.cores):
+                    result = results[name]
+                    result['obs'] += obs
+                    result['neg_obs'] += obs
+
+                # Increase sampling_size
+                partitions = []
+                for name, result in results.items():
+                    sampling_size = float(result['sampling_size'])
+
+                    if result['obs'] < self.configuration['statistic']['sampling_min_obs'] and sampling_size < self.configuration['statistic']['sampling_max']:
+                        next_sampling_size = min(sampling_size*10, self.configuration['statistic']['sampling_max'])
+                        pending_sampling_size = int(next_sampling_size - sampling_size)
+                        chunk_size = (pending_sampling_size * result['muts_count']) // self.configuration['statistic']['sampling_chunk']
+                        chunk_size = pending_sampling_size if chunk_size == 0 else pending_sampling_size // chunk_size
+
+                        result['sampling_size'] = next_sampling_size
+                        for partition in partitions_list(pending_sampling_size, chunk_size):
+                            partitions.append((name, partition, result))
+
+            # Compute p-values
+            logging.info("Compute p-values")
+            for result in results.values():
+                sampling_size = float(result['sampling_size'])
+                result['pvalue'] = max(1, result['obs']) / sampling_size
+                result['pvalue_neg'] = max(1, result['neg_obs']) / sampling_size
 
         if results == {}:
             logging.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")

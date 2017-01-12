@@ -8,6 +8,47 @@ from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
 
 
+def flatten_partitions(results):
+
+    for name, result in results.items():
+        for partition in result['partitions']:
+            yield (name, partition, result)
+
+
+def compute_sampling(value):
+    name, samples, result = value
+
+    try:
+        scores = result['simulation_scores']
+        muts_count = result['muts_count']
+        probs = result['simulation_probs']
+        observed = result['observed']
+        statistic_test = STATISTIC_TESTS.get(result['statistic_name'])
+        background = np.random.choice(scores, size=(samples, muts_count), p=probs, replace=True)
+        obs, neg_obs = statistic_test.calc_observed(background, np.array(observed))
+    except Exception as e:
+        logging.error("At {} error {}, result = {}".format(name, str(e), result.keys()))
+
+    return name, obs, neg_obs
+
+
+def partitions_list(total_size, chunk_size):
+    """
+    Create a list of values less or equal to chunk_size that sum total_size
+
+    :param total_size: Total size
+    :param chunk_size: Chunk size
+    :return: list of integers
+    """
+    partitions = [chunk_size for _ in range(total_size // chunk_size)]
+
+    res = total_size % chunk_size
+    if res != 0:
+        partitions += [res]
+
+    return partitions
+
+
 class ElementExecutor(object):
     """
     Base class for executors that do the analysis per genomic element.
@@ -55,6 +96,8 @@ class ElementExecutor(object):
         # Configuration parameters
         self.score_config = config['score']
         self.sampling_size = config['statistic']['sampling']
+        self.min_obs = config['statistic']['sampling_min_obs']
+        self.sampling_chunk = config['statistic']['sampling_chunk']
         self.statistic_name = config['statistic']['method']
         self.signature_column = config['signature']['classifier']
         self.samples_method = config['statistic']['per_sample_analysis']
@@ -81,7 +124,6 @@ class ElementExecutor(object):
 
         """
         raise RuntimeError("The classes that extend ElementExecutor must override, at least the compute_muts_statistics() method")
-
 
     def compute_mutation_score(self, mutation, indels):
 
@@ -122,7 +164,6 @@ class ElementExecutor(object):
             score = indels.get_indel_score(mutation)
 
             mutation['SCORE'] = score if not math.isnan(score) else None
-
 
     def run(self):
         """
@@ -195,18 +236,14 @@ class ElementExecutor(object):
                         else:
                             signature_ids.append('indels_having_no_signature')
 
-
             for signature_id in set(signature_ids):
                 subs_probs_by_signature.update({signature_id: []})
-
-
 
             # When the probabilities of subs and indels are None, they are taken from
             # mutations seen in the gene
             if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
                 self.p_subs = (self.result['subs'] + indels_simulated_as_subs) / len(self.result['mutations'])
                 self.p_indels = 1 - self.p_subs
-
 
             # Compute the values for the substitutions
             if self.use_subs and self.p_subs > 0:
@@ -240,14 +277,30 @@ class ElementExecutor(object):
             simulation_scores = subs_scores + indels_scores
             simulation_probs = subs_probs + indels_probs
 
-            background = np.random.choice(simulation_scores, size=(self.sampling_size, len(self.result['mutations'])), p=simulation_probs, replace=True)
+            muts_count = len(self.result['mutations'])
+            chunk_size = (self.sampling_size * muts_count) // self.sampling_chunk
+            chunk_size = self.sampling_size if chunk_size == 0 else self.sampling_size // chunk_size
 
-            self.obs, self.neg_obs = statistic_test.calc_observed(background, np.array(observed))
+            # Calculate sampling parallelization partitions
+            self.result['partitions'] = partitions_list(self.sampling_size, chunk_size)
+            self.result['sampling'] = {}
 
-        # Calculate p-values
-        self.result['pvalue'] = max(1, self.obs) / float(self.sampling_size)
-        self.result['pvalue_neg'] = max(1, self.neg_obs) / float(self.sampling_size)
+            # Run first partition
+            first_partition = self.result['partitions'].pop(0)
+            background = np.random.choice(simulation_scores, size=(first_partition, muts_count), p=simulation_probs, replace=True)
+            obs, neg_obs = statistic_test.calc_observed(background, np.array(observed))
+            self.result['obs'] = obs
+            self.result['neg_obs'] = neg_obs
 
+            # Sampling parallelization (if more than one partition)
+            if len(self.result['partitions']) > 1 or obs < self.min_obs:
+                self.result['muts_count'] = muts_count
+                self.result['simulation_scores'] = simulation_scores
+                self.result['simulation_probs'] = simulation_probs
+                self.result['observed'] = observed
+                self.result['statistic_name'] = self.statistic_name
+
+        self.result['sampling_size'] = self.sampling_size
         self.result['symbol'] = self.symbol
 
         return self
