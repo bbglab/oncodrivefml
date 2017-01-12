@@ -201,7 +201,7 @@ class OncodriveFML(object):
                 logging.info("Parallel sampling. Iteration {}, partitions {}".format(i, len(partitions)))
 
                 # Pending sampling execution
-                for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=18*self.cores):
+                for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=6*self.cores):
                     result = results[name]
                     result['obs'] += obs
                     result['neg_obs'] += obs
