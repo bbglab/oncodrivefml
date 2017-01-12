@@ -285,6 +285,11 @@ def load_signature(mutations_file, signature_function, signature_config, save_pi
             return signature_dict
 
     elif method == "full" or method == "complement":
+        if method == "complement":
+            collapse = True
+        else:
+            collapse = False
+
         if classifier == 'CANCER_TYPE' or classifier == 'SAMPLE':
             signature_dict_precomputed = mutations_file + '_signature_' + method +'_' + classifier + ".pickle.gz"
         else:
@@ -306,10 +311,6 @@ def load_signature(mutations_file, signature_function, signature_config, save_pi
                 signature_dict = pickle.load(fd)
         else:
             logging.info("Computing signatures")
-            if method == "complement":
-                collapse = True
-            else:
-                collapse = False
             signature_dict = compute_signature(signature_function, classifier, collapse, include_mnp)
             if save_pickle:
                 try:
