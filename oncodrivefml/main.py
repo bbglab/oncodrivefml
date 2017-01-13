@@ -204,7 +204,7 @@ class OncodriveFML(object):
                 for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=6*self.cores):
                     result = results[name]
                     result['obs'] += obs
-                    result['neg_obs'] += obs
+                    result['neg_obs'] += neg_obs
 
                 # Increase sampling_size
                 partitions = []

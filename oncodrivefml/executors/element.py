@@ -293,7 +293,7 @@ class ElementExecutor(object):
             self.result['neg_obs'] = neg_obs
 
             # Sampling parallelization (if more than one partition)
-            if len(self.result['partitions']) > 1 or obs < self.min_obs:
+            if len(self.result['partitions']) > 0 or obs < self.min_obs:
                 self.result['muts_count'] = muts_count
                 self.result['simulation_scores'] = simulation_scores
                 self.result['simulation_probs'] = simulation_probs
