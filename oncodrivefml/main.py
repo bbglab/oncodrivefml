@@ -13,13 +13,13 @@ from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
-from oncodrivefml.executors.element import flatten_partitions, compute_sampling, partitions_list
 from oncodrivefml.load import load_and_map_variants, load_mutations, count_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations, change_ref_build
 from oncodrivefml.utils import executor_run, loop_logging
 from oncodrivefml.indels import _init_indels
+from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
 
 
 class OncodriveFML(object):
@@ -162,11 +162,6 @@ class OncodriveFML(object):
                                          save_pickle=save_signature_pickle,
                                          load_pickle=load_signature_pickle)
 
-        # TODO move to config file
-        #self.configuration['statistic']['sampling_min_obs'] = 3
-        #self.configuration['statistic']['sampling_chunk'] = 50000000
-        #self.configuration['statistic']['sampling_max'] = self.configuration['statistic']['sampling'] * 100
-
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for
                              element_id, muts in self.mutations.items()]
@@ -176,6 +171,9 @@ class OncodriveFML(object):
 
         # Sort executors to compute first the ones that have more mutations
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
+
+        # TODO remove this
+        element_executors = element_executors[:10]
 
         # initialize the indels module
         indels_config = self.configuration['statistic']['indels']
@@ -201,7 +199,7 @@ class OncodriveFML(object):
                 logging.info("Parallel sampling. Iteration {}, partitions {}".format(i, len(partitions)))
 
                 # Pending sampling execution
-                for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=6*self.cores):
+                for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
                     result = results[name]
                     result['obs'] += obs
                     result['neg_obs'] += neg_obs

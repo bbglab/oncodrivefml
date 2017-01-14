@@ -6,47 +6,7 @@ from collections import Counter
 from oncodrivefml.indels import Indel
 from oncodrivefml.scores import Scores
 from oncodrivefml.stats import STATISTIC_TESTS
-
-
-def flatten_partitions(results):
-
-    for name, result in results.items():
-        for partition in result['partitions']:
-            yield (name, partition, result)
-
-
-def compute_sampling(value):
-    name, samples, result = value
-
-    try:
-        scores = result['simulation_scores']
-        muts_count = result['muts_count']
-        probs = result['simulation_probs']
-        observed = result['observed']
-        statistic_test = STATISTIC_TESTS.get(result['statistic_name'])
-        background = np.random.choice(scores, size=(samples, muts_count), p=probs, replace=True)
-        obs, neg_obs = statistic_test.calc_observed(background, np.array(observed))
-    except Exception as e:
-        logging.error("At {} error {}, result = {}".format(name, str(e), result.keys()))
-
-    return name, obs, neg_obs
-
-
-def partitions_list(total_size, chunk_size):
-    """
-    Create a list of values less or equal to chunk_size that sum total_size
-
-    :param total_size: Total size
-    :param chunk_size: Chunk size
-    :return: list of integers
-    """
-    partitions = [chunk_size for _ in range(total_size // chunk_size)]
-
-    res = total_size % chunk_size
-    if res != 0:
-        partitions += [res]
-
-    return partitions
+from oncodrivefml.walker import partitions_list
 
 
 class ElementExecutor(object):

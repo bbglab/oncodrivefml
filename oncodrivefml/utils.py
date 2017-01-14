@@ -7,10 +7,8 @@ from collections import defaultdict
 from datetime import datetime
 from ago import human
 
-from oncodrivefml.executors.bymutation import ElementExecutor
 
-
-def executor_run(executor: ElementExecutor):
+def executor_run(executor):
     """
     Method to call the run method
 
