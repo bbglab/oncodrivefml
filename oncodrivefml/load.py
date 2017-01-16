@@ -394,7 +394,7 @@ def count_mutations(file, show_warnings=True, blacklist=None):
     logging.info('Counting subs and indels')
     subs = 0
     indels = 0
-    for mut in load_mutations(file, blacklist=blacklist):
+    for mut in load_mutations(file, show_warnings=False, blacklist=blacklist):
         if mut['TYPE'] == 'indel':
             indels += 1
         else:
