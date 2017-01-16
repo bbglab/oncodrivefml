@@ -172,9 +172,6 @@ class OncodriveFML(object):
         # Sort executors to compute first the ones that have more mutations
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
 
-        # TODO remove this
-        element_executors = element_executors[:10]
-
         # initialize the indels module
         indels_config = self.configuration['statistic']['indels']
         if indels_config['enabled']:
@@ -196,7 +193,7 @@ class OncodriveFML(object):
             while len(partitions) > 0 or i == 0:
 
                 i += 1
-                logging.info("Parallel sampling. Iteration {}, partitions {}".format(i, len(partitions)))
+                logging.info("Parallel sampling. Iteration {}, genes {}, partitions {}".format(i, len(set([n for n,p,r in partitions])), len(partitions)))
 
                 # Pending sampling execution
                 for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
