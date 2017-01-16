@@ -4,7 +4,7 @@ import pyximport
 from oncodrivefml.stats import STATISTIC_TESTS
 
 pyximport.install()
-from walker_cython import walker_sampling
+from oncodrivefml.walker_cython import walker_sampling
 
 
 def flatten_partitions(results):

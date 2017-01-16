@@ -10,7 +10,7 @@ setup(
     name='oncodrivefml',
     version=__version__,
     packages=find_packages(),
-    package_data={'oncodrivefml': ['*.txt.gz', '*.conf.template', '*.conf.template.spec']},
+    package_data={'oncodrivefml': ['*.txt.gz', '*.conf.template', '*.conf.template.spec', '*.pyx']},
     url="https://bitbucket.org/bbglab/oncodrivefml",
     download_url="https://bitbucket.org/bbglab/oncodrivefml/get/"+__version__+".tar.gz",
     license='UPF Free Source Code',
