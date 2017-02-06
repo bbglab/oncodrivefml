@@ -11,7 +11,7 @@ OncodriveFML is made available to the general public subject to certain conditio
 Installation
 ============
 
-OncodriveFML depends on Python 3.4 and some external libraries. The easiest way to install all this software stack is using the well known `Anaconda Python distribution <http://continuum.io/downloads>`_.
+OncodriveFML depends on Python 3.5 and some external libraries. The easiest way to install all this software stack is using the well known `Anaconda Python distribution <http://continuum.io/downloads>`_.
 
 Then to get OncodriveFML installed first clone the repository and then install it using ``pip``::
 
@@ -53,23 +53,30 @@ File formats
 
    All the files can be compressed using GZIP (extension ".gz"), BZIP2 (ext. ".bz2") or LZMA (ext. ".xz")
 
+
 Input file format
 -----------------
 
-The variants file is a text file with 5 columns separated by a tab character (without any header or comment):
+The variants file is a text file with, at least, 5 columns separated by a tab character (header is required, but the order of the columns can change):
 
-* Column 1: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
-* Column 2: Mutation position. A positive integer.
-* Column 3: Reference allelle. A single letter: A, C, G or T (upper case)
-* Column 4: Alternate allelle. A single letter: A, C, G or T (upper case)
-* Column 5: Sample identifier. Any alphanumeric string.
-      
+* Column CHROMOSOME: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
+* Column POSITION: Mutation position. A positive integer.
+* Column REF: Reference allelle. A single letter: A, C, G or T (upper case)
+* Column ALT: Alternate allelle. A single letter: A, C, G or T (upper case)
+* Column SAMPLE: Sample identifier. Any alphanumeric string.
+* Column TYPE: Mutation type. Optional field (if not present it is inferred). One of the following strings: 'subs' for substitutions, 'indel' for insertions or deletions and 'mnp' for Multi-Nucleotide Polymorphism
+
+The variants file can contain more columns e.g. the cancer type. The more columns it contains, the more time it will take to read the file.
+
+
 Regions file format
 --------------------
 
-The regions file is a text file with 4 columns separated by a tab character (without any header or comment):
+The regions file is a text file with, at least, 4 columns separated by a tab character (without any header or comment):
 
 * Column 1: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
 * Column 2: Start position. A positive integer.
 * Column 3: End position. A positive integer.
 * Column 4: Element identifier.
+* Column 5: Segment identifier. Optional column.
+* Column 6: Symbol, a different identifier for the element that will also be printed in the output file. Optional column. Requires column 5 to be present.

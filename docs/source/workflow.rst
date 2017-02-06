@@ -11,11 +11,10 @@ Workflow
 
 - The :ref:`signature <signature dict>` is computed (:mod:`oncodrivefml.signature`).
 
-- Create executors by element (:class:`oncodrivefml.executors.bymutation.ElementExecutor`).
+- Create executors by element (:class:`oncodrivefml.executors.element.ElementExecutor`).
 
 - Launch the executors in parallel using :class:`multiprocessing.pool.Pool`.
 
 - Do a multiple test correction (:mod:`oncodrivefml.mtc`).
 
 - Generate the output (:mod:`oncodrivefml.store`).
-
