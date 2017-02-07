@@ -166,10 +166,6 @@ mnp = True
         enabled = True
 
         # Method to compute and simulate the indels
-        # Use the pattern of changes produced by the indel to
-        # compute the substitutions and simlate the same type of changes
-        method = pattern
-
         # Use the stops scores to compute the scores of the indels in the gene
         # Indels are simulated as substitutions
         #method = stop
@@ -187,15 +183,6 @@ mnp = True
         # max_repeats = number of times the sequence of the indel should appear in the region to be considered repetitive
         # use max_repeats = 0 to not discard indels
 
-
-        # Pattern method configuration
-        # Widow size
-        window_size = 10
-
-        # Function to weight the scores within the window size but outside the indel size
-        weight_function = 'constant'
-        #weight_function = 'linear'
-        #weight_function = 'logistic'
 
         # Stop method configuration
         # Function used on the scores of the stops to compute the indel scores

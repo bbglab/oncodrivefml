@@ -46,9 +46,6 @@ use_gene_mutations = boolean(default=False)
         enable_frame = boolean(default=False)
         max_repeats = integer(default=0)
 
-        window_size = integer(default=10)
-        weight_function = option('constant', 'linear', 'logistic', default='linear')
-
         stop_function = option('mean', 'median', 'random', 'random_choice', default='mean')
 
         indels_simulated_with_signature =  boolean(default=False)
