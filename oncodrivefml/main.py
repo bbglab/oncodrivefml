@@ -65,7 +65,7 @@ class OncodriveFML(object):
         self.elements = None
         self.signatures = None
 
-        self.debug = False
+        self.avoid_parallel = False
 
 
 
@@ -181,7 +181,7 @@ class OncodriveFML(object):
         with Pool(self.cores) as pool:
             results = {}
             logging.info("Computing OncodriveFML")
-            map_func = pool.imap if not self.debug else map
+            map_func = map if self.avoid_parallel else pool.imap
             for executor in loop_logging(map_func(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
                 if len(executor.result['mutations']) > 0:
                     results[executor.name] = executor.result
