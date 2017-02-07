@@ -67,31 +67,26 @@ class OncodriveFML(object):
 
         self.avoid_parallel = False
 
-
-
     def create_element_executor(self, element_id, muts_for_an_element):
         """
         To enable paralelization, for each element ID,
-        one :class:`~oncodrivefml.executors.bymutation.ElementExecutor` is created.
+        one :class:`~oncodrivefml.executors.element.ElementExecutor` is created.
 
         Args:
             element_id (str): ID of the element
             muts_for_an_element (list): list with all the mutations observed in the element
 
         Returns:
-            :class:`~oncodrivefml.executors.bymutation.ElementExecutor`:
-            returns :class:`~oncodrivefml.executors.bymutation.GroupByMutationExecutor` if
-            the there is no method to apply to the samples;
-            :class:`~oncodrivefml.executors.bysamplen.GroupBySampleExecutor` otherwise.
-
+            :class:`~oncodrivefml.executors.bymutation.GroupByMutationExecutor` or
+            :class:`~oncodrivefml.executors.bysample.GroupBySampleExecutor`.
 
         """
-        if self.samples_statistic_method is not None:
+        if self.samples_statistic_method is None:
+            return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
+                                           self.configuration)
+        else:
             return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
                                          self.configuration)
-
-        return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
-                                       self.configuration)
 
     def run(self):
         """
