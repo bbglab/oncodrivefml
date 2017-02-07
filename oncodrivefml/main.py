@@ -13,7 +13,7 @@ from os.path import join, exists
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
-from oncodrivefml.load import load_and_map_variants, load_mutations, count_mutations
+from oncodrivefml.load import load_and_map_variants, load_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations, change_ref_build
@@ -101,10 +101,12 @@ class OncodriveFML(object):
             return
 
         # Load mutations mapping
-        self.mutations, self.elements = load_and_map_variants(self.mutations_file,
+        mutations_data, self.elements = load_and_map_variants(self.mutations_file,
                                                               self.elements_file,
                                                               blacklist=self.blacklist,
                                                               save_pickle=self.save_pickle)
+
+        self.mutations = mutations_data['data']
 
         if self.configuration['statistic']['use_gene_mutations']:
             self.configuration['p_indels'] = None
@@ -112,7 +114,8 @@ class OncodriveFML(object):
         else:
             if self.configuration['statistic']['subs'] and self.configuration['statistic']['indels']['enabled']:
                 # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
-                subs_counter, indels_counter = count_mutations(self.mutations_file, blacklist=self.blacklist)
+                subs_counter = mutations_data['metadata']['subs']
+                indels_counter = mutations_data['metadata']['indels']
 
                 if self.configuration['statistic']['indels']['method'] == 'stop' and self.configuration['statistic']['indels']['enable_frame']:
                     logging.info('Indels identified as in frame, are going to be simulated as subs')
@@ -135,7 +138,6 @@ class OncodriveFML(object):
             else:
                 self.configuration['p_indels'] = 1
                 self.configuration['p_subs'] = 1
-
 
         if self.configuration['signature']['use_only_mapped_mutations']:
             signature_function = lambda: yield_mutations(self.mutations)
@@ -282,6 +284,9 @@ def cmdline():
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
     logging.getLogger().setLevel(logging.DEBUG if args.debug else logging.INFO)
     logging.debug(args)
+
+    if args.samples_blacklist is not None:
+        logging.debug('Using a blacklist causes some pickle files not to be saved/loaded')
 
     # Load configuration file and prepare analysis
     logging.info("Loading configuration")

@@ -51,6 +51,27 @@ mutations (:obj:`dict`)
             ]
         }
 
+.. _mutations data dict:
+
+mutations_data (:obj:`dict`)
+    contains the `mutations dict`_ and some metadata information about the mutations.
+    Currently, the number of substitutions and indels.
+    Basic structure:
+
+    .. code-block:: python
+
+        {
+            'data':
+                {
+                    `mutations dict`_
+                },
+            'metadata':
+                {
+                    'subs': amount_of_subs
+                    'indels': amount_o_indels
+                }
+        }
+
 """
 
 import gzip
@@ -100,12 +121,13 @@ MUTATIONS_SCHEMA = {
 }
 
 
-def load_mutations(file, show_warnings=True, blacklist=None):
+def load_mutations(file, show_warnings=True, blacklist=None, metadata_dict=None):
     """
     Parsed the mutations file
 
     Args:
         file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
+        metadata_dict (dict): dict that the function will fill with useful information
         show_warnings (bool, optional): Defaults to True.
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
             Defaults to None.
@@ -118,6 +140,9 @@ def load_mutations(file, show_warnings=True, blacklist=None):
 
     # Set of samples to blacklist
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
+
+    subs = 0
+    indels = 0
 
     reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA) # TODO add the header and switch SAMPLE and TYPE?
     all_errors = []
@@ -140,6 +165,15 @@ def load_mutations(file, show_warnings=True, blacklist=None):
             else:
                 row['TYPE'] = 'subs'
 
+        if metadata_dict is not None:
+            # compute the metatada needed
+            if row['TYPE'] == 'indel':
+                indels += 1
+            elif row['TYPE'] == 'subs':
+                subs += 1
+            else:
+                subs += len(row['REF'])
+
         yield row
 
     if show_warnings and len(all_errors) > 0:
@@ -149,6 +183,10 @@ def load_mutations(file, show_warnings=True, blacklist=None):
         ))
         for e in all_errors[:10]:
             logging.warning(e)
+
+    if metadata_dict is not None:
+        metadata_dict['subs'] = subs
+        metadata_dict['indels'] = indels
 
     reader.fd.close()
 
@@ -227,14 +265,14 @@ def build_regions_tree(regions):
 
 def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pickle=False):
     """
-    From the elements and variants files, get dictionaries with the segments grouped by element ID and the
-    mutations grouped in the same way.
+    From the elements and variants file, get dictionaries with the segments grouped by element ID and the
+    mutations grouped in the same way, as well as some information related to the mutations.
 
     Args:
         variants_file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
         elements_file: elements file (see :class:`~oncodrivefml.main.OncodriveFML`)
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
-           If the blacklist option is passed, the mutations are not loaded from / saved to a pickle file.
+           If the blacklist option is passed, the mutations are not loaded from/saved to a pickle file.
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
@@ -242,7 +280,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
 
         Elements: `elements dict`_
 
-        Mutations `mutations dict`_
+        Mutations: `mutations data dict`_
 
 
     The process is done in 3 steps:
@@ -250,23 +288,6 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
        #. :meth:`build_regions_tree`.
        #. each mutation (:meth:`load_mutations`) is associated with the right
           element ID
-
-    For each of the steps, a precomputed file is search:
-        1.
-            .. code-block:: python
-
-                elements_file + "_dict.pickle.gz"
-
-        #. Only if the mutations precomputed file is not found
-
-            .. code-block:: python
-
-                elements_file + "_tree.pickle.gz"
-
-        #.
-            .. code-block:: python
-
-                variants_file + "_mapping_" + get_name(elements_file) + '.pickle.gz'
 
     """
     # Load elements file
@@ -332,11 +353,12 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
 
     # Mapping mutations
     variants_dict = defaultdict(list)
+    variants_metadata_dict = {}
     logging.info("Mapping mutations")
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
-    for i, r in enumerate(load_mutations(variants_file, blacklist=blacklist), start=1):
+    for i, r in enumerate(load_mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist), start=1):
 
         if r['CHROMOSOME'] not in elements_tree:
             continue
@@ -348,7 +370,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             print(' [{} muts]'.format(i), flush=True)
 
         position = int(r['POSITION'])
-        #Get all intervals that include that position in the same chromosome
+        # Get the interval that include that position in the same chromosome
         intervals = elements_tree[r['CHROMOSOME']][position]
 
         for interval in intervals:
@@ -361,42 +383,17 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     if i > show_small_progress_at:
         print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)
 
+    mutations_data_dict = {'data': variants_dict, 'metadata': variants_metadata_dict}
+
     if save_pickle:
         if blacklist is None:
             # Try to store as precomputed
             try:
                 with gzip.open(variants_dict_precomputed, 'wb') as fd:
-                    pickle.dump(variants_dict, fd)
+                    pickle.dump(mutations_data_dict, fd)
             except OSError:
                 logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
         else:
             logging.warning("Mutations pickle file not saved because a blacklist was provided")
 
-    return variants_dict, elements
-
-
-
-def count_mutations(file, show_warnings=True, blacklist=None):
-    """
-    Count subs and indels in the mutations file
-    using :meth:`load_mutations`.
-
-    Args:
-        file:
-        show_warnings (bool):
-        blacklist:
-
-    Returns:
-        tuple. Amount of subs and amount of indels
-
-    """
-    # TODO add option to not read the file twice
-    logging.info('Counting subs and indels')
-    subs = 0
-    indels = 0
-    for mut in load_mutations(file, show_warnings=False, blacklist=blacklist):
-        if mut['TYPE'] == 'indel':
-            indels += 1
-        else:
-            subs += 1
-    return subs, indels
+    return mutations_data_dict, elements
