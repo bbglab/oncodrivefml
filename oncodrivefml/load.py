@@ -143,6 +143,8 @@ def load_mutations(file, show_warnings=True, blacklist=None, metadata_dict=None)
 
     subs = 0
     indels = 0
+    mnp = 0
+    mnp_length = 0
 
     reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA) # TODO add the header and switch SAMPLE and TYPE?
     all_errors = []
@@ -172,7 +174,8 @@ def load_mutations(file, show_warnings=True, blacklist=None, metadata_dict=None)
             elif row['TYPE'] == 'subs':
                 subs += 1
             else:
-                subs += len(row['REF'])
+                mnp_length += len(row['REF'])
+                mnp += 1
 
         yield row
 
@@ -187,6 +190,8 @@ def load_mutations(file, show_warnings=True, blacklist=None, metadata_dict=None)
     if metadata_dict is not None:
         metadata_dict['subs'] = subs
         metadata_dict['indels'] = indels
+        metadata_dict['mnp'] = mnp
+        metadata_dict['mnp_length'] = mnp_length
 
     reader.fd.close()
 

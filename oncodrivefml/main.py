@@ -113,7 +113,7 @@ class OncodriveFML(object):
             self.configuration['p_subs'] = None
         else:
             if self.configuration['statistic']['subs'] and self.configuration['statistic']['indels']['enabled']:
-                subs_counter = mutations_data['metadata']['subs']
+                subs_counter = mutations_data['metadata']['subs'] + mutations_data['metadata']['mnp_length']
                 indels_counter = mutations_data['metadata']['indels']
 
                 if self.configuration['statistic']['indels']['method'] == 'stop' and self.configuration['statistic']['indels']['enable_frame']:
