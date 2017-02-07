@@ -113,7 +113,6 @@ class OncodriveFML(object):
             self.configuration['p_subs'] = None
         else:
             if self.configuration['statistic']['subs'] and self.configuration['statistic']['indels']['enabled']:
-                # In case we are using indels and subs. Ohterwise it is pointless to get the counts of each
                 subs_counter = mutations_data['metadata']['subs']
                 indels_counter = mutations_data['metadata']['indels']
 
@@ -141,21 +140,16 @@ class OncodriveFML(object):
 
         if self.configuration['signature']['use_only_mapped_mutations']:
             signature_function = lambda: yield_mutations(self.mutations)
-
         else:
             signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
 
-
-        save_signature_pickle = self.save_pickle
-        if save_signature_pickle:
-            if self.blacklist is not None or self.configuration['signature']['use_only_mapped_mutations']:
-                save_signature_pickle = False
-                logging.warning('Signature pickle not saved because a blacklist for the mutations was provided or the use_only_mapped_mutations flag was set to true')
-
-        load_signature_pickle = True if self.blacklist is None and not self.configuration['signature']['use_only_mapped_mutations']  else False
+        save_signature_pickle = self.save_pickle if self.blacklist is None else False
+        load_signature_pickle = True if self.blacklist is None else False
+        if self.blacklist is None:
+            logging.debug('The presence of a blacklist force to not load/save pickle files')
 
         # Load signatures
-        self.signatures = load_signature(self.mutations_file, signature_function, self.configuration['signature'],
+        self.signatures = load_signature(signature_function, self.configuration['signature'], self.mutations_file,
                                          save_pickle=save_signature_pickle,
                                          load_pickle=load_signature_pickle)
 

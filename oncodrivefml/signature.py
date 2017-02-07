@@ -81,6 +81,7 @@ def get_ref(chromosome, start, size=1):
     """
     return refseq(ref_build, chromosome, start, size)
 
+
 def get_ref_triplet(chromosome, start):
     """
 
@@ -182,6 +183,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
         classifier (str): passed to :func:`~oncodrivefml.load.load_mutations`
             as parameter ``signature_classifier``.
         collapse (bool): consider one substitutions and the complementary one as the same. Defaults to True.
+        include_mnp (bool): use MNP mutation in the signature computation or not
 
     Returns:
         dict: probability of each substitution (measured by the triplets) grouped by the signature_classifier
@@ -196,7 +198,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
 
     .. warning::
 
-        Only substitutions are taken into account
+        Only substitutions (MNP are optional) are taken into account
 
     """
     signature_count = defaultdict(lambda: defaultdict(int))
@@ -204,6 +206,10 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
         if mut['TYPE'] == 'subs':
             signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
             signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
+            # TODO remove check ?
+            if signature_ref[1] != mut['REF']:
+                logging.warning('Discrepancy in substitution at position {} of chr {}'.format(pos, mut['CHROMOSOME']))
+                continue
 
             signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
         elif include_mnp and mut['TYPE'] == 'mnp':
@@ -230,15 +236,16 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
     return signature
 
 
-def load_signature(mutations_file, signature_function, signature_config, save_pickle=False, load_pickle=True):
+def load_signature(signature_function, signature_config, mutations_file, save_pickle=False, load_pickle=True):
     """
     Computes the probability that certain mutation occurs.
 
     Args:
-        mutations_file: mutations file
         signature_function: function that yields one mutation each time
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
+        mutations_file: mutations file
         save_pickle (:obj:`bool`, optional): save pickle files
+        load_pickle (:obj:`bool`, optional): load pickle files if exist
 
     Returns:
         dict: probability of each substitution (measured by the triplets) grouped by the signature_id
@@ -291,21 +298,20 @@ def load_signature(mutations_file, signature_function, signature_config, save_pi
             collapse = False
 
         if classifier == 'CANCER_TYPE' or classifier == 'SAMPLE':
-            signature_dict_precomputed = mutations_file + '_signature_' + method +'_' + classifier + ".pickle.gz"
+            signature_dict_precomputed = mutations_file + '_signature_' + method + '_' + classifier + ".pickle.gz"
         else:
             signature_dict_precomputed = None
             save_pickle = False
 
         if use_only_mapped_mutations:
             # Do not save any pickle and do not correct by the number of sites
-            signature_dict_precomputed = None
+            load_pickle = False
             save_pickle = False
             if correct_by_sites is not None:
-                logging.warning('Signature not corrected because the use_only_mapped_mutations flag was set to True')
+                logging.debug('Signature not corrected because the use_only_mapped_mutations flag was set to True')
             correct_by_sites = None
 
-
-        if signature_dict_precomputed is not None and exists(signature_dict_precomputed) and load_pickle:
+        if load_pickle and signature_dict_precomputed is not None and exists(signature_dict_precomputed):
             logging.info("Using precomputed signatures")
             with gzip.open(signature_dict_precomputed, 'rb') as fd:
                 signature_dict = pickle.load(fd)
@@ -349,7 +355,6 @@ def yield_mutations(mutations):
             yield mutation
 
 
-
 def correct_signature_by_triplets_frequencies(signature, triplets_frequencies):
     """
     Normalized de signature by the frequency of the triplets
@@ -371,7 +376,6 @@ def correct_signature_by_triplets_frequencies(signature, triplets_frequencies):
     return corrected_signature
 
 
-
 def get_normalized_frequencies(signature, triplets_frequencies):
     """
     Divides the frequency of each triplet alteration by the
@@ -389,7 +393,7 @@ def get_normalized_frequencies(signature, triplets_frequencies):
     corrected_signature = {}
     for triplet_pair, frequency in signature.items():
         ref_triplet = triplet_pair[0]
-        corrected_signature[triplet_pair] = frequency/triplets_frequencies[ref_triplet]
+        corrected_signature[triplet_pair] = frequency/triplets_frequencies.get(ref_triplet, float("inf")) # TODO check if the inf is the right thing to do
     return sum2one_dict(corrected_signature)
 
 
