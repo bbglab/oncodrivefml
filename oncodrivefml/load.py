@@ -394,6 +394,6 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             except OSError:
                 logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
         else:
-            logging.warning("Mutations pickle file not saved because a blacklist was provided")
+            logging.debug("Mutations pickle file not saved because a blacklist was provided")
 
     return mutations_data_dict, elements
