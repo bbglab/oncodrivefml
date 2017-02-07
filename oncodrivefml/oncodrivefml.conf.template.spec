@@ -25,7 +25,7 @@ element = integer(default=None)
 extra = integer(default=None)
 
 [statistic]
-method = option('amean', 'gmean', 'max', default='amean')
+method = option('amean', 'gmean', default='amean')
 
 sampling = integer(default=100000)
 sampling_max = integer(default=1000000)
@@ -41,7 +41,7 @@ use_gene_mutations = boolean(default=False)
 
     [[indels]]
         enabled = boolean(default=True)
-        method = option('pattern', 'stop', 'max', default='max')
+        method = option(stop', 'max', default='max')
 
         enable_frame = boolean(default=False)
         max_repeats = integer(default=0)
