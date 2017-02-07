@@ -76,7 +76,7 @@ class QQPlot(object):
         Creates the basic plot.
 
         Args:
-            extra_fiedls (list): list of extra fields containen by each point
+            extra_fields (list): list of extra fields containen by each point
             cutoff (bool): add cutoff
 
         """
@@ -319,8 +319,6 @@ class QQPlot(object):
             text_file.close()
 
 
-
-
 def eliminate_duplicates(df):
 
     colors = df['color'].tolist()
@@ -356,10 +354,10 @@ def store_png(input_file, output_file, showit=False):
     """
     pvalue='P_VALUE'
     qvalue='Q_VALUE'
-    min_samples=2
-    draw_greys=True
-    annotate=True
-    cut=True
+    min_samples = 2
+    draw_greys = True
+    annotate = True
+    cut = True
     #############################
 
     MIN_PVALUE = 10000
@@ -513,7 +511,6 @@ def store_png(input_file, output_file, showit=False):
     plt.close()
 
 
-
 def store_html(input_file, output_path):
     """
     Create the QQPlot and save it.
@@ -527,7 +524,7 @@ def store_html(input_file, output_path):
 
     search_by_fields = ['HugoID', 'EnsemblID']
 
-    qqp = QQPlot(input_file = input_file, rename_fields = {'SAMPLES': 'num_samples','SYMBOL': 'HugoID', 'GENE_ID': 'EnsemblID', 'P_VALUE': 'pvalue', 'Q_VALUE': 'qvalue'}, extra_fields=search_by_fields, cutoff=True)
+    qqp = QQPlot(input_file=input_file, rename_fields={'SAMPLES': 'num_samples','SYMBOL': 'HugoID', 'GENE_ID': 'EnsemblID', 'P_VALUE': 'pvalue', 'Q_VALUE': 'qvalue'}, extra_fields=search_by_fields, cutoff=True)
 
     qqp.add_tooltip_enhanced()
 
