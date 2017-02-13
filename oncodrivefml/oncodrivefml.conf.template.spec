@@ -24,6 +24,9 @@ score = integer
 element = integer(default=None)
 extra = integer(default=None)
 
+limit = integer(default=1)
+function = string(default=None)
+
 [statistic]
 method = option('amean', 'gmean', default='amean')
 
@@ -41,7 +44,7 @@ use_gene_mutations = boolean(default=False)
 
     [[indels]]
         enabled = boolean(default=True)
-        method = option(stop', 'max', default='max')
+        method = option('stop', 'max', default='max')
 
         enable_frame = boolean(default=False)
         max_repeats = integer(default=0)

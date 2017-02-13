@@ -15,6 +15,7 @@ from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.load import load_and_map_variants, load_mutations
 from oncodrivefml.mtc import multiple_test_correction
+from oncodrivefml.scores import init_scores_module
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations, change_ref_build
 from oncodrivefml.utils import executor_run, loop_logging
@@ -147,6 +148,8 @@ class OncodriveFML(object):
         load_signature_pickle = True if self.blacklist is None else False
         if self.blacklist is None:
             logging.debug('The presence of a blacklist force to not load/save pickle files')
+
+        init_scores_module(self.configuration['score'])
 
         # Load signatures
         self.signatures = load_signature(signature_function, self.configuration['signature'], self.mutations_file,

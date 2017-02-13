@@ -48,6 +48,38 @@ Parameters:
 """
 
 
+def null(x):
+    return x
+
+stop_function = null
+min_stops = 3
+
+
+def init_scores_module(conf):
+    global stop_function, min_stops
+    # if conf['function'] == 'polynomial':
+    #     def f(x):
+    #         index = 0
+    #         value = 0
+    #         for param in conf['params']:
+    #             value += param * (value**index)
+    #             index += 1
+    #         return value
+    #
+    # elif conf['function'] == 'exponential':
+    #     def f(x):
+    #         return conf['params'][0] * np.exp(conf['params'][1] * x)
+    #     stop_function = f
+
+    min_stops = conf.get('limit', min_stops)
+    logging.debug('Below {} stops in the element the function for stops will be used'.format(min_stops))
+    if 'function' in conf:
+        exec("def stops_function(x): return {}".format(conf['function']), globals())
+        stop_function = stops_function
+    else:
+        logging.warning('You have not provided any function for computing the stops')
+
+
 class Scores(object):
     """
 
@@ -223,12 +255,9 @@ class Scores(object):
     def get_stop_scores(self):
         """
         Get the scores of the stops in a gene that fall in the regions
-        being analized
+        being analyzed
         """
-        # TODO add other scores
-        # TODO note that is only for coding
         stops = defaultdict(list)
-        # stops_file = '/home/iker/Desktop/cds_stop/cds_stops.bgz'
         stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
 
         tb = tabix.open(stops_file)
@@ -251,19 +280,14 @@ class Scores(object):
                 continue
 
         self.stop_scores = []
-        if len(stops) > 3:
-            # if more than 3 positions have stops we get the stop value from those
-            for pos, alts in stops.items():
-                for s in self.get_score_by_position(pos):
-                    if s.alt in alts:
-                        self.stop_scores.append(s.value)
-        if len(self.stop_scores) < 3:
-            A = 8.9168668946147314
-            B = 0.082688007694096191
+        for pos, alts in stops.items():
+            for s in self.get_score_by_position(pos):
+                if s.alt in alts:
+                    self.stop_scores.append(s.value)
+        if len(self.stop_scores) < min_stops:
             all_scores = []
             positions = self.get_all_positions()
             for pos in positions:
                 for s in self.get_score_by_position(pos):
                     all_scores.append(s.value)
-            mean = np.mean(all_scores)
-            self.stop_scores = [A * np.exp(B * mean)]
+            return [stop_function(np.mean(all_scores))]
