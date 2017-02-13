@@ -39,10 +39,12 @@ import json
 import logging
 import os
 import pickle
+from multiprocessing.pool import Pool
+
 import bgdata
 import pandas as pd
 from os.path import exists
-from collections import defaultdict
+from collections import defaultdict, Counter
 from bgreference import refseq
 
 ref_build = 'hg19'
@@ -51,6 +53,7 @@ Build of the Reference Genome
 """
 
 __CB = {"A": "T", "T": "A", "G": "C", "C": "G"}
+
 
 
 def change_ref_build(build):
@@ -236,16 +239,16 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
     return signature
 
 
-def load_signature(signature_function, signature_config, mutations_file, save_pickle=False, load_pickle=True):
+def load_signature(signature_config, signature_function, trinucleotides_counts=None, pickle_file=None, save_pickle=False):
     """
     Computes the probability that certain mutation occurs.
 
     Args:
-        signature_function: function that yields one mutation each time
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
-        mutations_file: mutations file
+        signature_function: function that yields one mutation each time
+        trinucleotides_counts (:obj:`dict`, optional): counts of trincleotides used to correct the signature
+        pickle_file (:obj:`str`, optional): path to the pickle file
         save_pickle (:obj:`bool`, optional): save pickle files
-        load_pickle (:obj:`bool`, optional): load pickle files if exist
 
     Returns:
         dict: probability of each substitution (measured by the triplets) grouped by the signature_id
@@ -297,23 +300,9 @@ def load_signature(signature_function, signature_config, mutations_file, save_pi
         else:
             collapse = False
 
-        if classifier == 'CANCER_TYPE' or classifier == 'SAMPLE':
-            signature_dict_precomputed = mutations_file + '_signature_' + method + '_' + classifier + ".pickle.gz"
-        else:
-            signature_dict_precomputed = None
-            save_pickle = False
-
-        if use_only_mapped_mutations:
-            # Do not save any pickle and do not correct by the number of sites
-            load_pickle = False
-            save_pickle = False
-            if correct_by_sites is not None:
-                logging.debug('Signature not corrected because the use_only_mapped_mutations flag was set to True')
-            correct_by_sites = None
-
-        if load_pickle and signature_dict_precomputed is not None and exists(signature_dict_precomputed):
+        if pickle_file is not None and exists(pickle_file):
             logging.info("Using precomputed signatures")
-            with gzip.open(signature_dict_precomputed, 'rb') as fd:
+            with gzip.open(pickle_file, 'rb') as fd:
                 signature_dict = pickle.load(fd)
         else:
             logging.info("Computing signatures")
@@ -321,15 +310,18 @@ def load_signature(signature_function, signature_config, mutations_file, save_pi
             if save_pickle:
                 try:
                     # Try to store as precomputed
-                    with gzip.open(signature_dict_precomputed, 'wb') as fd:
+                    with gzip.open(save_pickle, 'wb') as fd:
                         pickle.dump(signature_dict, fd)
                 except OSError:
                     logging.debug(
-                        "Imposible to write precomputed signature here: {}".format(signature_dict_precomputed))
+                        "Imposible to write precomputed signature here: {}".format(pickle_file))
 
-        if signature_dict is not None and correct_by_sites is not None:  # correct the signature
+        if signature_dict is not None and trinucleotides_counts is not None:  # correct the signature
 
-            triplets_probabilities = load_regions_signature(correct_by_sites, collapse)
+            if collapse:
+                trinucleotides_counts = collapse_complementaries(trinucleotides_counts)
+
+            triplets_probabilities = sum2one_dict(trinucleotides_counts)
 
             logging.info('Correcting signatures')
 
@@ -397,23 +389,107 @@ def get_normalized_frequencies(signature, triplets_frequencies):
     return sum2one_dict(corrected_signature)
 
 
-def load_regions_signature(region, collapse):
+def load_trinucleotides_counts(region):
     """
-    Get the trinucleotides counts for a certain region
+    Get the trinucleotides counts for a precomputed
+    region: whole exome or whole genome
 
     Args:
-        region (str): whole genome or coding regions
-        collapse (bool): collapse complementaries
+        region (str): whole genome or whole exome
 
     Returns:
-        dict. Frequency of presence of the different triplets
+        dict. Counts of the different trinucleotides
 
     """
     file = bgdata.get_path('datasets', region+'signature', ref_build)
     with open(file) as fd:
         triplets_counts = json.load(fd)
 
-    if collapse:
-        triplets_counts = collapse_complementaries(triplets_counts)
+    return triplets_counts
 
-    return sum2one_dict(triplets_counts)
+
+def triplets(sequence):
+    """
+
+    Args:
+        sequence (str): sequence of nucleotides
+
+    Yields:
+        str. Triplet
+
+    """
+    iterator = iter(sequence)
+
+    n1 = next(iterator)
+    n2 = next(iterator)
+
+    for n3 in iterator:
+        yield n1 + n2 + n3
+        n1 = n2
+        n2 = n3
+
+
+def triplet_counter_executor(elements):
+    """
+    For a list of regions, get all the triplets present
+    in all the segments
+
+    Args:
+        elements (:obj:`list` of :obj:`list` or :obj:`str`): list of lists of segments or a chromosome
+
+    Returns:
+        :class:`collections.Counter`. Count of each triplet in the regions
+
+    """
+    counts = Counter()
+    for element in elements:
+        for segment in element:
+            chrom = segment['CHROMOSOME']
+            start = segment['START']
+            stop = segment['STOP']
+            seq = refseq(ref_build, chrom, start, stop-start+1)
+            counts.update(triplets(seq))
+    return counts
+
+
+def chunkizator(iterable, size=1000):
+    """
+    Creates chunks from an iterable
+
+    Args:
+        iterable:
+        size (int): elements in the chunk
+
+    Returns:
+        list. Chunk
+
+    """
+    s = 0
+    chunk = []
+    for i in iterable:
+        if s == size:
+            yield chunk
+            chunk = []
+            s = 0
+        chunk.append(i)
+        s += 1
+    yield chunk
+
+
+def compute_regions_signature(elements, cores):
+    """
+    Counts triplets in the elements
+
+    Args:
+        elements:
+        cores (int): cores to use
+
+    Returns:
+        :class:`collections.Counter`. Counts of the triplets in the elements
+
+    """
+    counter = Counter()
+    pool = Pool(cores)
+    for result in pool.imap(triplet_counter_executor, chunkizator(elements, size=500)):
+        counter.update(result)
+    return counter
