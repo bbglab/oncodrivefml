@@ -5,11 +5,12 @@ Contains the command line parsing and the main class of the method
 
 import os
 import sys
-import argparse
+import click
 import logging
 from multiprocessing.pool import Pool
 from os.path import join, exists
 
+from oncodrivefml import __version__
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
@@ -23,6 +24,8 @@ from oncodrivefml.utils import executor_run, loop_logging
 from oncodrivefml.indels import _init_indels
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
 
+
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 class OncodriveFML(object):
@@ -258,56 +261,32 @@ class OncodriveFML(object):
         logging.info("Done")
 
 
-def cmdline():
+@click.command(context_settings=CONTEXT_SETTINGS, help='Run OncodriveFML analysis')
+@click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', required=True)
+@click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), help='Genomic elements to analyse', required=True)
+@click.option('-o', '--output', 'output_folder', type=click.Path(), help="Output folder. Default to regions file name without extensions.", default=None)
+@click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
+@click.option('--samples-blacklist', default=None, type=click.Path(exists=True), help="Remove these samples when loading the input file")
+@click.option('--save-pickle', help="Save intermediate information as pickle files.", is_flag=True)
+@click.option('--debug', help="Show more progress details", is_flag=True)
+@click.version_option(version=__version__)
+def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, save_pickle, debug):
     """
     Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
-
-    Required arguments:
-
-    -i, --input file        mutations file
-    -e, --elements file     elements file
-
-    Optional arguments:
-
-    -o, --output folder     output folder
-    -c, --configuration file
-                            configuration file
-    --samples-blacklist file
-                            file with blacklisted samples
-    --save-pickle           store intermediate information in pickle files
-    --debug                 show more progress
-
     """
-
-    # Command line arguments parser
-    parser = argparse.ArgumentParser()
-
-    # Required arguments
-    parser.add_argument('-i', '--input', dest='mutations_file', required=True, help='Variants file')
-    parser.add_argument('-e', '--elements', dest='elements_file', required=True, help='Genomic elements to analyse')
-
-    # Optional arguments
-    parser.add_argument('-o', '--output', dest='output_folder', default=None, help="Output folder. Default to regions file name without extensions.")
-    parser.add_argument('-c', '--configuration', dest='config_file', default=None, help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
-    parser.add_argument('--samples-blacklist', dest='samples_blacklist', default=None, help="Remove this samples when loading the input file")
-    parser.add_argument('--save-pickle', dest='save_pickle', action='store_true', default=False, help="Save intermediate information as pickle files.")
-    parser.add_argument('--debug', dest='debug', default=False, action='store_true', help="Show more progress details")
-
-    # Parse arguments
-    args = parser.parse_args()
 
     # Configure the logging
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
-    logging.getLogger().setLevel(logging.DEBUG if args.debug else logging.INFO)
-    logging.debug(args)
+    logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
+    logging.debug('args: {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file, samples_blacklist, save_pickle, debug))
 
-    if args.samples_blacklist is not None:
+    if samples_blacklist is not None:
         logging.debug('Using a blacklist causes some pickle files not to be saved/loaded')
 
     # Load configuration file and prepare analysis
     logging.info("Loading configuration")
-    analysis = OncodriveFML(args.mutations_file, args.elements_file, args.output_folder, args.config_file,
-                            args.samples_blacklist, args.save_pickle)
+    analysis = OncodriveFML(mutations_file, elements_file, output_folder, config_file,
+                            samples_blacklist, save_pickle)
 
     # Run the analysis
     analysis.run()

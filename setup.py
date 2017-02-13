@@ -30,7 +30,8 @@ setup(
         'bgqmap >= 1.0.0',
         'bgdata >= 0.6.0',
         'itab >= 0.3.0',
-        'bgreference >= 0.1.1'
+        'bgreference >= 0.1.1',
+        'click >= 5.0'
     ],
 
     entry_points={
