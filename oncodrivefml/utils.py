@@ -6,6 +6,7 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from ago import human
+from os.path import exists
 
 
 def executor_run(executor):
@@ -59,3 +60,7 @@ def loop_logging(iterable, size=None, step=1):
         yield value
     logging.info("[{} of {}]".format(i+1, size))
     logging.debug("Time: {}".format(human(start_time)))
+
+
+def exists_path(path):
+    return False if path is None else exists(path)

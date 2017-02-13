@@ -43,9 +43,10 @@ from multiprocessing.pool import Pool
 
 import bgdata
 import pandas as pd
-from os.path import exists
 from collections import defaultdict, Counter
 from bgreference import refseq
+
+from oncodrivefml.utils import exists_path
 
 ref_build = 'hg19'
 """
@@ -239,7 +240,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
     return signature
 
 
-def load_signature(signature_config, signature_function, trinucleotides_counts=None, pickle_file=None, save_pickle=False):
+def load_signature(signature_config, signature_function, trinucleotides_counts=None, load_pickle=None, save_pickle=False):
     """
     Computes the probability that certain mutation occurs.
 
@@ -247,8 +248,8 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
         signature_config (dict): information of the signature (see :ref:`configuration <project configuration>`)
         signature_function: function that yields one mutation each time
         trinucleotides_counts (:obj:`dict`, optional): counts of trincleotides used to correct the signature
-        pickle_file (:obj:`str`, optional): path to the pickle file
-        save_pickle (:obj:`bool`, optional): save pickle files
+        load_pickle (:obj:`str`, optional): path to the pickle file
+        save_pickle (:obj:`str`, optional): path to pickle file
 
     Returns:
         dict: probability of each substitution (measured by the triplets) grouped by the signature_id
@@ -271,8 +272,6 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
     column_alt = signature_config['column_alt']
     column_probability = signature_config['column_probability']
     include_mnp = signature_config['include_mnp']
-    correct_by_sites = signature_config['correct_by_sites']
-    use_only_mapped_mutations = signature_config['use_only_mapped_mutations']
 
     if path is not None and path.endswith(".pickle.gz"):
         with gzip.open(path, 'rb') as fd:
@@ -300,21 +299,26 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
         else:
             collapse = False
 
-        if pickle_file is not None and exists(pickle_file):
-            logging.info("Using precomputed signatures")
-            with gzip.open(pickle_file, 'rb') as fd:
-                signature_dict = pickle.load(fd)
-        else:
+        if exists_path(load_pickle):
+            try:
+                logging.info("Using precomputed signatures")
+                with gzip.open(load_pickle, 'rb') as fd:
+                    signature_dict = pickle.load(fd)
+            except EOFError:
+                logging.error("Loading file {}".format(load_pickle))
+                signature_dict = None
+
+        if signature_dict is None:
             logging.info("Computing signatures")
             signature_dict = compute_signature(signature_function, classifier, collapse, include_mnp)
-            if save_pickle:
+            if save_pickle is not None:
                 try:
                     # Try to store as precomputed
                     with gzip.open(save_pickle, 'wb') as fd:
                         pickle.dump(signature_dict, fd)
                 except OSError:
                     logging.debug(
-                        "Imposible to write precomputed signature here: {}".format(pickle_file))
+                        "Imposible to write precomputed signature here: {}".format(save_pickle))
 
         if signature_dict is not None and trinucleotides_counts is not None:  # correct the signature
 

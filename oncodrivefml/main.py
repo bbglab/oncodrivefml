@@ -41,14 +41,14 @@ class OncodriveFML(object):
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist, pickle_save):
+    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist, generate_pickle):
 
         # Required parameters
         self.mutations_file = file_exists_or_die(mutations_file)
         self.elements_file = file_exists_or_die(elements_file)
         self.configuration = load_configuration(configuration_file)
         self.blacklist = blacklist
-        self.save_pickle = pickle_save
+        self.generate_pickle = generate_pickle
 
         genome_reference_build = self.configuration['genome']['build']
         change_ref_build(genome_reference_build)
@@ -97,16 +97,9 @@ class OncodriveFML(object):
     def compute_signature(self):
         conf = self.configuration['signature']
 
-        save_signature_pickle = None
-        precomputed_signature = None
-        method = conf['method']
-        classifier = conf['classifier']
-        if (method == 'full' or method == 'complement') and (classifier == 'CANCER_TYPE' or classifier == 'SAMPLE') and self.blacklist is None:
-            precomputed_signature = self.mutations_file + '_signature_' + method + '_' + classifier + ".pickle.gz"
-            save_signature_pickle = self.save_pickle if self.blacklist is None else False
-
-        if self.blacklist is not None:
-            logging.debug('The presence of a blacklist force to not load/save pickle files')
+        precomputed_signature = self.mutations_file + '_signature_' + conf['method'] + '_' + conf['classifier'] + ".pickle.gz"
+        load_signature_pickle = precomputed_signature if self.blacklist is None else None
+        save_signature_pickle = precomputed_signature if self.generate_pickle else None
 
         trinucleotides_counts = None
         if conf['use_only_mapped_mutations']:
@@ -119,8 +112,8 @@ class OncodriveFML(object):
                 trinucleotides_counts = load_trinucleotides_counts(conf['correct_by_sites'])
 
         # Load signatures
-        return load_signature(conf, signature_function, trinucleotides_counts,
-                                         pickle_file=precomputed_signature,
+        self.signatures = load_signature(conf, signature_function, trinucleotides_counts,
+                                         load_pickle=load_signature_pickle,
                                          save_pickle=save_signature_pickle)
 
     def run(self):
@@ -139,7 +132,7 @@ class OncodriveFML(object):
         mutations_data, self.elements = load_and_map_variants(self.mutations_file,
                                                               self.elements_file,
                                                               blacklist=self.blacklist,
-                                                              save_pickle=self.save_pickle)
+                                                              save_pickle=self.generate_pickle)
 
         self.mutations = mutations_data['data']
 
@@ -176,7 +169,7 @@ class OncodriveFML(object):
         init_scores_module(self.configuration['score'])
 
         # Load signatures
-        self.signatures = self.compute_signature()
+        self.compute_signature()
 
         # Create one executor per element
         element_executors = [self.create_element_executor(element_id, muts) for
@@ -192,6 +185,10 @@ class OncodriveFML(object):
         indels_config = self.configuration['statistic']['indels']
         if indels_config['enabled']:
             _init_indels(indels_config)
+
+        if self.generate_pickle:
+            logging.info('Pickles generated. Exiting')
+            return
 
         # Run the executors
         with Pool(self.cores) as pool:
@@ -267,10 +264,10 @@ class OncodriveFML(object):
 @click.option('-o', '--output', 'output_folder', type=click.Path(), help="Output folder. Default to regions file name without extensions.", default=None)
 @click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
 @click.option('--samples-blacklist', default=None, type=click.Path(exists=True), help="Remove these samples when loading the input file")
-@click.option('--save-pickle', help="Save intermediate information as pickle files.", is_flag=True)
+@click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
-def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, save_pickle, debug):
+def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, debug):
     """
     Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
     """
@@ -278,7 +275,7 @@ def cmdline(mutations_file, elements_file, output_folder, config_file, samples_b
     # Configure the logging
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
     logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
-    logging.debug('args: {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file, samples_blacklist, save_pickle, debug))
+    logging.debug('args: {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, debug))
 
     if samples_blacklist is not None:
         logging.debug('Using a blacklist causes some pickle files not to be saved/loaded')
@@ -286,7 +283,7 @@ def cmdline(mutations_file, elements_file, output_folder, config_file, samples_b
     # Load configuration file and prepare analysis
     logging.info("Loading configuration")
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, config_file,
-                            samples_blacklist, save_pickle)
+                            samples_blacklist, generate_pickle)
 
     # Run the analysis
     analysis.run()

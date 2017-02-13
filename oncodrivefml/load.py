@@ -391,14 +391,11 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     mutations_data_dict = {'data': variants_dict, 'metadata': variants_metadata_dict}
 
     if save_pickle:
-        if blacklist is None:
-            # Try to store as precomputed
-            try:
-                with gzip.open(variants_dict_precomputed, 'wb') as fd:
-                    pickle.dump(mutations_data_dict, fd)
-            except OSError:
-                logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
-        else:
-            logging.debug("Mutations pickle file not saved because a blacklist was provided")
+        # Try to store as precomputed
+        try:
+            with gzip.open(variants_dict_precomputed, 'wb') as fd:
+                pickle.dump(mutations_data_dict, fd)
+        except OSError:
+            logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
 
     return mutations_data_dict, elements
