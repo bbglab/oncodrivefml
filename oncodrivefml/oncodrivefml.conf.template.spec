@@ -37,7 +37,6 @@ sampling_min_obs = integer(default=3)
 
 per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 
-subs = boolean(default=True)
 mnp = boolean(default=True)
 
 use_gene_mutations = boolean(default=False)

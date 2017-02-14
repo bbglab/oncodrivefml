@@ -31,16 +31,13 @@ class ElementExecutor(object):
         self.name = element_id
         self.indels_conf = config['statistic']['indels']
         self.use_indels = self.indels_conf['enabled']
-        self.use_subs = config['statistic']['subs']
-        self.use_mnp = config['statistic']['mnp'] and self.use_subs
+        self.use_mnp = config['statistic']['mnp']
         # MNP mutations are only used if subs are enabled
 
-        if self.use_subs and self.use_indels and self.use_mnp:
+        if self.use_indels and self.use_mnp:
             self.muts = muts
         else:
-            self.muts = []
-            if self.use_subs:
-                self.muts += [m for m in muts if m['TYPE'] == 'subs']
+            self.muts = [m for m in muts if m['TYPE'] == 'subs']
             if self.use_mnp:
                 self.muts += [m for m in muts if m['TYPE'] == 'mnp']
             if self.use_indels:
@@ -205,7 +202,7 @@ class ElementExecutor(object):
                 self.p_indels = 1 - self.p_subs
 
             # Compute the values for the substitutions
-            if self.use_subs and self.p_subs > 0:
+            if self.p_subs > 0:
                 for pos in positions:
                     for s in self.scores.get_score_by_position(pos):
                         subs_scores.append(s.value)

@@ -150,22 +150,13 @@ class OncodriveFML(object):
             self.configuration['p_indels'] = None
             self.configuration['p_subs'] = None
         else:
-            if self.configuration['statistic']['subs'] and self.configuration['statistic']['indels']['enabled']:
-                subs_counter = mutations_data['metadata']['subs'] + mutations_data['metadata']['mnp_length']
-                indels_counter = mutations_data['metadata']['indels']
+            if self.configuration['statistic']['indels']['enabled']:
+                subs_counter = mutations_data['metadata']['subs']
 
-                if self.configuration['statistic']['indels']['method'] == 'stop' and self.configuration['statistic']['indels']['enable_frame']:
-                    logging.info('Indels identified as in frame, are going to be simulated as subs')
-                    # count how many indels are frameshift
-                    discarded = 0
-                    for element, mutations in self.mutations.items():
-                        for mut in mutations:
-                            if mut['TYPE'] == 'indel':
-                                indel_size = max(len(mut['REF']), len(mut['ALT']))
-                                if indel_size % 3 == 0:
-                                    discarded +=1
-                    indels_counter -= discarded
-                    subs_counter += discarded
+                if self.configuration['statistic']['mnp']:
+                    subs_counter += mutations_data['metadata']['mnp']
+
+                indels_counter = mutations_data['metadata']['indels']
 
                 p_indels = indels_counter/(indels_counter + subs_counter)
                 p_subs = subs_counter/(subs_counter + indels_counter)
@@ -173,7 +164,7 @@ class OncodriveFML(object):
                 self.configuration['p_indels'] = p_indels
                 self.configuration['p_subs'] = p_subs
             else:
-                self.configuration['p_indels'] = 1
+                self.configuration['p_indels'] = 0
                 self.configuration['p_subs'] = 1
 
         init_scores_module(self.configuration['score'])
