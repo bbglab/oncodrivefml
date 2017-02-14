@@ -145,8 +145,7 @@ class ElementExecutor(object):
         self.scores = Scores(self.name, self.segments, self.score_config)
 
         if self.use_indels:
-            indels = Indel(self.scores, self.signature, self.signature_column,
-                                self.indels_conf['method'], self.is_positive_strand)
+            indels = Indel(self.scores, self.is_positive_strand)
         else:
             indels = False
 
@@ -214,7 +213,7 @@ class ElementExecutor(object):
                             if k in self.signature.keys():
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
                             else:
-                                v.append(1/192)
+                                v.append(1/192)  # TODO is this the right thing to do?? if signature is collapsed??
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)
@@ -225,7 +224,7 @@ class ElementExecutor(object):
                     tot = sum(subs_probs)
                     subs_probs = subs_probs * self.p_subs / tot
                     subs_probs = list(subs_probs)
-                else: # Same prob for all values (according to the prob of substitutions
+                else: # Same prob for all values (according to the prob of substitutions)
                     subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []
 
             if self.use_indels and self.p_indels > 0:

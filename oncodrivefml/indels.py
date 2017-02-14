@@ -32,19 +32,17 @@ the impact of the indels.
 import math
 import random
 import numpy as np
-from math import exp
-from enum import Enum
 
 from oncodrivefml.signature import get_ref
 
 
 # Global variables
-frame_length = 1
-indels_max_repeats = 0
+analysis = None
+indels_max_repeats = None
 stop_function = None
 
 
-def _init_indels(indels_config):
+def init_indels_module(indels_config):
     """
     Initialize the indels module
 
@@ -52,14 +50,15 @@ def _init_indels(indels_config):
         indels_config (dict): configuration of how to compute the impact of indels
 
     """
-    global frame_length, stop_function, indels_max_repeats
+    global analysis, stop_function, indels_max_repeats
 
     if indels_config['method'] == 'stop':
-        stop = StopsScore(indels_config['stop_function'])
-        stop_function = stop.function
+        analysis = 'coding'
+    elif indels_config['method'] == 'max':
+        analysis = 'noncoding'
 
-    if indels_config['enable_frame']:
-        frame_length = 3
+    stop = StopsScore(indels_config['stop_function'])
+    stop_function = stop.function
 
     indels_max_repeats = indels_config['max_repeats']
 
@@ -76,7 +75,7 @@ class StopsScore:
         """
         if type == 'mean':
             self.funct = self.mean
-        elif type =='median':
+        elif type == 'median':
             self.funct = self.median
         elif type == 'random':
             self.funct = self.random
@@ -101,9 +100,6 @@ class StopsScore:
         return random.choice(x)
 
 
-
-
-
 class Indel:
     """
     Methods to compute the impact of indels
@@ -118,25 +114,21 @@ class Indel:
         has_positive_strand (bool): if the element being analysed has positive strand
     """
 
-    def __init__(self, scores, signature, signature_id, method, has_positive_strand=True):
+    def __init__(self, scores, has_positive_strand=True):
         self.scores = scores
-        self.signature = signature
-        self.signature_id = signature_id
         self.has_positive_strand = has_positive_strand
         self.simulated_as_subs = False
         self.in_frame_simulated_as_subs = False
 
-        if method == "stop":
-            if frame_length == 3:
-                self.in_frame_simulated_as_subs = True
-            self.get_background_indel_scores = self.get_background_indel_scores_as_stops
+        if analysis == "coding":
+            self.in_frame_simulated_as_subs = True
             self.get_indel_score = self.get_indel_score_from_stop
+            self.get_background_indel_scores = self.get_background_indel_scores_as_stops
             self.scores.get_stop_scores()
-        elif method == 'max':
+        elif analysis == 'noncoding':
             self.simulated_as_subs = True
-            self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions_without_signature
             self.get_indel_score = self.get_indel_score_max_of_subs
-
+            self.get_background_indel_scores = self.get_background_indel_scores_as_substitutions_without_signature
 
     @staticmethod
     def is_frameshift(size):
@@ -150,7 +142,7 @@ class Indel:
             enabled in the configuration)
 
         """
-        if frame_length != 1 and (size % frame_length) == 0:
+        if (size % 3) == 0:
             return False
         return True
 
@@ -188,7 +180,6 @@ class Indel:
         ref = get_ref(chrom, pos-(size//2)-1, size+1)
         return ref.count(seq) >= indels_max_repeats
 
-
     def get_mutation_sequences(self, mutation, size):
         """
         Get the reference and altered sequence of the indel
@@ -202,7 +193,6 @@ class Indel:
             tuple. Reference and alterned sequences
 
         """
-        # TODO pass indel_size as parameter because it is already computed in the get_indel_score method
         position = mutation['POSITION']
         is_insertion = True if '-' in mutation['REF'] else False
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
@@ -277,15 +267,6 @@ class Indel:
         cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
         return max(cleaned_scores) if cleaned_scores else math.nan
 
-    def get_indel_score_substitutions(self, mutation, mutation_position):
-        indel_size = max(len(mutation['REF']), len(mutation['ALT']))
-
-        indel_scores = []
-        for pos in range(mutation_position, mutation_position + indel_size):
-            indel_scores += [s.value for s in self.scores.get_score_by_position(pos)]
-
-        return max(indel_scores)
-
     def get_indel_score_from_stop(self, mutation):
         """
         Compute the indel score as a stop
@@ -331,6 +312,16 @@ class Indel:
     #                     self.signature[mutation.get(self.signature_id, self.signature_id)].get(
     #                         (s.ref_triplet, s.alt_triplet), 0.0))
     #     return indel_scores, signatures
+    #
+    #
+    # def get_indel_score_substitutions(self, mutation, mutation_position):
+    #     indel_size = max(len(mutation['REF']), len(mutation['ALT']))
+    #
+    #     indel_scores = []
+    #     for pos in range(mutation_position, mutation_position + indel_size):
+    #         indel_scores += [s.value for s in self.scores.get_score_by_position(pos)]
+    #
+    #     return max(indel_scores)
 
     def get_background_indel_scores_as_substitutions_without_signature(self, **kwargs):
         """
@@ -343,8 +334,7 @@ class Indel:
             list.
 
         """
-        # TODO if these values have already been computed for the subs, we can optimize the
-        # code avoiding this second loop
+        # TODO if these values have already been computed for the subs, we can optimize the code avoiding this second loop
         indel_scores = []
         for pos in self.scores.get_all_positions():
             for s in self.scores.get_score_by_position(pos):
@@ -361,7 +351,6 @@ class Indel:
 
         """
         return self.scores.stop_scores
-
 
     def not_found(self, mutation):
         return np.nan

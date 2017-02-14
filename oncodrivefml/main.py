@@ -21,7 +21,7 @@ from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.signature import load_signature, yield_mutations, change_ref_build, load_trinucleotides_counts, \
     compute_regions_signature
 from oncodrivefml.utils import executor_run, loop_logging
-from oncodrivefml.indels import _init_indels
+from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
 
 
@@ -41,7 +41,7 @@ class OncodriveFML(object):
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist, generate_pickle):
+    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist, indels, generate_pickle):
 
         # Required parameters
         self.mutations_file = file_exists_or_die(mutations_file)
@@ -49,6 +49,16 @@ class OncodriveFML(object):
         self.configuration = load_configuration(configuration_file)
         self.blacklist = blacklist
         self.generate_pickle = generate_pickle
+
+        # Fill the configuration for the indels according to the indels value
+        if indels == 'coding':
+            self.configuration['statistic']['indels']['enabled'] = True
+            self.configuration['statistic']['indels']['method'] = 'stop'
+        elif indels == 'noncoding':
+            self.configuration['statistic']['indels']['enabled'] = True
+            self.configuration['statistic']['indels']['method'] = 'max'
+        else:
+            self.configuration['statistic']['indels']['enabled'] = False
 
         genome_reference_build = self.configuration['genome']['build']
         change_ref_build(genome_reference_build)
@@ -182,9 +192,7 @@ class OncodriveFML(object):
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
 
         # initialize the indels module
-        indels_config = self.configuration['statistic']['indels']
-        if indels_config['enabled']:
-            _init_indels(indels_config)
+        init_indels_module(self.configuration['statistic']['indels'])
 
         if self.generate_pickle:
             logging.info('Pickles generated. Exiting')
@@ -261,13 +269,14 @@ class OncodriveFML(object):
 @click.command(context_settings=CONTEXT_SETTINGS, help='Run OncodriveFML analysis')
 @click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', required=True)
 @click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), help='Genomic elements to analyse', required=True)
+@click.option('--indels', type=click.Choice(['discard', 'coding', 'noncoding']), help='Type of analysis performed with the indels', required=True)
 @click.option('-o', '--output', 'output_folder', type=click.Path(), help="Output folder. Default to regions file name without extensions.", default=None)
 @click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
 @click.option('--samples-blacklist', default=None, type=click.Path(exists=True), help="Remove these samples when loading the input file")
 @click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
-def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, debug):
+def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, generate_pickle, debug):
     """
     Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
     """
@@ -275,7 +284,7 @@ def cmdline(mutations_file, elements_file, output_folder, config_file, samples_b
     # Configure the logging
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
     logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
-    logging.debug('args: {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, debug))
+    logging.debug('args: {} {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, generate_pickle, debug))
 
     if samples_blacklist is not None:
         logging.debug('Using a blacklist causes some pickle files not to be saved/loaded')
@@ -283,7 +292,7 @@ def cmdline(mutations_file, elements_file, output_folder, config_file, samples_b
     # Load configuration file and prepare analysis
     logging.info("Loading configuration")
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, config_file,
-                            samples_blacklist, generate_pickle)
+                            samples_blacklist, indels, generate_pickle)
 
     # Run the analysis
     analysis.run()
