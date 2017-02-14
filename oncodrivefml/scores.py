@@ -54,22 +54,72 @@ def null(x):
 stop_function = null
 min_stops = 3
 stops_file = None
+scores_reader = None
+
+
+class ReaderError(Exception):
+
+    def __init__(self, msg):
+        self.message = msg
+
+
+class ReaderGetError(ReaderError):
+
+    def __init__(self, chr, start, stop):
+        self.message = 'Error reading chr: {} start: {} stop: {}'.format(chr, start, stop)
+
+
+class ScoresTabixReader:
+
+    def __init__(self, conf):
+        self.file = conf['file']
+        self.conf_chr_prefix = conf['chr_prefix']
+        self.ref_pos = conf['ref']
+        self.alt_pos = conf['alt']
+        self.pos_pos = conf['pos']
+        self.score_pos = conf['score']
+        self.element_pos = conf['element']
+
+    def __enter__(self):
+        self.tb = tabix.open(self.file)
+        self.index_errors = 0
+        self.elements_errors = 0
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.index_errors > 0 or self.elements_errors > 0:
+            raise ReaderError('{} index errors and {} discrepancies between the expected and retreived element'.format(self.index_errors, self.elements_errors))
+        return True
+
+    def _read_row(self, row):
+        score = float(row[self.score_pos])
+        ref = None if self.ref_pos is None else row[self.ref_pos]
+        alt = None if self.alt_pos is None else row[self.alt_pos]
+        pos = None if self.pos_pos is None else int(row[self.pos_pos])
+        element = None if self.element_pos is None else row[self.element_pos]
+
+        return (score, ref, alt, pos), element
+
+    def get(self, chromosome, start, stop, element=None):
+        try:
+            for row in self.tb.query("{}{}".format(self.conf_chr_prefix, chromosome), start - 1, stop):
+                try:
+                    r = self._read_row(row)
+                except IndexError:
+                    self.index_errors += 1
+                    continue
+                else:
+                    # TODO is this check useful???
+                    if self.element_pos is not None and r[1] != element:
+                        self.elements_errors += 1
+                        continue
+                    yield r[0]
+        except tabix.TabixError:
+            raise ReaderGetError(chromosome, start, stop)
+
 
 def init_scores_module(conf):
-    global stop_function, min_stops, stops_file
-    # if conf['function'] == 'polynomial':
-    #     def f(x):
-    #         index = 0
-    #         value = 0
-    #         for param in conf['params']:
-    #             value += param * (value**index)
-    #             index += 1
-    #         return value
-    #
-    # elif conf['function'] == 'exponential':
-    #     def f(x):
-    #         return conf['params'][0] * np.exp(conf['params'][1] * x)
-    #     stop_function = f
+    global stop_function, min_stops, stops_file, scores_reader
 
     min_stops = conf.get('limit', min_stops)
     logging.debug('Below {} stops in the element the function for stops will be used'.format(min_stops))
@@ -78,7 +128,9 @@ def init_scores_module(conf):
         stop_function = stops_function
     else:
         logging.warning('You have not provided any function for computing the stops')
-    stops_file = bgdata.get_path('datasets', 'genestops', get_build())  # TODO what to do in case of error
+    # stops_file = bgdata.get_path('datasets', 'genestops', get_build())  # TODO what to do in case of error
+    stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
+    scores_reader = ScoresTabixReader(conf)
 
 
 class Scores(object):
@@ -167,34 +219,6 @@ class Scores(object):
         """
         return self.scores_by_pos.keys()
 
-    def _read_score(self, row: list) -> float:
-        """
-        Parses a score line and returns the score value
-
-        Args:
-            row (list): row from the scores file
-
-        Returns:
-            float: score value
-
-        """
-        value_str = row[self.conf_score]
-        if value_str is None or value_str == '':
-            if self.conf_extra is not None:
-                value_str = row[self.conf_extra].split(',')
-                value = 0
-                for val in value_str:
-                    elm, vals = val.split(':')
-                    if elm == self.element:
-                        value = float(vals)
-                        break
-            else:
-                value = 0
-        else:
-            value = float(value_str)
-
-        return value
-
     def _load_scores(self):
         """
         For each position get all possible substitutions and for each
@@ -204,54 +228,31 @@ class Scores(object):
             dict: for each positions get a list of ScoreValue
             (see :attr:`scores_by_pos`)
         """
-        tb = tabix.open(self.conf_file)  # conf_file is the file with the scores
 
-        #Loop through a list of dictionaries from the elements dictionary
-        for region in self.segments:
-            try:
-                # get all rows with certain chromosome and start and stop
-                # between the element start -1 and stop
-                for row in tb.query("{}{}".format(self.conf_chr_prefix, region['CHROMOSOME']), region['START']-1, region['STOP']):
-
-                    if self.conf_element is not None:
-                        # Check that is the element we want
-                        if row[self.conf_element] != self.element:
-                            continue
-
+        try:
+            with scores_reader as reader:
+                for region in self.segments:
                     try:
-                        value = self._read_score(row)
-                    except IndexError:
+                        for row in reader.get(region['CHROMOSOME'], region['START'], region['STOP'], self.element):
+                            score, ref, alt, pos = row
+                            ref_triplet = get_ref_triplet(region['CHROMOSOME'], pos - 1)
+                            ref = ref_triplet[1] if ref is None else ref
+
+                            if ref_triplet[1] != ref:
+                                logging.warning("Background mismatch at position %d at '%s'", pos, self.element)
+
+                            # Expand funseq2 dots
+                            alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
+
+                            for a in alts:
+                                alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+                                self.scores_by_pos[pos].append(ScoreValue(ref, a, score, ref_triplet, alt_triplet))
+
+                    except ReaderError as e:
+                        logging.warning(e.message)
                         continue
-
-                    if self.conf_alt is None:
-                        alt = None
-                    else:
-                        alt = row[self.conf_alt]
-
-                    pos = int(row[self.conf_pos])
-
-                    ref_triplet = get_ref_triplet(row[self.conf_chr].replace(self.conf_chr_prefix, ''), int(row[self.conf_pos]) - 1)
-
-                    if self.conf_ref is None:
-                        ref = ref_triplet[1]
-                    else:
-                        ref = row[self.conf_ref]
-
-                    if ref is not None and ref_triplet[1] != ref:
-                        logging.warning("Background mismatch at position %d at '%s'", int(row[self.conf_pos]), self.element)
-
-                    # Expand funseq2 dots
-                    alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
-
-                    for a in alts:
-                        alt_triplet = ref_triplet[0] + a + ref_triplet[2]
-                        self.scores_by_pos[pos].append(ScoreValue(ref, a, value, ref_triplet, alt_triplet))
-
-
-            except tabix.TabixError:
-                logging.warning("Tabix error at {}='{}{}:{}-{}'".format(self.element, self.conf_chr_prefix, region['CHROMOSOME'], region['START']-1, region['STOP']))
-                continue
-
+        except ReaderError as e:
+            logging.warning("Reader error: {}. Regions being analysed {}".format(e.message, self.segments))
 
     def get_stop_scores(self):
         """
@@ -267,8 +268,9 @@ class Scores(object):
                     pos = int(row[1])
                     ref = row[2]
                     alt = row[3]
-                    element_id = row[4]
 
+                    # TODO remove this check?
+                    element_id = row[4]
                     if element_id != self.element:
                         continue
 
