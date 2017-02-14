@@ -33,7 +33,7 @@ import numpy as np
 from typing import List
 from collections import defaultdict, namedtuple
 
-from oncodrivefml.signature import get_ref_triplet
+from oncodrivefml.signature import get_ref_triplet, get_build
 
 ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'ref_triplet', 'alt_triplet'])
 """
@@ -53,10 +53,10 @@ def null(x):
 
 stop_function = null
 min_stops = 3
-
+stops_file = None
 
 def init_scores_module(conf):
-    global stop_function, min_stops
+    global stop_function, min_stops, stops_file
     # if conf['function'] == 'polynomial':
     #     def f(x):
     #         index = 0
@@ -78,6 +78,7 @@ def init_scores_module(conf):
         stop_function = stops_function
     else:
         logging.warning('You have not provided any function for computing the stops')
+    stops_file = bgdata.get_path('datasets', 'genestops', get_build())  # TODO what to do in case of error
 
 
 class Scores(object):
@@ -258,7 +259,6 @@ class Scores(object):
         being analyzed
         """
         stops = defaultdict(list)
-        stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
 
         tb = tabix.open(stops_file)
         for region in self.segments:

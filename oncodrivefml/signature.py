@@ -70,6 +70,10 @@ def change_ref_build(build):
     logging.info('Using {} as reference genome'.format(ref_build.upper()))
 
 
+def get_build():
+    return ref_build
+
+
 def get_ref(chromosome, start, size=1):
     """
     Gets a sequence from the reference genome
