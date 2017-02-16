@@ -81,12 +81,12 @@ include_mnp = False
 
 [score]
 # Path to score tab separated file compress with bgzip and next to a Tabix .tbi index file
-file = "%(bgdata://genomicscores/cadd/1.3)"
+file = "%(bgdata://genomicscores/cadd/1.0)"
 
 # WARNING: The %(bgdata:...) will download (the first time that you use it) a score file from
 # our servers and install it into the ~/.bgdata folder.
 
-# WARNING: CADD 1.3 scores are original from http://cadd.gs.washington.edu/ and are freely
+# WARNING: CADD 1.0 scores are original from http://cadd.gs.washington.edu/ and are freely
 # available for all non-commercial applications. If you are planning on using them in a
 # commercial application, please contact them at http://cadd.gs.washington.edu/contact.
 

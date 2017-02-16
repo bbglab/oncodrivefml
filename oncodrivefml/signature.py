@@ -34,15 +34,14 @@ signature (:obj:`dict`)
 
 """
 
+import os
 import gzip
 import json
-import logging
-import os
 import pickle
-from multiprocessing.pool import Pool
-
+import logging
 import bgdata
 import pandas as pd
+from multiprocessing.pool import Pool
 from collections import defaultdict, Counter
 from bgreference import refseq
 
@@ -393,6 +392,8 @@ def get_normalized_frequencies(signature, triplets_frequencies):
     corrected_signature = {}
     for triplet_pair, frequency in signature.items():
         ref_triplet = triplet_pair[0]
+        if ref_triplet not in triplets_frequencies:
+            logging.warning('Triplet {} not found'.format(ref_triplet))
         corrected_signature[triplet_pair] = frequency/triplets_frequencies.get(ref_triplet, float("inf")) # TODO check if the inf is the right thing to do
     return sum2one_dict(corrected_signature)
 

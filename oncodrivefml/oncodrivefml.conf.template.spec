@@ -50,7 +50,7 @@ use_gene_mutations = boolean(default=False)
 
         stop_function = option('mean', 'median', 'random', 'random_choice', default='mean')
 
-        indels_simulated_with_signature =  boolean(default=False)
+        indels_simulated_with_signature =  boolean(default=True)
 
 [settings]
 cores = integer(default=None)

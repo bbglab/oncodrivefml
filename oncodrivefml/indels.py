@@ -64,7 +64,7 @@ def init_indels_module(indels_config):
 
 
 class StopsScore:
-    def __init__(self, type):
+    def __init__(self, funct_type):
         """
         Contain the function that operates on the scores of the stops
         when the indel is treated as stop
@@ -73,13 +73,13 @@ class StopsScore:
             type (str): indentifier of the function
 
         """
-        if type == 'mean':
+        if funct_type == 'mean':
             self.funct = self.mean
-        elif type == 'median':
+        elif funct_type == 'median':
             self.funct = self.median
-        elif type == 'random':
+        elif funct_type == 'random':
             self.funct = self.random
-        elif type == 'random_choice':
+        elif funct_type == 'random_choice':
             self.funct = self.choose
 
     def function(self, x):
@@ -300,51 +300,21 @@ class Indel:
             cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
             return max(cleaned_scores) if cleaned_scores else math.nan
 
-
-    # def get_background_indel_scores_as_substitutions(self, mutation, positions):
-    #     indel_scores = []
-    #     signatures = []
-    #     for pos in positions:
-    #         for s in self.scores.get_score_by_position(pos):
-    #             indel_scores.append(s.value)
-    #             if self.signature is not None:
-    #                 signatures.append(
-    #                     self.signature[mutation.get(self.signature_id, self.signature_id)].get(
-    #                         (s.ref_triplet, s.alt_triplet), 0.0))
-    #     return indel_scores, signatures
-    #
-    #
-    # def get_indel_score_substitutions(self, mutation, mutation_position):
-    #     indel_size = max(len(mutation['REF']), len(mutation['ALT']))
-    #
-    #     indel_scores = []
-    #     for pos in range(mutation_position, mutation_position + indel_size):
-    #         indel_scores += [s.value for s in self.scores.get_score_by_position(pos)]
-    #
-    #     return max(indel_scores)
-
-    def get_background_indel_scores_as_substitutions_without_signature(self, **kwargs):
+    def get_background_indel_scores_as_substitutions_without_signature(self):
         """
         Return the values of scores of all possible substitutions
-
-        Args:
-            **kwargs:
-
         Returns:
             list.
 
         """
-        # TODO if these values have already been computed for the subs, we can optimize the code avoiding this second loop
         indel_scores = []
         for pos in self.scores.get_all_positions():
             for s in self.scores.get_score_by_position(pos):
                 indel_scores.append(s.value)
         return indel_scores
 
-    def get_background_indel_scores_as_stops(self, **kwargs):
+    def get_background_indel_scores_as_stops(self):
         """
-        Args:
-            **kwargs:
 
         Returns:
             list. Values of the stop scores of the gene

@@ -210,7 +210,7 @@ class ElementExecutor(object):
                             if k in self.signature.keys():
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
                             else:
-                                v.append(1/192)  # TODO is this the right thing to do?? if signature is collapsed??
+                                v.append(1/192)
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)
@@ -221,11 +221,11 @@ class ElementExecutor(object):
                     tot = sum(subs_probs)
                     subs_probs = subs_probs * self.p_subs / tot
                     subs_probs = list(subs_probs)
-                else: # Same prob for all values (according to the prob of substitutions)
+                else:  # Same prob for all values (according to the prob of substitutions)
                     subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []
 
             if self.use_indels and self.p_indels > 0:
-                indels_scores = indels.get_background_indel_scores(mutations=[m for m in self.result['mutations'] if m['TYPE'] == 'indel'])
+                indels_scores = indels.get_background_indel_scores()
 
                 # All indels have the same probability
                 indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []
