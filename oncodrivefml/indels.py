@@ -111,12 +111,12 @@ class Indel:
         signature_id (str): classifier for the signatures
         method (str): identifies which method to use to compute the functional impact
             (see :ref:`methods <indels methods>`)
-        has_positive_strand (bool): if the element being analysed has positive strand
+        strand (str): if the element being analysed has positive, negative or unknown strand (+,-,.)
     """
 
-    def __init__(self, scores, has_positive_strand=True):
+    def __init__(self, scores, strand):
         self.scores = scores
-        self.has_positive_strand = has_positive_strand
+        self.has_positive_strand = False if strand == '-' else True
         self.simulated_as_subs = False
         self.in_frame_simulated_as_subs = False
 

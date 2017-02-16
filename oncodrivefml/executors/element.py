@@ -46,7 +46,7 @@ class ElementExecutor(object):
         self.signature = signature
         self.segments = segments
         self.symbol = self.segments[0].get('SYMBOL', None)
-        self.is_positive_strand = False if segments[0].get('STRAND', '+') == '-' else True
+        self.strand = self.segments[0]['STRAND']
         # When the strand is unknown is considered the same as positive
         #TODO fix
 
@@ -142,7 +142,7 @@ class ElementExecutor(object):
         self.scores = Scores(self.name, self.segments, self.score_config)
 
         if self.use_indels:
-            indels = Indel(self.scores, self.is_positive_strand)
+            indels = Indel(self.scores, self.strand)
         else:
             indels = False
 
@@ -210,7 +210,7 @@ class ElementExecutor(object):
                             if k in self.signature.keys():
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
                             else:
-                                v.append(1/192)
+                                v.append(1/192)  # TODO Adjust the probability to the # of distinct triplets in the region
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)
