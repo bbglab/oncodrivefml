@@ -17,7 +17,7 @@ elements (:obj:`dict`)
                 'CHROMOSOME': chromosome,
                 'START': start_position_of_the_segment,
                 'STOP': end_position_of_the_segment,
-                'STRAND': strand (+ -> positive | - -> negative | . -> unknown)
+                'STRAND': strand (+ -> positive | - -> negative)
                 'ELEMENT': element_id,
                 'SEGMENT': segment_id,
                 'SYMBOL': symbol_id
@@ -81,26 +81,11 @@ import pickle
 import itab
 from os.path import exists
 from collections import defaultdict
+from bgcache import bgcache
 from intervaltree import IntervalTree
+from bgparsers import readers
 
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
-
-
-REGIONS_HEADER = ['CHROMOSOME', 'START', 'STOP', 'STRAND', 'ELEMENT', 'SEGMENT', 'SYMBOL']
-"""
-Headers of the data expected in the elements file (see :class:`~oncodrivefml.main.OncodriveFML`).
-"""
-
-REGIONS_SCHEMA = {
-    'fields': {
-        'CHROMOSOME': {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
-        'START': {'reader': 'int(x)', 'validator': 'x > 0'},
-        'STOP': {'reader': 'int(x)', 'validator': 'x > 0'},
-        'STRAND': {'reader': 'str(x)', 'validator': "x in ['.', '+', '-']"},
-        'ELEMENT': {'reader': 'str(x)'},
-        'SEGMENT': {'reader': 'str(x)', 'nullable': 'True'},
-        'SYMBOL': {'reader': 'str(x)', 'nullable': 'True'}
-}}
 
 
 MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "CANCER_TYPE"]
@@ -196,45 +181,6 @@ def load_mutations(file, show_warnings=True, blacklist=None, metadata_dict=None)
     reader.fd.close()
 
 
-def load_regions(file):
-    """
-    Parse an elements file compliant with :attr:`REGIONS_HEADER`
-
-    Args:
-        file: elements file. If 'SEGMENT' field is not present, the value of the 'ELEMENT'
-            is used instead.
-
-    Returns:
-        dict: elements' (see :ref:`elements <elements dict>`).
-
-    """
-
-    regions = defaultdict(list)
-    with itab.DictReader(file, header=REGIONS_HEADER, schema=REGIONS_SCHEMA) as reader:
-        all_errors = []
-        for r, errors in reader:
-            # Report errors and continue
-            if len(errors) > 0:
-                all_errors += errors
-                continue
-
-            # If there are no segments use the element_id as randomization segment
-            if r['SEGMENT'] is None:
-                r['SEGMENT'] = r['ELEMENT']
-
-            regions[r['ELEMENT']].append(r)
-
-        if len(all_errors) > 0:
-            logging.warning("There are {} errors at {}. {}".format(
-                len(all_errors), os.path.basename(file),
-                " I show you only the ten first errors." if len(all_errors) > 10 else ""
-            ))
-            for e in all_errors[:10]:
-                logging.warning(e)
-    logging.info("Regions: {}".format(len(regions)))
-    return regions
-
-
 def build_regions_tree(regions):
     """
     Generates a binary tree with the intervals of the regions
@@ -255,17 +201,25 @@ def build_regions_tree(regions):
             }
 
     """
-    regions_tree = defaultdict(IntervalTree)
+    regions_tree = {}
     for i, (k, allr) in enumerate(regions.items()):
 
         if i % 7332 == 0:
             logging.info("[{} of {}]".format(i+1, len(regions)))
 
         for r in allr:
-            regions_tree[r['CHROMOSOME']][r['START']:(r['STOP']+1)] = (r['ELEMENT'], r['SEGMENT'])
+            tree = regions_tree.get(r['CHROMOSOME'], IntervalTree())
+            tree[r['START']:(r['STOP']+1)] = (r['ELEMENT'], r['SEGMENT'])
+            regions_tree[r['CHROMOSOME']] = tree
 
     logging.info("[{} of {}]".format(i+1, len(regions)))
     return regions_tree
+
+
+@bgcache
+def load_elements_tree(elements_file):
+    elements = readers.elements(elements_file)
+    return build_regions_tree(elements)
 
 
 def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pickle=False):
@@ -296,27 +250,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
 
     """
     # Load elements file
-    elements = None
-    elements_precomputed = elements_file + "_dict.pickle.gz"
-    if exists(elements_precomputed):
-        try:
-            logging.info("Using precomputed elements map")
-            with gzip.open(elements_precomputed, 'rb') as fd:
-                elements = pickle.load(fd)
-        except EOFError:
-            logging.error("Loading file {}".format(elements_precomputed))
-            elements = None
-
-    if elements is None:
-        logging.info("Loading elements")
-        elements = load_regions(elements_file)
-        if save_pickle:
-            # Try to store as precomputed
-            try:
-                with gzip.open(elements_precomputed, 'wb') as fd:
-                    pickle.dump(elements, fd)
-            except OSError:
-                logging.debug("Imposible to write precomputed elements map here: {}".format(elements_precomputed))
+    elements = readers.elements(elements_file)
 
     # If the input file is a pickle file do nothing
     if variants_file.endswith(".pickle.gz"):
@@ -334,27 +268,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             logging.error("Loading file {}".format(variants_dict_precomputed))
 
     # Loading elements tree
-    elements_tree = None
-    elements_tree_precomputed = elements_file + "_tree.pickle.gz"
-    if exists(elements_tree_precomputed):
-        try:
-            logging.info("Using precomputed genomic elements tree")
-            with gzip.open(elements_tree_precomputed, 'rb') as fd:
-                elements_tree = pickle.load(fd)
-        except EOFError:
-            logging.error("Loading file {}".format(elements_tree_precomputed))
-            elements_tree = None
-
-    if elements_tree is None:
-        logging.info("Loading genomic elements tree")
-        elements_tree = build_regions_tree(elements)
-        if save_pickle:
-            # Try to store as precomputed
-            try:
-                with gzip.open(elements_tree_precomputed, 'wb') as fd:
-                    pickle.dump(elements_tree, fd)
-            except OSError:
-                logging.debug("Imposible to write precomputed genomic elements tree here: {}".format(elements_tree_precomputed))
+    elements_tree = load_elements_tree(elements_file)
 
     # Mapping mutations
     variants_dict = defaultdict(list)
