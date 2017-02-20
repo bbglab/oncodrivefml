@@ -25,10 +25,14 @@ values.
 
 """
 
-
-import logging
+import os
+import mmap
+import gzip
+import json
 import tabix
+import struct
 import bgdata
+import logging
 import numpy as np
 from typing import List
 from collections import defaultdict, namedtuple
@@ -67,6 +71,83 @@ class ReaderGetError(ReaderError):
 
     def __init__(self, chr, start, stop):
         self.message = 'Error reading chr: {} start: {} stop: {}'.format(chr, start, stop)
+
+
+class PackScoresReader:
+
+    STRUCT_SIZE = 6
+    SCORE_ALT = {'T': 'ACG', 'A': 'CGT', 'C': 'AGT', 'G': 'ACT'}
+    BIT_TO_REF = {
+        (0, 0, 0): '?',
+        (0, 0, 1): 'T',
+        (0, 1, 0): 'A',
+        (0, 1, 1): 'C',
+        (1, 0, 0): 'G'
+    }
+    SCORE_ORDER = {
+        'T': {'A': 0, 'C': 1, 'G': 2},
+        'A': {'C': 0, 'G': 1, 'T': 2},
+        'C': {'A': 0, 'G': 1, 'T': 2},
+        'G': {'A': 0, 'C': 1, 'T': 2}
+    }
+
+    def __init__(self, conf):
+
+        self.file_path = os.path.join(conf['file'], 'whole_genome_SNVs.fml')
+
+        with gzip.open('{}.idx'.format(self.file_path), 'rt') as fd:
+            index = json.load(fd)
+
+        self.scores = index['scores']
+        self.metadata = index['metadata']
+        self.fd = None
+
+    def unpack(self, block):
+        values = struct.unpack('3H', block)
+        bits = tuple([v % 2 for v in values])
+        values = [v // 2 for v in values]
+        ref = PackScoresReader.BIT_TO_REF[bits]
+        return ref, values
+
+    def __enter__(self):
+        self.fd = open(self.file_path, 'rb')
+        self.mm = mmap.mmap(self.fd.fileno(), 0, access=mmap.ACCESS_READ)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.mm.close()
+        self.fd.close()
+
+    def get(self, chromosome, start, stop):
+
+        if chromosome not in self.metadata['positions']:
+            raise ReaderError("Chromosome '{}' not found".format(chromosome))
+
+        c_ini, c_end, c_start, c_stop = self.metadata['positions'][chromosome]
+
+        q_ini = c_ini + (start - c_start)
+        q_end = q_ini + (stop - start)
+
+        # Check boundaries
+        q_ini = c_ini if q_ini < c_ini else q_ini
+        q_end = c_end if q_end > c_end else q_end
+        if q_end < q_ini:
+            raise ReaderError("Position out of boundaries. Chr:{} start:{} stop:{}".format(chromosome, start, stop))
+
+        b_now = q_ini
+        p_now = start
+
+        self.mm.seek(b_now*PackScoresReader.STRUCT_SIZE)
+        while b_now <= q_end:
+            ref, values = self.unpack(self.mm.read(PackScoresReader.STRUCT_SIZE))
+
+            if ref != '?':
+                yield self.scores[values[0]], ref, PackScoresReader.SCORE_ALT[ref][0], p_now
+                yield self.scores[values[1]], ref, PackScoresReader.SCORE_ALT[ref][1], p_now
+                yield self.scores[values[2]], ref, PackScoresReader.SCORE_ALT[ref][2], p_now
+
+            p_now += 1
+            b_now += 1
 
 
 class ScoresTabixReader:
@@ -109,8 +190,7 @@ class ScoresTabixReader:
                     self.index_errors += 1
                     continue
                 else:
-                    # TODO is this check useful???
-                    if self.element_pos is not None and r[1] != element:
+                    if self.element_pos is not None and element is not None and r[1] != element:
                         self.elements_errors += 1
                         continue
                     yield r[0]
@@ -130,7 +210,11 @@ def init_scores_module(conf):
         logging.warning('You have not provided any function for computing the stops')
     # stops_file = bgdata.get_path('datasets', 'genestops', get_build())  # TODO what to do in case of error
     stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
-    scores_reader = ScoresTabixReader(conf)
+    # TODO check conf to get tabix (default) or pack
+    if conf['format'] == 'tabix':
+        scores_reader = ScoresTabixReader(conf)
+    elif conf['format'] == 'pack':
+        scores_reader = PackScoresReader(conf)
 
 
 class Scores(object):
@@ -194,7 +278,6 @@ class Scores(object):
 
         # Initialize background scores
         self._load_scores()
-
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
         """
@@ -268,11 +351,7 @@ class Scores(object):
                     pos = int(row[1])
                     ref = row[2]
                     alt = row[3]
-
-                    # TODO remove this check?
-                    element_id = row[4]
-                    if element_id != self.element:
-                        continue
+                    # Here we can add a check for the elements
 
                     stops[pos].append(alt)
 

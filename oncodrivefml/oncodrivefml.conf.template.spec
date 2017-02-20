@@ -23,7 +23,7 @@ alt = integer(default=None)
 score = integer
 element = integer(default=None)
 extra = integer(default=None)
-
+format = option('tabix', 'pack', default='tabix')
 limit = integer(default=1)
 function = string(default=None)
 
