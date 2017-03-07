@@ -38,7 +38,7 @@ from oncodrivefml.signature import get_ref
 
 # Global variables
 analysis = None
-indels_max_repeats = None
+max_repeats = None
 stop_function = None
 
 
@@ -50,7 +50,7 @@ def init_indels_module(indels_config):
         indels_config (dict): configuration of how to compute the impact of indels
 
     """
-    global analysis, stop_function, indels_max_repeats
+    global analysis, stop_function, max_repeats
 
     if indels_config['method'] == 'stop':
         analysis = 'coding'
@@ -60,7 +60,7 @@ def init_indels_module(indels_config):
     stop = StopsScore(indels_config['stop_function'])
     stop_function = stop.function
 
-    indels_max_repeats = indels_config['max_repeats']
+    max_repeats = indels_config['max_repeats']
 
 
 class StopsScore:
@@ -70,7 +70,7 @@ class StopsScore:
         when the indel is treated as stop
 
         Args:
-            type (str): indentifier of the function
+            funct_type (str): indentifier of the function
 
         """
         if funct_type == 'mean':
@@ -112,6 +112,7 @@ class Indel:
         method (str): identifies which method to use to compute the functional impact
             (see :ref:`methods <indels methods>`)
         strand (str): if the element being analysed has positive, negative or unknown strand (+,-,.)
+
     """
 
     def __init__(self, scores, strand):
@@ -146,8 +147,7 @@ class Indel:
             return False
         return True
 
-    @staticmethod
-    def is_in_repetitive_region(mutation):
+    def is_in_repetitive_region(self, mutation):
         """
         Check if  an indel falls in a repetitive region
 
@@ -161,11 +161,11 @@ class Indel:
             mutation (dict): a mutation object as in :ref:`here <mutations dict>`
 
         Returns:
-            bool. Whether the indel falls in a repetitive region or to
+            bool: Whether the indel falls in a repetitive region or not
 
         """
 
-        if indels_max_repeats == 0:
+        if max_repeats == 0:
             # 0 means do not search for repetitive regions
             return False
 
@@ -176,9 +176,10 @@ class Indel:
 
         # Check if it's repeated
         seq = alt if '-' in ref else ref
-        size = indels_max_repeats * 2 * len(seq)
-        ref = get_ref(chrom, pos-(size//2)-1, size+1)
-        return ref.count(seq) >= indels_max_repeats
+        size = max_repeats * len(seq)
+        pos = pos if self.has_positive_strand else pos - size
+        ref = get_ref(chrom, pos, size)
+        return ref.count(seq) >= max_repeats
 
     def get_mutation_sequences(self, mutation, size):
         """
@@ -190,7 +191,7 @@ class Indel:
             size (int): window length
 
         Returns:
-            tuple. Reference and alterned sequences
+            tuple: Reference and alternated sequences
 
         """
         position = mutation['POSITION']
@@ -223,7 +224,7 @@ class Indel:
             size (int): number of position to look
 
         Returns:
-            list. Scores of the substitution in the indel. :obj:`~math.nan` when it is not possible
+            list: Scores of the substitution in the indel. :obj:`~math.nan` when it is not possible
             to compute a value.
 
         """
@@ -245,11 +246,11 @@ class Indel:
             mutation (dict): a mutation object as in :ref:`here <mutations dict>`
 
         Returns:
-            float. Maximum value of all substitution
+            float: Maximum value of all substitutions
 
         """
 
-        if Indel.is_in_repetitive_region(mutation):
+        if self.is_in_repetitive_region(mutation):
             return math.nan
 
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
@@ -277,11 +278,11 @@ class Indel:
             mutation (dict): a mutation object as in :ref:`here <mutations dict>`
 
         Returns:
-            float. Score value. :obj:`~math.nan` if is not possible to compute it
+            float: Score value. :obj:`~math.nan` if is not possible to compute it
 
         """
 
-        if Indel.is_in_repetitive_region(mutation):
+        if self.is_in_repetitive_region(mutation):
             return math.nan
 
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
@@ -317,7 +318,7 @@ class Indel:
         """
 
         Returns:
-            list. Values of the stop scores of the gene
+            list: Values of the stop scores of the gene
 
         """
         return self.scores.stop_scores
