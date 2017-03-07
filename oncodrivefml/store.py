@@ -549,7 +549,7 @@ def store_tsv(results, result_file):
     df.reset_index(inplace=True)
     df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE', 'samples_mut': 'SAMPLES',
                        'pvalue': 'P_VALUE', 'qvalue': 'Q_VALUE','pvalue_neg': 'P_VALUE_NEG',
-                       'qvalue_neg': 'Q_VALUE_NEG', 'subs': 'SUBSTITUTIONS', 'indels': 'INDELS',
+                       'qvalue_neg': 'Q_VALUE_NEG', 'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
                        'symbol': 'SYMBOL'}, inplace=True)
     df = add_symbol(df)
 

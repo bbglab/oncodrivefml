@@ -9,23 +9,13 @@ class GroupByMutationExecutor(ElementExecutor):
     observed in the element.
     The simulation parameters are taken from the configuration file.
 
-    Args:
-        element_id (str): element ID
-        muts (list): list of mutations belonging to that element (see :ref:`mutations <mutations dict>` inner items)
-        segments (list): list of segments belonging to that element (see :ref:`elements <elements dict>` inner items)
-        signature (dict): probabilities of each mutation (see :ref:`signatures <signature dict>`)
-        config (dict): configurations
-
     """
     def __init__(self, element_id, muts, segments, signature, config):
         super(GroupByMutationExecutor, self).__init__(element_id, muts, segments, signature, config)
 
-    def compute_muts_statistics(self, indels=False):
+    def compute_muts_statistics(self):
         """
         Gets the score of each mutation
-
-        Args:
-            indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise.
 
         Returns:
             dict: several information about the mutations and a list of them with the scores
@@ -37,12 +27,13 @@ class GroupByMutationExecutor(ElementExecutor):
         scores_list = []
         positions = []
         mutations = []
-        amount_of_subs = 0
+        amount_of_snps = 0
+        amount_of_mnps = 0
         amount_of_indels = 0
 
         for m in self.muts:
 
-            self.compute_mutation_score(m, indels)
+            self.compute_mutation_score(m)
 
             # Update scores
             if m.get('SCORE', None) is not None:
@@ -53,9 +44,11 @@ class GroupByMutationExecutor(ElementExecutor):
 
                 scores_list.append(m['SCORE'])
 
-                if m['TYPE'] == "subs" or m['TYPE'] == "mnp":
-                    amount_of_subs += 1
-                elif m['TYPE'] == "indel":
+                if m['ALT_TYPE'] == "snp":
+                    amount_of_snps += 1
+                elif m['ALT_TYPE'] == "mnp":
+                    amount_of_mnps +=1
+                elif m['ALT_TYPE'] == "indel":
                     amount_of_indels += 1
 
                 positions.append(m['POSITION'])
@@ -69,7 +62,8 @@ class GroupByMutationExecutor(ElementExecutor):
             'samples_mut': num_samples,
             'muts': len(scores_list),
             'muts_recurrence': len(set(positions)),
-            'subs': amount_of_subs,
+            'snps': amount_of_snps,
+            'mnps': amount_of_mnps,
             'indels': amount_of_indels,
             'scores': scores_list,
             'positions': positions,

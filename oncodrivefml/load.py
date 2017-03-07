@@ -44,7 +44,7 @@ mutations (:obj:`dict`)
                 'REF': reference_sequence,
                 'ALT': alteration_sequence,
                 'SAMPLE': sample_id,
-                'TYPE': type_of_the_mutation,
+                'ALT_TYPE': type_of_the_mutation,
                 'CANCER_TYPE': group to which the mutation belongs to,
                 'SEGMENT': segment_id
                 }
@@ -67,53 +67,34 @@ mutations_data (:obj:`dict`)
                 },
             'metadata':
                 {
-                    'subs': amount_of_subs
-                    'indels': amount_o_indels
+                    'snp': amount of SNP mutations
+                    'mnp': amount of MNP mutations
+                    'mnp_length': total length of the MNP mutations
+                    'indel': amount of indels
                 }
         }
 
 """
 
 import gzip
-import logging
-import os
 import pickle
-import itab
+import logging
 from os.path import exists
-from collections import defaultdict
 from bgcache import bgcache
-from intervaltree import IntervalTree
 from bgparsers import readers
+from collections import defaultdict
+from intervaltree import IntervalTree
 
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
 
-MUTATIONS_HEADER = ["CHROMOSOME", "POSITION", "REF", "ALT", "SAMPLE", "TYPE", "CANCER_TYPE"]
-"""
-Headers of the data expected in the mutations file file (see :class:`~oncodrivefml.main.OncodriveFML`).
-"""
-
-MUTATIONS_SCHEMA = {
-    'fields': {
-        'CHROMOSOME':  {'reader': 'str(x)', 'validator': "x in ([str(c) for c in range(1,23)] + ['X', 'Y'])"},
-        'POSITION':    {'reader': 'int(x)', 'validator': 'x > 0'},
-        'REF':         {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x)'},
-        'ALT':         {'reader': 'str(x).upper()', 'validator': 'match("^[ACTG-]*$",x) and r[2]!=x'},
-        'SAMPLE':      {'reader': 'str(x)'},
-        'TYPE':        {'nullable': 'True', 'validator': 'x in ["subs", "indel", "mnp"]'},
-        'CANCER_TYPE': {'reader': 'str(x)', 'nullable': 'True'},
-    }
-}
-
-
-def load_mutations(file, show_warnings=True, blacklist=None, metadata_dict=None):
+def load_mutations(file, blacklist=None, metadata_dict=None):
     """
     Parsed the mutations file
 
     Args:
         file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
         metadata_dict (dict): dict that the function will fill with useful information
-        show_warnings (bool, optional): Defaults to True.
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
             Defaults to None.
 
@@ -126,59 +107,30 @@ def load_mutations(file, show_warnings=True, blacklist=None, metadata_dict=None)
     # Set of samples to blacklist
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
 
-    subs = 0
-    indels = 0
+    snp = 0
+    indel = 0
     mnp = 0
     mnp_length = 0
 
-    reader = itab.DictReader(file, schema=MUTATIONS_SCHEMA) # TODO add the header and switch SAMPLE and TYPE?
-    all_errors = []
-    for ix, (row, errors) in enumerate(reader, start=1):
-        if len(errors) > 0:
-            if reader.line_num == 1:
-                # Most probable this is a file with a header
-                continue
-            all_errors += errors
+    for row in readers.variants(file):
+        if row['SAMPLE'] in samples_blacklisted:
             continue
 
-        if row.get('SAMPLE', None) in samples_blacklisted:
-            continue
-
-        if row.get('TYPE', None) is None:
-            if '-' in row['REF'] or '-' in row['ALT'] or len(row['REF']) != len(row['ALT']):
-                row['TYPE'] = 'indel'
-            elif len(row['REF']) == len(row['ALT']) and len(row['REF']) > 1:
-                row['TYPE'] = 'mnp'
-            else:
-                row['TYPE'] = 'subs'
-
-        if metadata_dict is not None:
-            # compute the metatada needed
-            if row['TYPE'] == 'indel':
-                indels += 1
-            elif row['TYPE'] == 'subs':
-                subs += 1
-            else:
-                mnp_length += len(row['REF'])
-                mnp += 1
+        if row['ALT_TYPE'] == 'snp':
+            snp += 1
+        elif row['ALT_TYPE'] == 'mnp':
+            mnp += 1
+            mnp_length += len(row['REF'])
+        elif row['ALT_TYPE'] == 'indel':
+            indel += 1
 
         yield row
 
-    if show_warnings and len(all_errors) > 0:
-        logging.warning("There are {} errors at {}. {}".format(
-            len(all_errors), os.path.basename(file),
-            " I show you only the ten first errors." if len(all_errors) > 10 else ""
-        ))
-        for e in all_errors[:10]:
-            logging.warning(e)
-
     if metadata_dict is not None:
-        metadata_dict['subs'] = subs
-        metadata_dict['indels'] = indels
+        metadata_dict['snp'] = snp
+        metadata_dict['indel'] = indel
         metadata_dict['mnp'] = mnp
         metadata_dict['mnp_length'] = mnp_length
-
-    reader.fd.close()
 
 
 def build_regions_tree(regions):
@@ -189,7 +141,7 @@ def build_regions_tree(regions):
         regions (dict): segments grouped by :ref:`elements <elements dict>`.
 
     Returns:
-        :obj:`dict` of :obj:`IntervalTree`: for each chromosome, it get one :obj:`IntervalTree` which
+        dict of :obj:`~intervaltree.IntervalTree`: for each chromosome, it get one :obj:`~intervaltree.IntervalTree` which
         is a binary tree. The leafs are intervals [low limit, high limit) and the value associated with each interval
         is the :obj:`tuple` (element, segment).
         It can be interpreted as:
@@ -231,7 +183,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
         variants_file: mutations file (see :class:`~oncodrivefml.main.OncodriveFML`)
         elements_file: elements file (see :class:`~oncodrivefml.main.OncodriveFML`)
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
-           If the blacklist option is passed, the mutations are not loaded from/saved to a pickle file.
+           If the blacklist option is passed, the mutations are not loaded from a pickle file.
         save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
@@ -277,7 +229,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
-    for i, r in enumerate(load_mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist), start=1):
+    for i, r in enumerate(load_mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist)):
 
         if r['CHROMOSOME'] not in elements_tree:
             continue
@@ -288,16 +240,12 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
         if i % show_big_progress_at == 0:
             print(' [{} muts]'.format(i), flush=True)
 
-        position = int(r['POSITION'])
         # Get the interval that include that position in the same chromosome
-        intervals = elements_tree[r['CHROMOSOME']][position]
+        intervals = elements_tree[r['CHROMOSOME']][r['POSITION']]
 
         for interval in intervals:
             element, segment = interval.data
-            mutation = r
-            mutation['POSITION'] = position
-            mutation['SEGMENT'] = segment
-            variants_dict[element].append(mutation)
+            variants_dict[element].append(r)
 
     if i > show_small_progress_at:
         print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)

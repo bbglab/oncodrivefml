@@ -210,16 +210,15 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
     """
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in signature_function():
-        if mut['TYPE'] == 'subs':
+        if mut['ALT_TYPE'] == 'SNP':
             signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
             signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
-            # TODO remove check ?
             if signature_ref[1] != mut['REF']:
                 logging.warning('Discrepancy in substitution at position {} of chr {}'.format(pos, mut['CHROMOSOME']))
                 continue
 
             signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
-        elif include_mnp and mut['TYPE'] == 'mnp':
+        elif include_mnp and mut['ALT_TYPE'] == 'mnp':
             pos = mut['POSITION']
             for index, nucleotides in enumerate(zip(mut['REF'], mut['ALT'])):
                 ref_nucleotide, alt_nucleotide = nucleotides
@@ -394,7 +393,7 @@ def get_normalized_frequencies(signature, triplets_frequencies):
         ref_triplet = triplet_pair[0]
         if ref_triplet not in triplets_frequencies:
             logging.warning('Triplet {} not found'.format(ref_triplet))
-        corrected_signature[triplet_pair] = frequency/triplets_frequencies.get(ref_triplet, float("inf")) # TODO check if the inf is the right thing to do
+        corrected_signature[triplet_pair] = frequency/triplets_frequencies.get(ref_triplet, float("inf"))
     return sum2one_dict(corrected_signature)
 
 
@@ -444,7 +443,7 @@ def triplet_counter_executor(elements):
     in all the segments
 
     Args:
-        elements (:obj:`list` of :obj:`list` or :obj:`str`): list of lists of segments or a chromosome
+        elements (:obj:`list` of :obj:`list`): list of lists of segments
 
     Returns:
         :class:`collections.Counter`. Count of each triplet in the regions

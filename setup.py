@@ -18,7 +18,7 @@ setup(
     author_email='nuria.lopez@upf.edu',
     description='',
     install_requires=[
-        'bgconfig >= 0.1.0',
+        'bgconfig >= 0.5.0',
         'numpy >= 1.9.0',
         'scipy >= 0.14.0',
         'statsmodels >= 0.6.1',
@@ -31,7 +31,9 @@ setup(
         'bgdata >= 0.6.0',
         'itab >= 0.3.0',
         'bgreference >= 0.1.1',
-        'click >= 5.0'
+        'click >= 5.0',
+        'bgparsers>=0.1',
+        'bgcache>=0.1'
     ],
 
     entry_points={

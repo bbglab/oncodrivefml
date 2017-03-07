@@ -13,7 +13,7 @@ file_exists_or_die = _file_exists_or_die
 file_name = _file_name
 
 
-def load_configuration(config_file):
+def load_configuration(config_file, override=None):
     """
     Load the configuration file and checks the format.
 
@@ -27,7 +27,7 @@ def load_configuration(config_file):
     config_template = os.path.join(os.path.dirname(__file__), "oncodrivefml.conf.template")
 
     try:
-        return BGConfig(config_template, config_file=config_file)
+        return BGConfig(config_template, config_file=config_file, override_values=override)
     except ValueError as e:
         logging.error(e)
         sys.exit(-1)

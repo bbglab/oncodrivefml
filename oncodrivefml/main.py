@@ -7,8 +7,9 @@ import os
 import sys
 import click
 import logging
-from multiprocessing.pool import Pool
 from os.path import join, exists
+from collections import defaultdict
+from multiprocessing.pool import Pool
 
 from oncodrivefml import __version__
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
@@ -35,30 +36,20 @@ class OncodriveFML(object):
        mutations_file: Mutations input file (see :mod:`~oncodrivefml.load` for details)
        elements_file: Genomic element input file (see :mod:`~oncodrivefml.load` for details)
        output_folder: Folder where the results will be stored
-       configuration_file: Configuration file (see :ref:`configuration <project configuration>`)
+       config: configuration (see :ref:`configuration <project configuration>`)
        blacklist: File with sample ids (one per line) to remove when loading the input file
-       pickle_save (bool): save pickle files
+       generate_pickle (bool): flag to only generate pickle files and exit
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, configuration_file, blacklist, indels, generate_pickle):
+    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, generate_pickle):
 
         # Required parameters
         self.mutations_file = file_exists_or_die(mutations_file)
         self.elements_file = file_exists_or_die(elements_file)
-        self.configuration = load_configuration(configuration_file)
+        self.configuration = config
         self.blacklist = blacklist
         self.generate_pickle = generate_pickle
-
-        # Fill the configuration for the indels according to the indels value
-        if indels == 'coding':
-            self.configuration['statistic']['indels']['enabled'] = True
-            self.configuration['statistic']['indels']['method'] = 'stop'
-        elif indels == 'noncoding':
-            self.configuration['statistic']['indels']['enabled'] = True
-            self.configuration['statistic']['indels']['method'] = 'max'
-        else:
-            self.configuration['statistic']['indels']['enabled'] = False
 
         genome_reference_build = self.configuration['genome']['build']
         change_ref_build(genome_reference_build)
@@ -66,11 +57,12 @@ class OncodriveFML(object):
         self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
-        self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
         if self.configuration['signature']['method'] == 'bysample':
             self.configuration['signature']['method'] = 'complement'
             self.configuration['signature']['classifier'] = 'SAMPLE'
+
+        self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
         # Optional parameters
         self.output_folder = file_name(self.elements_file) if output_folder is None else output_folder
@@ -83,14 +75,14 @@ class OncodriveFML(object):
 
         self.avoid_parallel = False
 
-    def create_element_executor(self, element_id, muts_for_an_element):
+    def __create_element_executor(self, element_id, element_mutations):
         """
-        To enable paralelization, for each element ID,
+        To enable parallelization, for each element ID,
         one :class:`~oncodrivefml.executors.element.ElementExecutor` is created.
 
         Args:
             element_id (str): ID of the element
-            muts_for_an_element (list): list with all the mutations observed in the element
+            element_mutations (list): list with all the mutations observed in the element
 
         Returns:
             :class:`~oncodrivefml.executors.bymutation.GroupByMutationExecutor` or
@@ -98,13 +90,13 @@ class OncodriveFML(object):
 
         """
         if self.samples_statistic_method is None:
-            return GroupByMutationExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
+            return GroupByMutationExecutor(element_id, element_mutations, self.elements[element_id], self.signatures,
                                            self.configuration)
         else:
-            return GroupBySampleExecutor(element_id, muts_for_an_element, self.elements[element_id], self.signatures,
+            return GroupBySampleExecutor(element_id, element_mutations, self.elements[element_id], self.signatures,
                                          self.configuration)
 
-    def compute_signature(self):
+    def __compute_signature(self):
         conf = self.configuration['signature']
 
         precomputed_signature = self.mutations_file + '_signature_' + conf['method'] + '_' + conf['classifier'] + ".pickle.gz"
@@ -117,7 +109,7 @@ class OncodriveFML(object):
             if conf['correct_by_sites'] is not None:
                 trinucleotides_counts = compute_regions_signature(self.elements.values(), self.cores)
         else:
-            signature_function = lambda: load_mutations(self.mutations_file, show_warnings=False, blacklist=self.blacklist)
+            signature_function = lambda: load_mutations(self.mutations_file, blacklist=self.blacklist)
             if conf['correct_by_sites'] is not None:
                 trinucleotides_counts = load_trinucleotides_counts(conf['correct_by_sites'])
 
@@ -125,6 +117,42 @@ class OncodriveFML(object):
         self.signatures = load_signature(conf, signature_function, trinucleotides_counts,
                                          load_pickle=load_signature_pickle,
                                          save_pickle=save_signature_pickle)
+
+    def __compute_simulation_probs(self, counts):
+        """
+        In the simulation mutations are simulated as either substitutions or stops.
+
+        Args:
+            counts (dict): counts for each mutation type
+
+        """
+        # compute cohort percentages of subs and indels
+        if self.configuration['statistic']['use_gene_mutations']:
+            self.configuration['p_indels'] = None
+            self.configuration['p_subs'] = None
+        else:
+            if self.configuration['statistic']['indels']['enabled']:
+                subs_counter = counts['snp']
+
+                if self.configuration['statistic']['mnp']:
+                    subs_counter += counts['mnp']
+
+                indels_counter = counts['indel'] * (1-self.configuration['discarded_indels'])
+
+                indels_as_subs = indels_counter * self.configuration['in_frame_indels']
+                indels_counter -= indels_as_subs
+                subs_counter += indels_as_subs
+
+                p_indels = indels_counter / (indels_counter + subs_counter)
+                p_subs = 1 - p_indels
+
+                self.configuration['p_indels'] = p_indels
+                self.configuration['p_subs'] = p_subs
+            else:
+                self.configuration['p_indels'] = 0
+                self.configuration['p_subs'] = 1
+
+
 
     def run(self):
         """
@@ -146,34 +174,22 @@ class OncodriveFML(object):
 
         self.mutations = mutations_data['data']
 
-        if self.configuration['statistic']['use_gene_mutations']:
-            self.configuration['p_indels'] = None
-            self.configuration['p_subs'] = None
-        else:
-            if self.configuration['statistic']['indels']['enabled']:
-                subs_counter = mutations_data['metadata']['subs']
+        self.__compute_simulation_probs(mutations_data['metadata'])
 
-                if self.configuration['statistic']['mnp']:
-                    subs_counter += mutations_data['metadata']['mnp']
+        # Load signatures
+        self.__compute_signature()
 
-                indels_counter = mutations_data['metadata']['indels']
-
-                p_indels = indels_counter/(indels_counter + subs_counter)
-                p_subs = subs_counter/(subs_counter + indels_counter)
-
-                self.configuration['p_indels'] = p_indels
-                self.configuration['p_subs'] = p_subs
-            else:
-                self.configuration['p_indels'] = 0
-                self.configuration['p_subs'] = 1
+        if self.generate_pickle:
+            logging.info('Pickles generated. Exiting')
+            return
 
         init_scores_module(self.configuration['score'])
 
-        # Load signatures
-        self.compute_signature()
+        # initialize the indels module
+        init_indels_module(self.configuration['statistic']['indels'])
 
         # Create one executor per element
-        element_executors = [self.create_element_executor(element_id, muts) for
+        element_executors = [self.__create_element_executor(element_id, muts) for
                              element_id, muts in self.mutations.items()]
 
         # Remove elements that don't have mutations to compute
@@ -181,13 +197,6 @@ class OncodriveFML(object):
 
         # Sort executors to compute first the ones that have more mutations
         element_executors = sorted(element_executors, key=lambda e: -len(e.muts))
-
-        # initialize the indels module
-        init_indels_module(self.configuration['statistic']['indels'])
-
-        if self.generate_pickle:
-            logging.info('Pickles generated. Exiting')
-            return
 
         # Run the executors
         with Pool(self.cores) as pool:
@@ -257,36 +266,69 @@ class OncodriveFML(object):
         logging.info("Done")
 
 
-@click.command(context_settings=CONTEXT_SETTINGS, help='Run OncodriveFML analysis')
-@click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', required=True)
-@click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), help='Genomic elements to analyse', required=True)
-@click.option('--indels', type=click.Choice(['discard', 'coding', 'noncoding']), help='Type of analysis performed with the indels', required=True)
-@click.option('-o', '--output', 'output_folder', type=click.Path(), help="Output folder. Default to regions file name without extensions.", default=None)
-@click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
-@click.option('--samples-blacklist', default=None, type=click.Path(exists=True), help="Remove these samples when loading the input file")
-@click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions", is_flag=True)
-@click.option('--debug', help="Show more progress details", is_flag=True)
-@click.version_option(version=__version__)
-def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, generate_pickle, debug):
-    """
-    Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
-    """
+def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, sequencing, generate_pickle, debug, config_override_dict=None):
 
     # Configure the logging
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
     logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
-    logging.debug('args: {} {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, generate_pickle, debug))
+    logging.debug('args: {} {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file,
+                                                         samples_blacklist, indels, generate_pickle, debug))
 
     if samples_blacklist is not None:
         logging.debug('Using a blacklist causes some pickle files not to be saved/loaded')
 
     # Load configuration file and prepare analysis
     logging.info("Loading configuration")
-    analysis = OncodriveFML(mutations_file, elements_file, output_folder, config_file,
-                            samples_blacklist, indels, generate_pickle)
+
+    configuration = load_configuration(config_file, override=config_override_dict)
+
+    analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
+                            samples_blacklist, generate_pickle)
 
     # Run the analysis
     analysis.run()
+
+
+
+
+@click.command(context_settings=CONTEXT_SETTINGS, help='Run OncodriveFML analysis')
+@click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', required=True)
+@click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), help='Genomic elements to analyse', required=True)
+@click.option('--indels', type=click.Choice(['discard', 'coding', 'noncoding', 'other']), help='Type of analysis performed with the indels', required=True)
+@click.option('--sequencing', type=click.Choice(['genome', 'exome', 'other']), help='Type of sequencing', required=True)
+@click.option('-o', '--output', 'output_folder', type=click.Path(), help="Output folder. Default to regions file name without extensions.", default=None)
+@click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
+@click.option('--samples-blacklist', default=None, type=click.Path(exists=True), help="Remove these samples when loading the input file")
+@click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions", is_flag=True)
+@click.option('--debug', help="Show more progress details", is_flag=True)
+@click.version_option(version=__version__)
+def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, sequencing, generate_pickle, debug):
+    """
+    Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
+    """
+
+    dd = lambda: defaultdict(dd)
+    override_config = dd()
+
+    # Fill the configuration for the indels according to the indels value
+    if indels == 'coding':
+        override_config['statistic']['indels']['enabled'] = True
+        override_config['statistic']['indels']['method'] = 'stop'
+    elif indels == 'noncoding':
+        override_config['statistic']['indels']['enabled'] = True
+        override_config['statistic']['indels']['method'] = 'max'
+    elif indels == 'discard':
+        override_config['statistic']['indels']['enabled'] = False
+
+    if sequencing == 'exome':
+        override_config['statistic']['indels']['lost_indels'] = 15
+        override_config['signature']['correct_by_sites'] = 'coding'
+    elif sequencing == 'genome':
+        override_config['statistic']['indels']['lost_indels'] = 7
+        override_config['signature']['correct_by_sites'] = 'genome'
+
+    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, debug, override_config)
+
 
 if __name__ == "__main__":
     cmdline()
