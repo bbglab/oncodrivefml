@@ -209,8 +209,7 @@ def init_scores_module(conf):
     else:
         logging.warning('You have not provided any function for computing the stops')
     # stops_file = bgdata.get_path('datasets', 'genestops', get_build())  # TODO what to do in case of error
-    stops_file = bgdata.get_path('datasets', 'genestops', 'cds')
-    # TODO check conf to get tabix (default) or pack
+    stops_file = bgdata.get_path('datasets', 'genestops', 'cds')  # TODO move file in bgdata to be associated with the build
     if conf['format'] == 'tabix':
         scores_reader = ScoresTabixReader(conf)
     elif conf['format'] == 'pack':
@@ -371,4 +370,4 @@ class Scores(object):
             for pos in positions:
                 for s in self.get_score_by_position(pos):
                     all_scores.append(s.value)
-            return [stop_function(np.mean(all_scores))]
+            self.stop_scores = [stop_function(np.mean(all_scores))]
