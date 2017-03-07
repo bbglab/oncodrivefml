@@ -128,7 +128,6 @@ class ArithmeticMeanHeteroscedasticScores(object):
         return obs, neg_obs
 
 
-
 STATISTIC_TESTS = {
     'amean': ArithmeticMean(),
     'max': Maximum(),

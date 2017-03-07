@@ -3,9 +3,10 @@ Module containing functions related to
 multiple test correction
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from statsmodels.sandbox.stats.multicomp import multipletests as mlpt
+
 
 def multiple_test_correction(results, num_significant_samples=2):
     """
