@@ -5,6 +5,7 @@ from collections import Counter
 
 from oncodrivefml.indels import Indel
 from oncodrivefml.scores import Scores
+from oncodrivefml.signature import triplet_counter_executor
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.walker import partitions_list
 
@@ -29,26 +30,24 @@ class ElementExecutor(object):
     def __init__(self, element_id, muts, segments, signature, config):
         # Input attributes
         self.name = element_id
+        self.use_mnp = config['statistic']['mnp']
         self.indels_conf = config['statistic']['indels']
         self.use_indels = self.indels_conf['enabled']
-        self.use_mnp = config['statistic']['mnp']
-        # MNP mutations are only used if subs are enabled
+        self.indels = None
 
         if self.use_indels and self.use_mnp:
             self.muts = muts
         else:
-            self.muts = [m for m in muts if m['TYPE'] == 'subs']
+            self.muts = [m for m in muts if m['ALT_TYPE'] == 'snp']
             if self.use_mnp:
-                self.muts += [m for m in muts if m['TYPE'] == 'mnp']
+                self.muts += [m for m in muts if m['ALT_TYPE'] == 'mnp']
             if self.use_indels:
-                self.muts += [m for m in muts if m['TYPE'] == 'indel']
+                self.muts += [m for m in muts if m['ALT_TYPE'] == 'indel']
 
         self.signature = signature
         self.segments = segments
         self.symbol = self.segments[0].get('SYMBOL', None)
         self.strand = self.segments[0]['STRAND']
-        # When the strand is unknown is considered the same as positive
-        #TODO fix
 
         # Configuration parameters
         self.score_config = config['score']
@@ -68,13 +67,10 @@ class ElementExecutor(object):
         self.p_subs = config['p_subs']
         self.p_indels = config['p_indels']
 
-    def compute_muts_statistics(self, indels=False):
+    def compute_muts_statistics(self):
         """
-        Assigns scores to the mutations and retreive the ones that are going
+        Assigns scores to the mutations and retrieve the ones that are going
         to be simulated
-
-        Args:
-            indels (:obj:`~oncodrivefml.indels.Indel`): Indels class if indels are considered. False otherwise
 
         Returns:
             dict: several information about the mutations and a list of them with the scores
@@ -82,10 +78,10 @@ class ElementExecutor(object):
         """
         raise RuntimeError("The classes that extend ElementExecutor must override, at least the compute_muts_statistics() method")
 
-    def compute_mutation_score(self, mutation, indels):
+    def compute_mutation_score(self, mutation):
 
         # Get substitutions scores
-        if mutation['TYPE'] == "subs":
+        if mutation['ALT_TYPE'] == "snp":
             mutation['POSITION'] = int(mutation['POSITION'])
             values = self.scores.get_score_by_position(mutation['POSITION'])
             for v in values:
@@ -93,9 +89,9 @@ class ElementExecutor(object):
                     mutation['SCORE'] = v.value
                     break
             else:
-                logging.warning('Discrepancy in SUBS at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
+                logging.warning('Discrepancy in SNP at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
 
-        if mutation['TYPE'] == "mnp":
+        elif mutation['ALT_TYPE'] == "mnp":
             pos = int(mutation['POSITION'])
             mnp_scores = []
             for index, nucleotides in enumerate(zip(mutation['REF'], mutation['ALT'])):
@@ -112,42 +108,33 @@ class ElementExecutor(object):
             mutation['SCORE'] = max(mnp_scores)
             mutation['POSITION'] = pos + mnp_scores.index(mutation['SCORE'])
 
-        if indels is not False and mutation['TYPE'] == "indel":
+        elif mutation['ALT_TYPE'] == "indel":
 
             # very long indels are discarded
             if max(len(mutation['REF']), len(mutation['ALT'])) > 20:
                 return
 
-            score = indels.get_indel_score(mutation)
+            score = self.indels.get_indel_score(mutation)
 
             mutation['SCORE'] = score if not math.isnan(score) else None
 
     def run(self):
         """
         Loads the scores and compute the statistics for the observed mutations.
-        For all positions around the mutation position, gets the scores and
-        probabilities of mutations in those positions.
-        Generates a random set of mutations (for each mutations, randomizes
-        certain amount).
-        Combining those random values (make the transpose to get a matrix
-        number_of_real_amount_of_mutation x randomization_amount) computes
-        how many are above and how many below the value of the current
-        mutation (statistical value of all mutations).
-        Computes the p-values.
+        Perform simulations to compute a set of randomized scores.
+        By comparing those scores with the observed through different
+        statistical tests, a p-value can be obtained.
 
-        :return: p values
         """
 
         # Load element scores
         self.scores = Scores(self.name, self.segments, self.score_config)
 
         if self.use_indels:
-            indels = Indel(self.scores, self.strand)
-        else:
-            indels = False
+            self.indels = Indel(self.scores, self.strand)
 
         # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics(indels=indels)
+        self.result = self.compute_muts_statistics()
 
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
@@ -163,34 +150,43 @@ class ElementExecutor(object):
             subs_probs_by_signature = {}
             signature_ids = []
 
+            equiprobable_signature = None
+
             indels_simulated_as_subs = 0
 
             for mut in self.result['mutations']:
                 observed.append(mut['SCORE'])  # Observed mutations
-                if mut['TYPE'] == 'subs' or mut['TYPE'] == 'mnp':
-                    if self.signature is not None:
-                        # Count how many signature ids are and prepare a vector for each
-                        # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
-                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
 
                 # Indels treated as subs also count for the subs probs
-                elif mut['TYPE'] == 'indel' and indels.simulated_as_subs:
+                if mut['ALT_TYPE'] == 'indel' and self.indels.simulated_as_subs:
                     self.p_subs = 1
                     self.p_indels = 0
                     if self.signature is not None:
                         if self.indels_conf['indels_simulated_with_signature']:
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
-                            signature_ids.append('indels_having_no_signature')
+                            signature_ids.append('equiprobable_signature')
+                            if equiprobable_signature is None:
+                                triplets = triplet_counter_executor([self.segments])
+                                equiprobable_signature = len(triplets.keys())
                 # When only in frame indels are simulated as subs
-                elif mut['TYPE'] == 'indel' and indels.in_frame_simulated_as_subs:
+                elif mut['ALT_TYPE'] == 'indel' and self.indels.in_frame_simulated_as_subs:
                     if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
                         indels_simulated_as_subs += 1
                     if self.signature is not None:
                         if self.indels_conf['indels_simulated_with_signature']:
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
-                            signature_ids.append('indels_having_no_signature')
+                            signature_ids.append('equiprobable_signature')
+                            if equiprobable_signature is None:
+                                triplets = triplet_counter_executor([self.segments])
+                                equiprobable_signature = len(triplets.keys())
+
+                else:  # SNP or MNP
+                    if self.signature is not None:
+                        # Count how many signature ids are and prepare a vector for each
+                        # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
+                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
 
             for signature_id in set(signature_ids):
                 subs_probs_by_signature.update({signature_id: []})
@@ -198,7 +194,7 @@ class ElementExecutor(object):
             # When the probabilities of subs and indels are None, they are taken from
             # mutations seen in the gene
             if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
-                self.p_subs = (self.result['subs'] + indels_simulated_as_subs) / len(self.result['mutations'])
+                self.p_subs = (self.result['snps'] + self.result['mnps'] + indels_simulated_as_subs) / len(self.result['mutations'])
                 self.p_indels = 1 - self.p_subs
 
             # Compute the values for the substitutions
@@ -207,10 +203,11 @@ class ElementExecutor(object):
                     for s in self.scores.get_score_by_position(pos):
                         subs_scores.append(s.value)
                         for k, v in subs_probs_by_signature.items():
-                            if k in self.signature.keys():
+                            if k in self.signature:
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
                             else:
-                                v.append(1/192)  # TODO Adjust the probability to the # of distinct triplets in the region
+                                v.append(1/equiprobable_signature)
+
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)
@@ -225,7 +222,7 @@ class ElementExecutor(object):
                     subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []
 
             if self.use_indels and self.p_indels > 0:
-                indels_scores = indels.get_background_indel_scores()
+                indels_scores = self.indels.get_background_indel_scores()
 
                 # All indels have the same probability
                 indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []
