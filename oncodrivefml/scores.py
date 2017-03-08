@@ -37,7 +37,11 @@ import numpy as np
 from typing import List
 from collections import defaultdict, namedtuple
 
+from oncodrivefml import __logger_name__
 from oncodrivefml.signature import get_ref_triplet, get_build
+
+logger = logging.getLogger(__logger_name__)
+
 
 ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'ref_triplet', 'alt_triplet'])
 """
@@ -202,12 +206,12 @@ def init_scores_module(conf):
     global stop_function, min_stops, stops_file, scores_reader
 
     min_stops = conf.get('limit', min_stops)
-    logging.debug('Below {} stops in the element the function for stops will be used'.format(min_stops))
+    logger.debug('Below %d stops in the element the function for stops will be used', min_stops)
     if 'function' in conf:
         exec("def stops_function(x): return {}".format(conf['function']), globals())
         stop_function = stops_function
     else:
-        logging.warning('You have not provided any function for computing the stops')
+        logger.warning('You have not provided any function for computing the stops')
     # stops_file = bgdata.get_path('datasets', 'genestops', get_build())  # TODO what to do in case of error
     stops_file = bgdata.get_path('datasets', 'genestops', 'cds')  # TODO move file in bgdata to be associated with the build
     if conf['format'] == 'tabix':
@@ -321,7 +325,7 @@ class Scores(object):
                             ref = ref_triplet[1] if ref is None else ref
 
                             if ref_triplet[1] != ref:
-                                logging.warning("Background mismatch at position %d at '%s'", pos, self.element)
+                                logger.warning("Background mismatch at position %d at '%s'", pos, self.element)
 
                             # Expand funseq2 dots
                             alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
@@ -331,10 +335,10 @@ class Scores(object):
                                 self.scores_by_pos[pos].append(ScoreValue(ref, a, score, ref_triplet, alt_triplet))
 
                     except ReaderError as e:
-                        logging.warning(e.message)
+                        logger.warning(e.message)
                         continue
         except ReaderError as e:
-            logging.warning("Reader error: {}. Regions being analysed {}".format(e.message, self.segments))
+            logger.warning("Reader error: %s. Regions being analysed %s", e.message, self.segments)
 
     def get_stop_scores(self):
         """
@@ -355,8 +359,8 @@ class Scores(object):
                     stops[pos].append(alt)
 
             except tabix.TabixError:
-                logging.warning(
-                    "Tabix error at {}='{}:{}-{}'".format(self.element, region['CHROMOSOME'], region['START'] - 1, region['STOP']))
+                logger.warning(
+                    "Tabix error at %s='%s:%d-%d'", self.element, region['CHROMOSOME'], region['START'] - 1, region['STOP'])
                 continue
 
         self.stop_scores = []

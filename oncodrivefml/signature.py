@@ -45,7 +45,10 @@ from multiprocessing.pool import Pool
 from collections import defaultdict, Counter
 from bgreference import refseq
 
+from oncodrivefml import __logger_name__
 from oncodrivefml.utils import exists_path
+
+logger = logging.getLogger(__logger_name__)
 
 ref_build = 'hg19'
 """
@@ -66,7 +69,7 @@ def change_ref_build(build):
     """
     global ref_build
     ref_build = build
-    logging.info('Using {} as reference genome'.format(ref_build.upper()))
+    logger.info('Using %s as reference genome', ref_build.upper())
 
 
 def get_build():
@@ -214,7 +217,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
             signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
             signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
             if signature_ref[1] != mut['REF']:
-                logging.warning('Discrepancy in substitution at position {} of chr {}'.format(pos, mut['CHROMOSOME']))
+                logger.warning('Discrepancy in substitution at position %d of chr %s', pos, mut['CHROMOSOME'])
                 continue
 
             signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
@@ -224,7 +227,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
                 ref_nucleotide, alt_nucleotide = nucleotides
                 signature_ref = get_ref_triplet(mut['CHROMOSOME'], pos - 1 + index)
                 if signature_ref[1] != ref_nucleotide:
-                    logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, mut['CHROMOSOME']))
+                    logger.warning('Discrepancy in MNP at position %d of chr %s', pos, mut['CHROMOSOME'])
                     continue
                 signature_alt = signature_ref[0] + alt_nucleotide + signature_ref[2]
 
@@ -282,14 +285,14 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
     signature_dict = None
     if method == "none":
         # We don't use signature
-        logging.warning("No signature is being used")
+        logger.warning("No signature is being used")
 
     elif method == "file":
         if not os.path.exists(path):
-            logging.error("Signature file {} not found.".format(path))
+            logger.error("Signature file %s not found.", path)
             return -1
         else:
-            logging.info("Loading signatures")
+            logger.info("Loading signatures")
             signature_probabilities = pd.read_csv(path, sep='\t')
             signature_probabilities.set_index([column_ref, column_alt], inplace=True)
             signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
@@ -303,15 +306,15 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
 
         if exists_path(load_pickle):
             try:
-                logging.info("Using precomputed signatures")
+                logger.info("Using precomputed signatures")
                 with gzip.open(load_pickle, 'rb') as fd:
                     signature_dict = pickle.load(fd)
             except EOFError:
-                logging.error("Loading file {}".format(load_pickle))
+                logger.error("Loading file %s", load_pickle)
                 signature_dict = None
 
         if signature_dict is None:
-            logging.info("Computing signatures")
+            logger.info("Computing signatures")
             signature_dict = compute_signature(signature_function, classifier, collapse, include_mnp)
             if save_pickle is not None:
                 try:
@@ -319,7 +322,7 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
                     with gzip.open(save_pickle, 'wb') as fd:
                         pickle.dump(signature_dict, fd)
                 except OSError:
-                    logging.debug(
+                    logger.debug(
                         "Imposible to write precomputed signature here: {}".format(save_pickle))
 
         if signature_dict is not None and trinucleotides_counts is not None:  # correct the signature
@@ -329,7 +332,7 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
 
             triplets_probabilities = sum2one_dict(trinucleotides_counts)
 
-            logging.info('Correcting signatures')
+            logger.info('Correcting signatures')
 
             signature_dict = correct_signature_by_triplets_frequencies(signature_dict, triplets_probabilities)
 
@@ -392,7 +395,7 @@ def get_normalized_frequencies(signature, triplets_frequencies):
     for triplet_pair, frequency in signature.items():
         ref_triplet = triplet_pair[0]
         if ref_triplet not in triplets_frequencies:
-            logging.warning('Triplet {} not found'.format(ref_triplet))
+            logger.warning('Triplet %s not found', ref_triplet)
         corrected_signature[triplet_pair] = frequency/triplets_frequencies.get(ref_triplet, float("inf"))
     return sum2one_dict(corrected_signature)
 

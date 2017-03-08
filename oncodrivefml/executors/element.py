@@ -3,12 +3,14 @@ import logging
 import numpy as np
 from collections import Counter
 
+from oncodrivefml import __logger_name__
 from oncodrivefml.indels import Indel
 from oncodrivefml.scores import Scores
 from oncodrivefml.signature import triplet_counter_executor
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.walker import partitions_list
 
+logger = logging.getLogger(__logger_name__)
 
 class ElementExecutor(object):
     """
@@ -89,7 +91,7 @@ class ElementExecutor(object):
                     mutation['SCORE'] = v.value
                     break
             else:
-                logging.warning('Discrepancy in SNP at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
+                logger.warning('Discrepancy in SNP at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
 
         elif mutation['ALT_TYPE'] == "mnp":
             pos = int(mutation['POSITION'])
@@ -102,7 +104,7 @@ class ElementExecutor(object):
                         mnp_scores.append(v.value)
                         break
                 else:
-                    logging.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
+                    logger.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
             if not mnp_scores:
                 return
             mutation['SCORE'] = max(mnp_scores)

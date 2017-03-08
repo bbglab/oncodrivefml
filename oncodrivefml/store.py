@@ -24,7 +24,11 @@ from bokeh.models import HoverTool, PrintfTickFormatter, CustomJS, Circle
 from bokeh.models.widgets.inputs import TextInput
 from bokeh.layouts import column, widgetbox
 
+from oncodrivefml import __logger_name__
+
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+logger = logging.getLogger(__logger_name__)
 
 
 
@@ -472,7 +476,7 @@ def store_png(input_file, output_file, showit=False):
             # This avoid the crash for ValueError: width and height must each be below 32768
             genes_annotated += 1
             if genes_annotated >= MAX_ANNOTATED_GENES:
-                logging.warning("Annotations cut to {} genes".format(MAX_ANNOTATED_GENES))
+                logger.warning("Annotations cut to %d genes", MAX_ANNOTATED_GENES)
                 break
 
     # Add labels
@@ -497,7 +501,7 @@ def store_png(input_file, output_file, showit=False):
     try:
         plt.tight_layout()
     except ValueError as e:
-        logging.warning('Ignoring tight_layout()')
+        logger.warning('Ignoring tight_layout()')
 
     # Save the plot
     if output_file:

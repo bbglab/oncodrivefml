@@ -8,6 +8,9 @@ from datetime import datetime
 from ago import human
 from os.path import exists
 
+from oncodrivefml import __logger_name__
+
+logger = logging.getLogger(__logger_name__)
 
 def executor_run(executor):
     """
@@ -56,10 +59,10 @@ def loop_logging(iterable, size=None, step=1):
     start_time = datetime.now()
     for i, value in enumerate(iterable):
         if i % step == 0:
-            logging.info("[{} of {}]".format(i+1, size))
+            logger.info("[%d of %d]", i+1, size)
         yield value
-    logging.info("[{} of {}]".format(i+1, size))
-    logging.debug("Time: {}".format(human(start_time)))
+    logger.info("[%d of %d]", i+1, size)
+    logger.debug("Time: %s", human(start_time))
 
 
 def exists_path(path):

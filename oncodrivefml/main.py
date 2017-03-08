@@ -2,7 +2,7 @@
 Contains the command line parsing and the main class of the method
 """
 
-
+import io
 import os
 import sys
 import click
@@ -10,8 +10,9 @@ import logging
 from os.path import join, exists
 from collections import defaultdict
 from multiprocessing.pool import Pool
+from logging.config import dictConfig
 
-from oncodrivefml import __version__
+from oncodrivefml import __version__, __logger_name__
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
@@ -25,6 +26,7 @@ from oncodrivefml.utils import executor_run, loop_logging
 from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
 
+logger = logging.getLogger(__logger_name__)
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -43,12 +45,18 @@ class OncodriveFML(object):
     """
 
     def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, generate_pickle):
+        logger.debug('Using OncodriveFML version %s', __version__)
 
         # Required parameters
         self.mutations_file = file_exists_or_die(mutations_file)
+        logger.debug('Mutations file: %s', self.mutations_file)
         self.elements_file = file_exists_or_die(elements_file)
+        logger.debug('Elements file: %s', self.elements_file)
         self.configuration = config
         self.blacklist = blacklist
+        if self.blacklist is not None:
+            logger.debug('Blacklist file: %s', self.blacklist)
+            logger.debug('Using a blacklist causes some pickle files not to be saved/loaded')
         self.generate_pickle = generate_pickle
 
         genome_reference_build = self.configuration['genome']['build']
@@ -57,6 +65,7 @@ class OncodriveFML(object):
         self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
+        logger.debug('Using %s cores', self.cores)
 
         if self.configuration['signature']['method'] == 'bysample':
             self.configuration['signature']['method'] = 'complement'
@@ -65,8 +74,9 @@ class OncodriveFML(object):
         self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
         # Optional parameters
-        self.output_folder = file_name(self.elements_file) if output_folder is None else output_folder
+        self.output_folder = output_folder
         self.output_file_prefix = join(self.output_folder, file_name(self.mutations_file) + '-oncodrivefml')
+        logger.debug('Output: %s', self.output_folder)
 
         # Output parameters
         self.mutations = None
@@ -74,6 +84,11 @@ class OncodriveFML(object):
         self.signatures = None
 
         self.avoid_parallel = False
+
+        s = io.BytesIO()
+        self.configuration.write(s)
+        logger.debug('Configuration used:\n' + s.getvalue().decode())
+        s.close()
 
     def __create_element_executor(self, element_id, element_mutations):
         """
@@ -161,11 +176,6 @@ class OncodriveFML(object):
 
         # TODO add explanation
 
-        # Skip if done
-        if exists(self.output_file_prefix + '.tsv'):
-            logging.warning("Already calculated at '{}'".format(self.output_file_prefix + '.tsv'))
-            return
-
         # Load mutations mapping
         mutations_data, self.elements = load_and_map_variants(self.mutations_file,
                                                               self.elements_file,
@@ -180,7 +190,7 @@ class OncodriveFML(object):
         self.__compute_signature()
 
         if self.generate_pickle:
-            logging.info('Pickles generated. Exiting')
+            logger.info('Pickles generated. Exiting')
             return
 
         init_scores_module(self.configuration['score'])
@@ -201,7 +211,7 @@ class OncodriveFML(object):
         # Run the executors
         with Pool(self.cores) as pool:
             results = {}
-            logging.info("Computing OncodriveFML")
+            logger.info("Computing OncodriveFML")
             map_func = map if self.avoid_parallel else pool.imap
             for executor in loop_logging(map_func(executor_run, element_executors), size=len(element_executors), step=6*self.cores):
                 if len(executor.result['mutations']) > 0:
@@ -214,7 +224,7 @@ class OncodriveFML(object):
             while len(partitions) > 0 or i == 0:
 
                 i += 1
-                logging.info("Parallel sampling. Iteration {}, genes {}, partitions {}".format(i, len(set([n for n,p,r in partitions])), len(partitions)))
+                logger.info("Parallel sampling. Iteration %d, genes %d, partitions %d", i, len(set([n for n,p,r in partitions])), len(partitions))
 
                 # Pending sampling execution
                 for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
@@ -238,53 +248,52 @@ class OncodriveFML(object):
                             partitions.append((name, partition, result))
 
             # Compute p-values
-            logging.info("Compute p-values")
+            logger.info("Compute p-values")
             for result in results.values():
                 sampling_size = float(result['sampling_size'])
                 result['pvalue'] = max(1, result['obs']) / sampling_size
                 result['pvalue_neg'] = max(1, result['neg_obs']) / sampling_size
 
         if results == {}:
-            logging.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")
+            logger.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")
             sys.exit(0)
 
         # Run multiple test correction
-        logging.info("Computing multiple test correction")
+        logger.info("Computing multiple test correction")
         results_mtc = multiple_test_correction(results, num_significant_samples=2)
 
         # Sort and store results
-        logging.info("Storing results")
+        logger.info("Storing results")
         if not exists(self.output_folder):
             os.makedirs(self.output_folder, exist_ok=True)
         result_file = self.output_file_prefix + '.tsv'
         store_tsv(results_mtc, result_file)
 
-        logging.info("Creating figures")
+        logger.info("Creating figures")
         store_png(result_file, self.output_file_prefix + ".png")
         store_html(result_file, self.output_file_prefix + ".html")
 
-        logging.info("Done")
+        logger.info("Done")
 
 
-def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, sequencing, generate_pickle, debug, config_override_dict=None):
-
-    # Configure the logging
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
-    logging.getLogger().setLevel(logging.DEBUG if debug else logging.INFO)
-    logging.debug('args: {} {} {} {} {} {} {} {}'.format(mutations_file, elements_file, output_folder, config_file,
-                                                         samples_blacklist, indels, generate_pickle, debug))
-
-    if samples_blacklist is not None:
-        logging.debug('Using a blacklist causes some pickle files not to be saved/loaded')
-
-    # Load configuration file and prepare analysis
-    logging.info("Loading configuration")
+def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, config_override_dict=None):
 
     configuration = load_configuration(config_file, override=config_override_dict)
+
+    output_folder = file_name(elements_file) if output_folder is None else output_folder
+    output_file = join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv')
+    # Skip if done
+    if exists(output_file):
+        logging.warning("Already calculated at '{}'".format(output_file))
+        return
+    else:
+        if 'logging' in configuration:
+            dictConfig(configuration['logging'])
 
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
                             samples_blacklist, generate_pickle)
 
+    logger.info('Running analysis')
     # Run the analysis
     analysis.run()
 
@@ -327,7 +336,10 @@ def cmdline(mutations_file, elements_file, output_folder, config_file, samples_b
         override_config['statistic']['indels']['lost_indels'] = 7
         override_config['signature']['correct_by_sites'] = 'genome'
 
-    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, debug, override_config)
+    if debug:
+        override_config['logging']['handlers']['console']['level'] = 'DEBUG'
+
+    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, override_config)
 
 
 if __name__ == "__main__":

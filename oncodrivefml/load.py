@@ -85,7 +85,10 @@ from bgparsers import readers
 from collections import defaultdict
 from intervaltree import IntervalTree
 
+from oncodrivefml import __logger_name__
 from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
+
+logger = logging.getLogger(__logger_name__)
 
 
 def load_mutations(file, blacklist=None, metadata_dict=None):
@@ -157,14 +160,14 @@ def build_regions_tree(regions):
     for i, (k, allr) in enumerate(regions.items()):
 
         if i % 7332 == 0:
-            logging.info("[{} of {}]".format(i+1, len(regions)))
+            logger.info("[%d of %d]", i+1, len(regions))
 
         for r in allr:
             tree = regions_tree.get(r['CHROMOSOME'], IntervalTree())
             tree[r['START']:(r['STOP']+1)] = (r['ELEMENT'], r['SEGMENT'])
             regions_tree[r['CHROMOSOME']] = tree
 
-    logging.info("[{} of {}]".format(i+1, len(regions)))
+    logger.info("[%d of %d]", i+1, len(regions))
     return regions_tree
 
 
@@ -213,11 +216,11 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     variants_dict_precomputed = variants_file + "_mapping_" + get_name(elements_file) + '.pickle.gz'
     if exists(variants_dict_precomputed) and blacklist is None:
         try:
-            logging.info("Using precomputed mutations mapping")
+            logger.info("Using precomputed mutations mapping")
             with gzip.open(variants_dict_precomputed, 'rb') as fd:
                 return pickle.load(fd), elements
         except EOFError:
-            logging.error("Loading file {}".format(variants_dict_precomputed))
+            logger.error("Loading file %s", variants_dict_precomputed)
 
     # Loading elements tree
     elements_tree = load_elements_tree(elements_file)
@@ -225,7 +228,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     # Mapping mutations
     variants_dict = defaultdict(list)
     variants_metadata_dict = {}
-    logging.info("Mapping mutations")
+    logger.info("Mapping mutations")
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
@@ -258,6 +261,6 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             with gzip.open(variants_dict_precomputed, 'wb') as fd:
                 pickle.dump(mutations_data_dict, fd)
         except OSError:
-            logging.debug("Imposible to write precomputed mutations mapping here: {}".format(variants_dict_precomputed))
+            logger.debug("Imposible to write precomputed mutations mapping here: %s", variants_dict_precomputed)
 
     return mutations_data_dict, elements

@@ -9,6 +9,9 @@ import os
 import sys
 from bgconfig import BGConfig, _file_name, _file_exists_or_die
 
+from oncodrivefml import __logger_name__
+logger = logging.getLogger(__logger_name__)
+
 file_exists_or_die = _file_exists_or_die
 file_name = _file_name
 
@@ -27,9 +30,9 @@ def load_configuration(config_file, override=None):
     config_template = os.path.join(os.path.dirname(__file__), "oncodrivefml.conf.template")
 
     try:
-        return BGConfig(config_template, config_file=config_file, override_values=override)
+        return BGConfig(config_template, config_file=config_file, use_env_vars=False, override_values=override, unrepr=True)
     except ValueError as e:
-        logging.error(e)
+        logger.error(e)
         sys.exit(-1)
 
 
