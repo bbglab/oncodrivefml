@@ -548,7 +548,7 @@ def store_tsv(results, result_file):
     """
     results.index.names = ['GENE_ID']
     results.sort_values(by='pvalue', inplace=True)
-    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'subs', 'indels', 'symbol']
+    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'snps', 'mnps', 'indels', 'symbol']
     df = results[fields].copy()
     df.reset_index(inplace=True)
     df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE', 'samples_mut': 'SAMPLES',
