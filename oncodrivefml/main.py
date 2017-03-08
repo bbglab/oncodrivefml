@@ -237,7 +237,7 @@ class OncodriveFML(object):
                 for name, result in results.items():
                     sampling_size = float(result['sampling_size'])
 
-                    if result['obs'] < self.configuration['statistic']['sampling_min_obs'] and sampling_size < self.configuration['statistic']['sampling_max']:
+                    if result['obs'] is not None and result['obs'] < self.configuration['statistic']['sampling_min_obs'] and sampling_size < self.configuration['statistic']['sampling_max']:
                         next_sampling_size = min(sampling_size*10, self.configuration['statistic']['sampling_max'])
                         pending_sampling_size = int(next_sampling_size - sampling_size)
                         chunk_size = (pending_sampling_size * result['muts_count']) // self.configuration['statistic']['sampling_chunk']
@@ -251,8 +251,8 @@ class OncodriveFML(object):
             logger.info("Compute p-values")
             for result in results.values():
                 sampling_size = float(result['sampling_size'])
-                result['pvalue'] = max(1, result['obs']) / sampling_size
-                result['pvalue_neg'] = max(1, result['neg_obs']) / sampling_size
+                result['pvalue'] = max(1, result['obs']) / sampling_size if result['obs'] is not None else None
+                result['pvalue_neg'] = max(1, result['neg_obs']) / sampling_size if result['neg_obs'] is not None else None
 
         if results == {}:
             logger.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")
@@ -261,6 +261,8 @@ class OncodriveFML(object):
         # Run multiple test correction
         logger.info("Computing multiple test correction")
         results_mtc = multiple_test_correction(results, num_significant_samples=2)
+
+        print(results_mtc.head())
 
         # Sort and store results
         logger.info("Storing results")

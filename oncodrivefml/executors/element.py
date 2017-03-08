@@ -152,7 +152,7 @@ class ElementExecutor(object):
             subs_probs_by_signature = {}
             signature_ids = []
 
-            equiprobable_signature = None
+            distinct_triplets_in_element = None
 
             indels_simulated_as_subs = 0
 
@@ -168,9 +168,9 @@ class ElementExecutor(object):
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
                             signature_ids.append('equiprobable_signature')
-                            if equiprobable_signature is None:
+                            if distinct_triplets_in_element is None:
                                 triplets = triplet_counter_executor([self.segments])
-                                equiprobable_signature = len(triplets.keys())
+                                distinct_triplets_in_element = len(triplets.keys())
                 # When only in frame indels are simulated as subs
                 elif mut['ALT_TYPE'] == 'indel' and self.indels.in_frame_simulated_as_subs:
                     if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
@@ -180,9 +180,9 @@ class ElementExecutor(object):
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
                             signature_ids.append('equiprobable_signature')
-                            if equiprobable_signature is None:
+                            if distinct_triplets_in_element is None:
                                 triplets = triplet_counter_executor([self.segments])
-                                equiprobable_signature = len(triplets.keys())
+                                distinct_triplets_in_element = len(triplets.keys())
 
                 else:  # SNP or MNP
                     if self.signature is not None:
@@ -198,7 +198,6 @@ class ElementExecutor(object):
             if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
                 self.p_subs = (self.result['snps'] + self.result['mnps'] + indels_simulated_as_subs) / len(self.result['mutations'])
                 self.p_indels = 1 - self.p_subs
-
             # Compute the values for the substitutions
             if self.p_subs > 0:
                 for pos in positions:
@@ -208,8 +207,7 @@ class ElementExecutor(object):
                             if k in self.signature:
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
                             else:
-                                v.append(1/equiprobable_signature)
-
+                                v.append(1/distinct_triplets_in_element)
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)
@@ -218,7 +216,15 @@ class ElementExecutor(object):
                     for k, v in subs_probs_by_signature.items():
                         subs_probs += (np.array(v) * signature_ids_counter[k] / total_ids)
                     tot = sum(subs_probs)
-                    subs_probs = subs_probs * self.p_subs / tot
+                    if tot == 0.0:
+                        logger.warning('Probability of substitutions equal to 0 in {}'.format(self.name))
+                        self.result['partitions'] = []
+                        self.result['sampling_size'] = self.sampling_size
+                        self.result['obs'] = None
+                        self.result['neg_obs'] = None
+                        return self
+                    else:
+                        subs_probs = subs_probs * self.p_subs / tot
                     subs_probs = list(subs_probs)
                 else:  # Same prob for all values (according to the prob of substitutions)
                     subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []
