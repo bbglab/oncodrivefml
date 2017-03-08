@@ -336,6 +336,8 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
 
             signature_dict = correct_signature_by_triplets_frequencies(signature_dict, triplets_probabilities)
 
+            signature_dict['trinucleotides'] = count_valid_trinucleotides(trinucleotides_counts)
+
     return signature_dict
 
 
@@ -504,3 +506,37 @@ def compute_regions_signature(elements, cores):
     for result in pool.imap(triplet_counter_executor, chunkizator(elements, size=500)):
         counter.update(result)
     return counter
+
+
+def is_valid_trinucleotides(trinucleotide):
+    """
+    Check if a trinucleotide has a nucleotide distinct than A, C, G, T
+    Args:
+        trinucleotide (str): triplet
+
+    Returns:
+        bool.
+
+    """
+    for nucleotide in trinucleotide:
+        if nucleotide not in __CB.keys():
+            return False
+    return True
+
+
+def count_valid_trinucleotides(trinucleotides_dict):
+    """
+    Count how many trinucleotides are valid
+
+    Args:
+        trinucleotides_dict (dict): trinucleotides counts
+
+    Returns:
+        int. Valid trinucleotides
+
+    """
+    distinct_trinucleotides = set()
+    for k in trinucleotides_dict.keys():
+        if is_valid_trinucleotides(k):
+            distinct_trinucleotides.add(k)
+    return len(k)

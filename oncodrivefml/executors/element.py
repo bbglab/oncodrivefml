@@ -152,8 +152,6 @@ class ElementExecutor(object):
             subs_probs_by_signature = {}
             signature_ids = []
 
-            distinct_triplets_in_element = None
-
             indels_simulated_as_subs = 0
 
             for mut in self.result['mutations']:
@@ -168,9 +166,6 @@ class ElementExecutor(object):
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
                             signature_ids.append('equiprobable_signature')
-                            if distinct_triplets_in_element is None:
-                                triplets = triplet_counter_executor([self.segments])
-                                distinct_triplets_in_element = len(triplets.keys())
                 # When only in frame indels are simulated as subs
                 elif mut['ALT_TYPE'] == 'indel' and self.indels.in_frame_simulated_as_subs:
                     if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
@@ -180,9 +175,6 @@ class ElementExecutor(object):
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
                             signature_ids.append('equiprobable_signature')
-                            if distinct_triplets_in_element is None:
-                                triplets = triplet_counter_executor([self.segments])
-                                distinct_triplets_in_element = len(triplets.keys())
 
                 else:  # SNP or MNP
                     if self.signature is not None:
@@ -207,7 +199,7 @@ class ElementExecutor(object):
                             if k in self.signature:
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
                             else:
-                                v.append(1/distinct_triplets_in_element)
+                                v.append(1/self.signature.get('trinucleotides', 64))
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)
