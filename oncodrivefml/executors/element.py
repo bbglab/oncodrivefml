@@ -199,7 +199,7 @@ class ElementExecutor(object):
                             if k in self.signature:
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
                             else:
-                                v.append(1/self.signature.get('trinucleotides', 64))
+                                v.append(1/(self.signature.get('trinucleotides', 64)*3))
 
                 if len(subs_probs_by_signature) > 0:
                     signature_ids_counter = Counter(signature_ids)
