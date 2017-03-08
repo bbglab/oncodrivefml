@@ -262,8 +262,6 @@ class OncodriveFML(object):
         logger.info("Computing multiple test correction")
         results_mtc = multiple_test_correction(results, num_significant_samples=2)
 
-        print(results_mtc.head())
-
         # Sort and store results
         logger.info("Storing results")
         if not exists(self.output_folder):
