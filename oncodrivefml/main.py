@@ -287,7 +287,12 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
         logging.warning("Already calculated at '{}'".format(output_file))
         return
     else:
+        if not exists(output_folder):
+            os.makedirs(output_folder, exist_ok=True)
         if 'logging' in configuration:
+            if configuration['logging'].get('handlers', {}).get('file', None) is not None:
+                logging_file = join(output_folder, file_name(mutations_file) + '__log.txt')
+                configuration['logging']['handlers']['file']['filename'] = logging_file
             dictConfig(configuration['logging'])
 
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
