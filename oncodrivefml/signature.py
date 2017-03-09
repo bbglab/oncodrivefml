@@ -35,6 +35,7 @@ signature (:obj:`dict`)
 """
 
 import os
+import sys
 import gzip
 import json
 import pickle
@@ -211,29 +212,41 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
         Only substitutions (MNP are optional) are taken into account
 
     """
+    total = 0
+    mismatches = 0
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in signature_function():
-        if mut['ALT_TYPE'] == 'SNP':
+        if mut['ALT_TYPE'] == 'snp':
+            total += 1
             signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
             signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
             if signature_ref[1] != mut['REF']:
-                logger.warning('Discrepancy in substitution at position %d of chr %s', pos, mut['CHROMOSOME'])
+                logger.debug('Discrepancy in substitution at position %d of chr %s', pos, mut['CHROMOSOME'])
+                mismatches += 1
                 continue
 
             signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
         elif include_mnp and mut['ALT_TYPE'] == 'mnp':
+            total += 1
             pos = mut['POSITION']
             for index, nucleotides in enumerate(zip(mut['REF'], mut['ALT'])):
                 ref_nucleotide, alt_nucleotide = nucleotides
                 signature_ref = get_ref_triplet(mut['CHROMOSOME'], pos - 1 + index)
                 if signature_ref[1] != ref_nucleotide:
-                    logger.warning('Discrepancy in MNP at position %d of chr %s', pos, mut['CHROMOSOME'])
+                    logger.debug('Discrepancy in MNP at position %d of chr %s', pos, mut['CHROMOSOME'])
+                    mismatches += 1
                     continue
                 signature_alt = signature_ref[0] + alt_nucleotide + signature_ref[2]
 
                 signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
         else:
             continue
+
+    if mismatches / total > 0.05:
+        logger.warning('There are %d mismatches between your mutations and the reference genome.', mismatches)
+    if mismatches / total > 0.1:
+        logger.error('Too many mismatches. You are using %s as reference genome, please check it is right. Program stopped', ref_build)
+        sys.exit(-1)
 
     signature = {}
     for k, v in signature_count.items():
