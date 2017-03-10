@@ -119,14 +119,14 @@ class OncodriveFML(object):
         save_signature_pickle = precomputed_signature if self.generate_pickle else None
 
         trinucleotides_counts = None
-        if conf['use_only_mapped_mutations']:
+        if conf['only_mapped_mutations']:
             signature_function = lambda: yield_mutations(self.mutations)
-            if conf['correct_by_sites'] is not None:
+            if conf['normalize_by_sites'] is not None:
                 trinucleotides_counts = compute_regions_signature(self.elements.values(), self.cores)
         else:
             signature_function = lambda: load_mutations(self.mutations_file, blacklist=self.blacklist)
-            if conf['correct_by_sites'] is not None:
-                trinucleotides_counts = load_trinucleotides_counts(conf['correct_by_sites'])
+            if conf['normalize_by_sites'] is not None:
+                trinucleotides_counts = load_trinucleotides_counts(conf['normalize_by_sites'])
 
         # Load signatures
         self.signatures = load_signature(conf, signature_function, trinucleotides_counts,
@@ -142,14 +142,11 @@ class OncodriveFML(object):
 
         """
         # compute cohort percentages of subs and indels
-        if self.configuration['statistic']['use_gene_mutations']:
-            self.configuration['p_indels'] = None
-            self.configuration['p_subs'] = None
-        else:
-            if self.configuration['statistic']['indels']['enabled']:
+        if self.configuration['statistic']['cohort_probabilities']:
+            if self.configuration['statistic']['indels']['include']:
                 subs_counter = counts['snp']
 
-                if self.configuration['statistic']['mnp']:
+                if not self.configuration['statistic']['discard_mnp']:
                     subs_counter += counts['mnp']
 
                 indels_counter = counts['indel'] * (1-self.configuration['discarded_indels'])
@@ -166,6 +163,10 @@ class OncodriveFML(object):
             else:
                 self.configuration['p_indels'] = 0
                 self.configuration['p_subs'] = 1
+        else:
+            self.configuration['p_indels'] = None
+            self.configuration['p_subs'] = None
+
 
 
 
@@ -326,20 +327,20 @@ def cmdline(mutations_file, elements_file, output_folder, config_file, samples_b
 
     # Fill the configuration for the indels according to the indels value
     if indels == 'coding':
-        override_config['statistic']['indels']['enabled'] = True
+        override_config['statistic']['indels']['include'] = True
         override_config['statistic']['indels']['method'] = 'stop'
     elif indels == 'noncoding':
-        override_config['statistic']['indels']['enabled'] = True
+        override_config['statistic']['indels']['include'] = True
         override_config['statistic']['indels']['method'] = 'max'
     elif indels == 'discard':
-        override_config['statistic']['indels']['enabled'] = False
+        override_config['statistic']['indels']['include'] = False
 
     if sequencing == 'exome':
         override_config['statistic']['indels']['lost_indels'] = 15
-        override_config['signature']['correct_by_sites'] = 'coding'
+        override_config['signature']['normalize_by_sites'] = 'whole_exome'
     elif sequencing == 'genome':
         override_config['statistic']['indels']['lost_indels'] = 7
-        override_config['signature']['correct_by_sites'] = 'genome'
+        override_config['signature']['normalize_by_sites'] = 'whole_genome'
 
     if debug:
         override_config['logging']['handlers']['console']['level'] = 'DEBUG'

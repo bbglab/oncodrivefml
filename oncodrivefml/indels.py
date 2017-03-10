@@ -57,10 +57,10 @@ def init_indels_module(indels_config):
     elif indels_config['method'] == 'max':
         analysis = 'noncoding'
 
-    stop = StopsScore(indels_config['stop_function'])
+    stop = StopsScore(indels_config['stops_function'])
     stop_function = stop.function
 
-    max_repeats = indels_config['max_repeats']
+    max_repeats = indels_config['max_consecutive']
 
 
 class StopsScore:

@@ -32,9 +32,9 @@ class ElementExecutor(object):
     def __init__(self, element_id, muts, segments, signature, config):
         # Input attributes
         self.name = element_id
-        self.use_mnp = config['statistic']['mnp']
+        self.use_mnp = not config['statistic']['discard_mnp']
         self.indels_conf = config['statistic']['indels']
-        self.use_indels = self.indels_conf['enabled']
+        self.use_indels = self.indels_conf['include']
         self.indels = None
 
         if self.use_indels and self.use_mnp:
@@ -162,7 +162,7 @@ class ElementExecutor(object):
                     self.p_subs = 1
                     self.p_indels = 0
                     if self.signature is not None:
-                        if self.indels_conf['indels_simulated_with_signature']:
+                        if self.indels_conf['simulate_with_signature']:
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
                             signature_ids.append('equiprobable_signature')
@@ -171,7 +171,7 @@ class ElementExecutor(object):
                     if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
                         indels_simulated_as_subs += 1
                     if self.signature is not None:
-                        if self.indels_conf['indels_simulated_with_signature']:
+                        if self.indels_conf['simulate_with_signature']:
                             signature_ids.append(mut.get(self.signature_column, self.signature_column))
                         else:
                             signature_ids.append('equiprobable_signature')

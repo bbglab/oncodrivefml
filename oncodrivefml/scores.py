@@ -60,7 +60,7 @@ def null(x):
     return x
 
 stop_function = null
-min_stops = 3
+min_stops = 1
 stops_file = None
 scores_reader = None
 
@@ -205,10 +205,10 @@ class ScoresTabixReader:
 def init_scores_module(conf):
     global stop_function, min_stops, stops_file, scores_reader
 
-    min_stops = conf.get('limit', min_stops)
+    min_stops = conf.get('minimum_number_of_stops', min_stops)
     logger.debug('Below %d stops in the element the function for stops will be used', min_stops)
-    if 'function' in conf:
-        exec("def stops_function(x): return {}".format(conf['function']), globals())
+    if 'mean_to_stop_function' in conf:
+        exec("def stops_function(x): return {}".format(conf['mean_to_stop_function']), globals())
         stop_function = stops_function
     else:
         logger.warning('You have not provided any function for computing the stops')

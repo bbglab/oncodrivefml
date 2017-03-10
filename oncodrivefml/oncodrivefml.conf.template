@@ -1,25 +1,33 @@
-
 [genome]
-
 # Build of the reference genome
-# Currently supported: HG19, HG38 and HG18
+# Currently supported: hg19, hg38 and hg18
+build = 'hg19'
+
+
 
 [signature]
 
 # Choose the method to calculate the trinuclotide singature:
 
 # "full" : Use a 192 matrix with all the possible signatures
-method = full
+method = 'full'
 
 # "complemented" : Use a 96 matrix with the signatures complemented
-# method = complement
+# method = 'complement'
 
 # "none": Don't use signature
-# method = none
+# method = 'none'
 
 # "bysample": Compute a 96 matrix signature for each sample
-# method = bysample
+# method = 'bysample'
 
+# "file": Provide a file with the signature to use
+# The format is a tab separated file with header, and you have to set the columns to use.
+# method = 'file'
+# path = [path to the file that contains the signature]
+# column_ref = [column that contains the reference signature]
+# column_alt = [column that contains the alternate signature]
+# column_probability = [column that contaions the probability]
 
 
 # Choose the classifier for the signature:
@@ -31,64 +39,43 @@ method = full
 # or leave it empty to use the whole dataset
 
 
-# Include MNP mutation in the signature
-# include_mnp = True
-
-# Do not include MNP mutations
-include_mnp = False
+# Include/exclude MNP mutations in the signature computation
+include_mnp = True
+# include_mnp = False
 
 
-# Choose if the signature must be computed using only the elements
-# that fall into the regions you are analysing:
-
-# False: use the whole dataset
-# use_only_mapped_mutations = False
-
-# True:use only mutations fall in any of the elements from the elements file
-# use_only_mapped_mutations = True
+# Choose if the signature must be computed using the whole cohort or
+# only the elements that fall into the regions you are analysing:
+only_mapped_mutations = False
+# only_mapped_mutations = True
 
 
-# Choose if the signature you want to correct the signature
-# by the number of sites:
+# The frequency of trinucleotides can be normalized by the frequency of sites
 
-# genomic: correct the signature for the whole genome counts
-# correct_signature_by_sites = genomic
+# whole_genome/wgs: correct the signature for the whole genome frequencies
+# normalize_by_sites = 'whole_genome'
 
-# coding: correct the signature for counts in coding regions
-# use this option if your mutations file contains only mutations from coding regions
-# correct_signature_by_sites = coding
+# whole_exome/wxs/wes: correct the signature for frequencies in coding regions
+# correct_signature_by_sites = 'whole_exome'
 
-# None: do not correct
-# comment the option
+# None: do not correct (comment the option)
+# normalize_by_sites = ''
 
-
-
-
-# "file": Provide a file with the signature to use
-# The format is a tab separated file with header, and you have to set the columns to use.
-# method = file
-# path = [path to the file that contains the signature]
-# column_ref = [column that contains the reference signature]
-# column_alt = [column that contains the alternate signature]
-# column_probability = [column that contaions the probability]
-
-# classifier = column of the mutations file that replaces the SIGNATURE column
-# if method is "bysample" the classifier is overwriten to "SAMPLE".
-# Use "SIGNATURE" to keep the value.
-# It can be any string value. If there is no column with that name, then the name is
-# used.
 
 
 [score]
-# Path to score tab separated file compress with bgzip and next to a Tabix .tbi index file
+# Path to score file
 file = "%(bgdata://genomicscores/cadd/1.0)"
-
 # WARNING: The %(bgdata:...) will download (the first time that you use it) a score file from
 # our servers and install it into the ~/.bgdata folder.
 
 # WARNING: CADD 1.0 scores are original from http://cadd.gs.washington.edu/ and are freely
 # available for all non-commercial applications. If you are planning on using them in a
 # commercial application, please contact them at http://cadd.gs.washington.edu/contact.
+
+# Format of the file
+# 'tabix': tab separated file compress with bgzip and next to a Tabix .tbi index file
+format = 'tabix'
 
 # Column that has the chromosome
 chr = 0
@@ -113,98 +100,119 @@ score = 5
 # that has the element id to match.
 # element = 6
 
-[background]
-# Size of the sampling
-sampling = 100000
+# Minimum number of stops per element to infer a for the stops using the mean of all scores
+minimum_number_of_stops = 3
 
-# If true all the recurrent mutations will be use, if false only one mutation per position will be use.
-recurrence = True
+# Function to infer the value of the stops in an element using the mean (x is the mean value of the scores)
+mean_to_stop_function = '8.9168668946147314*np.exp(0.082688007694096191*x)'
+
+
 
 [statistic]
 
-# Mathematical method to use
+# Mathematical method to use to compare observed and simulated values
 # Arithmetic mean
 method = amean
 
 # Gemoetric mean
 # method = gmean
 
-# The default option is to simulate the same number of mutations
-# that it is observed.
-# However, there is available an option to simulate only one mutation per sample.
-# To enable it, assign one of the possible statstical methods to samples_method the variable:
+# Compute the observed values using only 1 mutation per sample
+#per_sample_analysis = 'max'
+#per_sample_analysis = 'amean'
+#per_sample_analysis = 'gmean'
 
-#samples_method = amean
-#samples_method = gmean
-#samples_method = max
-
-# This only has effect on the score, for the rest of parameters (e.g. POSITION)
-# the mutation with the highest score is used.
-# This is important when simulating indels with the pattern method
-# or when mutation from the same sample have different signatures.
-# It also makes a difference when simulating the indels and subs
-# following the amount in the gene
+# Do not use/use MNP mutations in the analysis
+discard_mnp = False
+#dicard_mnp = True
 
 
-
-# Compute the substitutions
-subs = True
-
-# Do not compute the substitutions
-#subs = False
-
-# Compute the MNP mutations
-# Must be used in conjunction with subs=True
-mnp = True
-
-# Do not compute the MNP mutations
-#mnp = False
-
-    # Insertions and deletions
-    [[indels]]
-        # Use indels
-        enabled = True
-
-        # Method to compute and simulate the indels
-        # Use the stops scores to compute the scores of the indels in the gene
-        # Indels are simulated as substitutions
-        #method = stop
-
-        # Use the max of the substitution in the indel as the score
-        # Indels are simulated as substitutions without signature
-        #method = max
+# Simulate mutations according to probabilites observed in the whole cohort
+# or in each individual region
+cohort_probabilities = True
+# cohort_probabilities = False
 
 
-        # Distinguish between frame shift and in frame indels (for coding regions)
-        #enable_frame = True
-        enable_frame = False
+# Minimum sampling
+sampling = 100000
 
-        # Detect and discard indels that fall into repetitive regions
-        # max_repeats = number of times the sequence of the indel should appear in the region to be considered repetitive
-        # use max_repeats = 0 to not discard indels
+# Maximum sampling
+sampling_max = 1000000
 
+# Sampling chunk
+sampling_chunk = 100000000
 
-        # Stop method configuration
-        # Function used on the scores of the stops to compute the indel scores
-        stop_function = mean
-        #stop_function = median
-        #stop_function = random
-        #stop_function = random_choice
+# Minimum number of observed (if not reached, keeps computing)
+sampling_min_obs = 3
 
 
+[[indels]]
+# Include/exclude indels from your analysis
+include = True
+# include = False
+
+# Method used to simulate indels
+
+# Treat them as stops (for coding regions)
+# method = 'stop'
+
+# Treat them as a set of substitutions and take the maximum
+# method = 'max'
+
+# Number of consecutive times the indel appears to consider it falls in a repetitive region
+# Looking from the indel position and in the direction of the strand
+max_consecutive = 7
+
+# Do not discard indels that fall in repetitive regions
+# max_consecutive = 0
+
+# Function applied to the scores of the stops in the gene to compute the observed score
+
+# Arithmetic mean
+stops_function = 'mean'
+
+# Median
+# stops_function = 'median'
+
+# Random value between the max and the minimum
+# stops_function = 'random'
+
+# Random choice amongst the values
+# stops_function = 'random_choice'
+
+# Indels simulated as substitutions take into account signature or not
+simulate_with_signature =  True
+# simulate_with_signature = False
 
 
 
 [settings]
+# Number of cores to use in the analysis
+# Comment this option to use all avaliable cores
+# cores = 6
 
-# Maximum number of cores to use (default to all available)
-# cores = [cores to use]
 
-# If using a DRMAA cluster, this parameter defines how many elements do you want to calculate per job
-# drmma = 100
-
-# If using a DRMAA cluster, this parameter defines the maximum number of jobs to submit to the queue at the same time (if none all the jobs are submited)
-# drmaa_maximum = 100
-
-# If using a DRMAA cluster, this parameters defines the queues to use
-# queues = normal, long
+# Configuration for the logging system
+[logging]
+version = 1
+disable_existing_loggers = False
+[[handlers]]
+[[[console]]]
+class = 'logging.StreamHandler'
+formatter = 'bgformat'
+level = 'INFO'
+stream = 'ext://sys.stdout'
+[[[file]]]
+class = 'logging.FileHandler'
+formatter = 'bgformat'
+filename = 'log.txt'
+mode = 'w'
+[[formatters]]
+[[[bgformat]]]
+format ='%(asctime)s %(levelname)s: %(message)s'
+datefmt ='%H:%M:%S'
+[[loggers]]
+[[[oncodrivefml]]]
+handlers = ['console', 'file']
+level = 'DEBUG'
+propagate = 0

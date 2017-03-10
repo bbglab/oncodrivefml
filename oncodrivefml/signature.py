@@ -415,6 +415,15 @@ def get_normalized_frequencies(signature, triplets_frequencies):
     return sum2one_dict(corrected_signature)
 
 
+def __get_region(region_name):
+    if region_name == 'whole_genome' or region_name == 'wgs':
+        return 'genome'
+    elif region_name == 'whole_exome' or region_name == 'wes' or region_name == 'wxs':
+        return 'exome'
+    else:
+        return region_name
+
+
 def load_trinucleotides_counts(region):
     """
     Get the trinucleotides counts for a precomputed
@@ -427,6 +436,7 @@ def load_trinucleotides_counts(region):
         dict. Counts of the different trinucleotides
 
     """
+    region = __get_region(region)
     file = bgdata.get_path('datasets', region+'signature', ref_build)
     with open(file) as fd:
         triplets_counts = json.load(fd)
