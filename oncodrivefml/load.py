@@ -236,6 +236,9 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
     indels_mapped_multiple_of_3 = 0
+    snp_mapped = 0
+    mnp_mapped = 0
+    indels_mapped = 0
     for i, r in enumerate(load_mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist)):
 
         if r['CHROMOSOME'] not in elements_tree:
@@ -255,12 +258,21 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             variants_dict[element].append(r)
 
         if intervals:
-            if max(len(r['REF']), len(r['ALT'])) % 3 == 0:
-                indels_mapped_multiple_of_3 += 1
+            if r['ALT_TYPE'] == 'snp':
+                snp_mapped += 1
+            elif r['ALT_TYPE'] == 'mnp':
+                mnp_mapped += 1
+            else:
+                indels_mapped += 1
+                if max(len(r['REF']), len(r['ALT'])) % 3 == 0:
+                    indels_mapped_multiple_of_3 += 1
 
     if i > show_small_progress_at:
         print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)
 
+    variants_metadata_dict['snp_mapped'] = snp_mapped
+    variants_metadata_dict['mnp_mapped'] = mnp_mapped
+    variants_metadata_dict['indels_mapped'] = indels_mapped
     variants_metadata_dict['indels_mapped_multiple_of_3'] = indels_mapped_multiple_of_3
     mutations_data_dict = {'data': variants_dict, 'metadata': variants_metadata_dict}
 

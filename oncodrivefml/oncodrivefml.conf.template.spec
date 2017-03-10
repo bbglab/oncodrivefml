@@ -48,14 +48,12 @@ cohort_probabilities = boolean(default=True)
 
     [[indels]]
         include = boolean(default=True)
-
         method = option('stop', 'max')
-
         max_consecutive = integer(default=0)
+        simulate_with_signature =  boolean(default=True)
 
         stops_function = option('mean', 'median', 'random', 'random_choice', default='mean')
 
-        simulate_with_signature =  boolean(default=True)
 
 
 [settings]

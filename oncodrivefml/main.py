@@ -144,12 +144,15 @@ class OncodriveFML(object):
         # compute cohort percentages of subs and indels
         if self.configuration['statistic']['cohort_probabilities']:
             if self.configuration['statistic']['indels']['include']:
-                subs_counter = counts['snp']
+                # subs_counter = counts['snp']
+                subs_counter = counts['snp_mapped']
 
                 if not self.configuration['statistic']['discard_mnp']:
-                    subs_counter += counts['mnp']
+                    # subs_counter += counts['mnp']
+                    subs_counter += counts['mnp_mapped']
 
-                indels_counter = counts['indel'] - counts['indels_mapped_multiple_of_3']
+                # indels_counter = counts['indel']
+                indels_counter = counts['indels_mapped'] - counts['indels_mapped_multiple_of_3']
                 subs_counter += counts['indels_mapped_multiple_of_3']
 
                 p_indels = indels_counter / (indels_counter + subs_counter)
