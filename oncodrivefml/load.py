@@ -125,6 +125,9 @@ def load_mutations(file, blacklist=None, metadata_dict=None):
             mnp += 1
             mnp_length += len(row['REF'])
         elif row['ALT_TYPE'] == 'indel':
+            # very long indels are discarded
+            if max(len(row['REF']), len(row['ALT'])) > 20:
+                continue
             indel += 1
 
         yield row

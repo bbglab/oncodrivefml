@@ -112,10 +112,6 @@ class ElementExecutor(object):
 
         elif mutation['ALT_TYPE'] == "indel":
 
-            # very long indels are discarded
-            if max(len(mutation['REF']), len(mutation['ALT'])) > 20:
-                return
-
             score = self.indels.get_indel_score(mutation)
 
             mutation['SCORE'] = score if not math.isnan(score) else None
