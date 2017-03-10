@@ -149,11 +149,8 @@ class OncodriveFML(object):
                 if not self.configuration['statistic']['discard_mnp']:
                     subs_counter += counts['mnp']
 
-                indels_counter = counts['indel'] * (1-self.configuration['discarded_indels'])
-
-                indels_as_subs = indels_counter * self.configuration['in_frame_indels']
-                indels_counter -= indels_as_subs
-                subs_counter += indels_as_subs
+                indels_counter = counts['indel'] - counts['indels_mapped_multiple_of_3']
+                subs_counter += counts['indels_mapped_multiple_of_3']
 
                 p_indels = indels_counter / (indels_counter + subs_counter)
                 p_subs = 1 - p_indels
