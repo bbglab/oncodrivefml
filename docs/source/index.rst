@@ -3,10 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+
 Welcome to OncodriveFML's documentation!
 ========================================
-
-OncodriveFML
 
 Contents:
 
@@ -14,13 +13,15 @@ Contents:
    :maxdepth: 2
    :caption: OncodriveFML
 
-   oncodriveFML.rst
-   workflow.rst
-   method.rst
-   configuration.rst
-   output.rst
-
-
+   oncodriveFML
+   workflow
+   files
+   configuration
+   analysis
+   signature
+   output
+   inside
+   pitfalls
 
 
 .. toctree::
@@ -36,4 +37,3 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

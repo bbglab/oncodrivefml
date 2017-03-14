@@ -1,4 +1,4 @@
-This a project develop by the `Barcelona Biomedical Genomics Group <http://bg.upf.edu/group/index.php>`_.
+OncodriveFML is a project develop by the `Barcelona Biomedical Genomics Group <http://bg.upf.edu/group/index.php>`_.
 
 We are a research group integrated in the Research Unit on Biomedical Informatics (`GRIB <http://grib.imim.es/>`_)
 of the University Pompeu Fabra (`UPF <https://www.upf.edu/>`_).
