@@ -37,9 +37,8 @@ OncodriveFML introduces this feature because the
 distribution of triplets is not expected to be constant.
 When using the command line interface, OncodriveFML
 does this correction automatically according to
-the value passed in the flag ``--sequencing``.
-Take a look at the :ref:`README file <oncodrive help cmd>` for
-more details.
+the value passed in the flag ``--sequencing``
+(you can list all the options :ref:`using the help <help cmd>`).
 
 
 Reasoning behind the correction

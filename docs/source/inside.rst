@@ -81,7 +81,7 @@ lead to different issues.
 To generate these cache-like files
 you need to run OncodriveFML with the
 :command:`--generate-pickle` option
-(see :ref:`command line interface <oncodrive help cmd>`).
+(you can list all the options :ref:`using the help <help cmd>`).
 
 .. warning::
 
@@ -125,7 +125,7 @@ and the ``only_mapped_mutations`` option is not used
 BgData
 ------
 
-OncodriveFML uses external data retrieved using the BgData package.
+OncodriveFML uses external data retrieved using the `BgData package <https://bitbucket.org/bgframework/bgdata>`_.
 You can download and check this data yourself. If you want to
 use different data, you can download the source code
 and replace the code to use your own data.

@@ -36,7 +36,7 @@ There is partial support for ``HG18`` and ``HG38``.
 The support is only partial because the values for the position and alterations
 of the stops in the these genomes has not been computed yet. If you want to
 run OncodriveFML with any of these genomes, make sure you do not use
-the ``stop`` option for the indels TODO link.
+the ``stop`` method for the indels(:ref:`ref <config indels>`).
 
 .. warning::
 
@@ -100,8 +100,7 @@ You can choose one of the following options for the signature:
     .. note::
 
        The frequencies have been computed for genome build ``HG19``.
-       If you want to check the values, use the `bgdata package <https://bitbucket.org/bgframework/bgdata>`_.
-       TODO add command for donwload the values and load them in Python
+       If you want to check the values, use the :ref:`bgdata package <inside bgdata>`.
 
 - The recommended approach is to use your own signatures.
   OncodriveFML has the option ``method = 'file'`` to
@@ -155,11 +154,10 @@ where other are mandatory.
 
 OncodriveFML uses two additional parameters,
 which are related only to the ``stop`` method
-for computing the indels. TODO link
+for :ref:`computing the indels <analysis indel>`.
 
 - When analysing a certain gene, OncodriveFML might need
   to score an indel according to the value of the stops in the gene.
-  TODO add link to anlysis.
   It might happen that the number of stops is 0
   or is below a certain threshold.
   In such cases, OncodriveFML uses the function specified
