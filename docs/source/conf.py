@@ -21,9 +21,6 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
-# Local modifications for the conda environment
-sys.path.insert(0, '/home/iker/anaconda3/envs/macao_oncodrive/lib/python3.5/site-packages/tabix')
-
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
