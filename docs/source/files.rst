@@ -11,6 +11,7 @@ File formats
 
    All the files can be compressed using GZIP (extension ".gz"), BZIP2 (ext. ".bz2") or LZMA (ext. ".xz")
 
+.. _files input format:
 
 Input file format
 ^^^^^^^^^^^^^^^^^
@@ -25,6 +26,7 @@ The variants file is a text file with, at least, 5 columns separated by a tab ch
 
 The variants file can contain more columns e.g. the cancer type. The more columns it contains, the more time it will take to read the file.
 
+.. _files region format:
 
 Regions file format
 ^^^^^^^^^^^^^^^^^^^
