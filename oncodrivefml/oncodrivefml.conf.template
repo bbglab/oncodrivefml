@@ -134,8 +134,8 @@ sampling = 100000
 # Maximum sampling
 sampling_max = 1000000
 
-# Sampling chunk
-sampling_chunk = 100000000
+# Sampling chunk (in millions)
+sampling_chunk = 100
 
 # Minimum number of observed (if not reached, keeps computing)
 sampling_min_obs = 3

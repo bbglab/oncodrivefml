@@ -213,7 +213,7 @@ certain limits.
 - ``sampling_max`` represents the maximum number
   of simulations to be performed.
 
-- ``sampling_chunk`` represents the maximum size
+- ``sampling_chunk`` represents the maximum size (in millions)
   that a single process can handle. This value is
   used to keep memory usage whitin certain limits.
 

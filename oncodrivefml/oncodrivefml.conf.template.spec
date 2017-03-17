@@ -36,7 +36,7 @@ discard_mnp = boolean(default=False)
 
 sampling = integer(default=100000)
 sampling_max = integer(default=1000000)
-sampling_chunk = integer(default=100000000)
+sampling_chunk = integer(default=100)
 sampling_min_obs = integer(default=3)
 
 per_sample_analysis = option('amean', 'gmean', 'max', default=None)

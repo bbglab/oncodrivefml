@@ -238,7 +238,7 @@ class OncodriveFML(object):
                     if result['obs'] is not None and result['obs'] < self.configuration['statistic']['sampling_min_obs'] and sampling_size < self.configuration['statistic']['sampling_max']:
                         next_sampling_size = min(sampling_size*10, self.configuration['statistic']['sampling_max'])
                         pending_sampling_size = int(next_sampling_size - sampling_size)
-                        chunk_size = (pending_sampling_size * result['muts_count']) // self.configuration['statistic']['sampling_chunk']
+                        chunk_size = (pending_sampling_size * result['muts_count']) // (self.configuration['statistic']['sampling_chunk'] * 10**6)
                         chunk_size = pending_sampling_size if chunk_size == 0 else pending_sampling_size // chunk_size
 
                         result['sampling_size'] = next_sampling_size

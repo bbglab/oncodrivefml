@@ -55,7 +55,7 @@ class ElementExecutor(object):
         self.score_config = config['score']
         self.sampling_size = config['statistic']['sampling']
         self.min_obs = config['statistic']['sampling_min_obs']
-        self.sampling_chunk = config['statistic']['sampling_chunk']
+        self.sampling_chunk = config['statistic']['sampling_chunk'] * 10**6
         self.statistic_name = config['statistic']['method']
         self.signature_column = config['signature']['classifier']
         self.samples_method = config['statistic']['per_sample_analysis']
