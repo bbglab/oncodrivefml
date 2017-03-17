@@ -142,7 +142,10 @@ class OncodriveFML(object):
 
         """
         # compute cohort percentages of subs and indels
-        if self.configuration['statistic']['cohort_probabilities']:
+        if self.configuration['statistic']['indels']['gene_exomic_frameshift_ratio']:
+            self.configuration['p_indels'] = None
+            self.configuration['p_subs'] = None
+        else:
             if self.configuration['statistic']['indels']['include']:
                 # subs_counter = counts['snp']
                 subs_counter = counts['snp_mapped']
@@ -163,12 +166,6 @@ class OncodriveFML(object):
             else:
                 self.configuration['p_indels'] = 0
                 self.configuration['p_subs'] = 1
-        else:
-            self.configuration['p_indels'] = None
-            self.configuration['p_subs'] = None
-
-
-
 
     def run(self):
         """
@@ -278,6 +275,21 @@ class OncodriveFML(object):
 
 
 def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, config_override_dict=None):
+    """
+    Run OncodriveFML analysis
+
+    Args:
+        mutations_file (str): path to the mutations file
+        elements_file (str): path to the elements file
+        output_folder (str): path to the output folder. Set to :obj:`None` to create
+           a folder with the elements file name in the current directory
+        config_file (str): path to configuration file
+        samples_blacklist (str): path to samples blacklist file. Set to :obj:`None`
+           if you are not using any blacklist file
+        generate_pickle (bool): whether run OncodriveFML to generate pickle files or full analysis
+        config_override_dict (dict, optional): override configuration from file
+
+    """
 
     configuration = load_configuration(config_file, override=config_override_dict)
 
@@ -306,44 +318,50 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 
 
 
-@click.command(context_settings=CONTEXT_SETTINGS, help='Run OncodriveFML analysis')
-@click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', required=True)
-@click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), help='Genomic elements to analyse', required=True)
-@click.option('--indels', type=click.Choice(['discard', 'coding', 'noncoding', 'other']), help='Type of analysis performed with the indels', required=True)
-@click.option('--sequencing', type=click.Choice(['genome', 'exome', 'other']), help='Type of sequencing', required=True)
-@click.option('-o', '--output', 'output_folder', type=click.Path(), help="Output folder. Default to regions file name without extensions.", default=None)
-@click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
-@click.option('--samples-blacklist', default=None, type=click.Path(exists=True), help="Remove these samples when loading the input file")
-@click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions", is_flag=True)
+@click.command(context_settings=CONTEXT_SETTINGS)
+@click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', metavar='MUTATIONS_FILE',required=True)
+@click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), metavar='ELEMENTS_FILE', help='Genomic elements to analyse', required=True)
+@click.option('-t', '--type', type=click.Choice(['coding', 'noncoding']), help='Type of genomic elements file', required=True)
+@click.option('-s', '--sequencing', type=click.Choice(['wgs', 'wes', 'targeted']), help='Type of sequencing: whole genome, whole exome or targeted.', required=True)
+@click.option('-o', '--output', 'output_folder', type=click.Path(), metavar='OUTPUT_FOLDER', help="Output folder. Default to regions file name without extensions.", default=None)
+@click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), metavar='CONFIG_FILE', help="Configuration file. Default to 'oncodrivefml.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml.conf if not.")
+@click.option('--samples-blacklist', default=None, type=click.Path(exists=True), metavar='SAMPLES_BLACKLIST', help="Remove these samples when loading the input file.")
+@click.option('--no-indels', help="Discard indels in your analysis", is_flag=True)
+@click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions and exit.", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
-def cmdline(mutations_file, elements_file, output_folder, config_file, samples_blacklist, indels, sequencing, generate_pickle, debug):
+def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist, no_indels, generate_pickle, debug):
     """
-    Parses the command and runs the analysis. See :meth:`~OncodriveFML.run`.
+    Run OncodriveFML on the genomic regions in ELEMENTS FILE
+    using the mutations in MUTATIONS FILE.
+
+
     """
 
     dd = lambda: defaultdict(dd)
     override_config = dd()
 
-    # Fill the configuration for the indels according to the indels value
-    if indels == 'coding':
-        override_config['statistic']['indels']['include'] = True
-        override_config['statistic']['indels']['method'] = 'stop'
-    elif indels == 'noncoding':
-        override_config['statistic']['indels']['include'] = True
-        override_config['statistic']['indels']['method'] = 'max'
-    elif indels == 'discard':
+    # Overrride the configuration
+    if no_indels:
         override_config['statistic']['indels']['include'] = False
+    else:
+        override_config['statistic']['indels']['include'] = True
+    if type == 'coding':
+        override_config['statistic']['indels']['method'] = 'stop'
+    elif type == 'noncoding':
+        override_config['statistic']['indels']['method'] = 'max'
 
-    if sequencing == 'exome':
-        override_config['statistic']['indels']['lost_indels'] = 15
+    if sequencing == 'wex':
         override_config['signature']['normalize_by_sites'] = 'whole_exome'
-    elif sequencing == 'genome':
-        override_config['statistic']['indels']['lost_indels'] = 7
+    elif sequencing == 'wgs':
         override_config['signature']['normalize_by_sites'] = 'whole_genome'
+    else:
+        override_config['signature']['normalize_by_sites'] = None
 
     if debug:
         override_config['logging']['handlers']['console']['level'] = 'DEBUG'
+    else:
+        override_config['logging']['handlers']['console']['level'] = 'INFO'
 
     main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, override_config)
 

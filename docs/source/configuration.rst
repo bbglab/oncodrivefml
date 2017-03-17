@@ -7,7 +7,7 @@ The method behaviour can be modified through a configuration file.
 
 .. warning::
 
-   Using the command line interface can overwrite some setting in the configuration file.
+   Using the command line interface overwrites some setting in the configuration file.
    Check how the command line interface changes the configuration in the :ref:`command line interface <inside cli>`
    section.
 
@@ -50,7 +50,7 @@ Signature
 
 .. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
    :language: text
-   :lines: 8,12-13,32-33,35-38,40-42,45-48,51-52,60-61
+   :lines: 8,12-13,32-33,32-38,40-42,45-48,51-52,60-61
 
 The signature represents the probability of certain nucleotide
 to mutate taking into account its context [#context]_.
@@ -74,11 +74,10 @@ You can choose one of the following options for the signature:
        The option ``method = 'bysample'`` is equivalent to ``method = 'complement'``
        but forces the classifier (see below) to be ``SAMPLE``.
 
-  - The classifier parameter indicates which column from the regions file
-    to use to group the mutations when computing the signature. E.g. grouping
+  - The classifier parameter indicates which column from the mutations file
+    is used to group the mutations when computing the signature. E.g. grouping
     by ``SAMPLE`` generates one signature for each sample.
-    A common option is to group mutations by cancer type:
-    ``classifier = 'CANCER_TYPE'``.
+    Only ``SAMPLE``, ``CANCER_TYPE`` and ``SIGNATURE`` columns can be used.
 
   - You can decide to use only SNP (``include_mnp = False``)
     or also use MNP mutations (``include_mnp = True``).
@@ -277,15 +276,15 @@ OncodriveFML accepts various parameters related to the indels
 
 .. _exomic frameshift rate:
 
-- ``exomic_frameshift_ratio`` is a flag that indicates OncodriveFML
+- ``gene_exomic_frameshift_ratio`` is a flag that indicates OncodriveFML
   which mutations influences the :ref:`probabilities <analysis probs>`
   for frameshift indels and substitutions.
-  When ``exomic_frameshift_ratio = True`` the probabilities are taken
+  When ``gene_exomic_frameshift_ratio = False`` the probabilities are taken
   from the mapped mutations discarding those whose length is
   multiple of 3. Note that in order to work properly,
   this option should be set when the regions file corresponds to
   coding regions.
-  If ``exomic_frameshift_ratio = False``, the probabilities
+  If ``gene_exomic_frameshift_ratio = True``, the probabilities
   are taken from the observed mutations rate in each region.
   This option is harmless when ``method = 'max'``.
 

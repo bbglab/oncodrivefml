@@ -19,25 +19,29 @@ parameters in the configuration file.
    This overwrite is perform regardless the parameter is set or not in the configuration file.
 
 
-In the :ref:`following table <cli indels>`, the effects of the :command:`--indels` flag
-on the :ref:`indels configuration parameters <config indels>`
-are shown:
+The :ref:`following table <cli type>` shows the
+modifications introduced
+in the :ref:`indels configuration parameters <config indels>`
+by the :command:`--type` flag:
 
 
-
-.. table:: Effects of --indels
-   :name: cli indels
+.. table:: Effects of --type
+   :name: cli type
 
    ======================  ========================================
-   Value                   Effect in indels
+   Value                   Effect in configurtion of indels
    ======================  ========================================
-   discard                 ``include = False``
-   coding                  ``include = True``
-                           ``method = 'stop'``
-   noncoding               ``include = True``
-                           ``method = 'max'``
+   coding                  ``method = 'stop'``
+   noncoding               ``method = 'max'``
    ======================  ========================================
 
+
+The flag :command:`--no-indels` also affects the
+:ref:`indels configuration parameters <config indels>`.
+Particularly, it has effect on the ``include`` option.
+The use of this flag discards the analysis of indels
+by setting ``include = False``, while not using it
+includes indels (``include = True``).
 
 The :ref:`table below <cli sequencing>` shows the effects of the
 :command:`--sequencing` flag in the :ref:`signature configuration <config signature>`:
@@ -49,10 +53,11 @@ The :ref:`table below <cli sequencing>` shows the effects of the
    ======================  ========================================
    Value                   Effect in signature
    ======================  ========================================
-   genome                  ``normalize_by_sites = 'whole_genome'``
-   exome                   ``normalize_by_sites = 'whole_exome'``
-   other                   none
+   wgs                     ``normalize_by_sites = 'whole_genome'``
+   wes                     ``normalize_by_sites = 'whole_exome'``
+   targeted                ``normalize_by_sites = None``
    ======================  ========================================
+
 
 Finally, the use of the :command:`--debug` flag
 sets the level of the *console* handler in the :ref:`logging section <config logging>`

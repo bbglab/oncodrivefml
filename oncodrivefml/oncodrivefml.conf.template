@@ -30,13 +30,12 @@ method = 'full'
 # column_probability = [column that contaions the probability]
 
 
-# Choose the classifier for the signature:
-
-# you can use any of the columns in the dataset
-# classifier = SAMPLE
-# classifier = CANCER_TYPE
-
-# or leave it empty to use the whole dataset
+# Choose the classifier (categorical value for the signature:
+# The classifier is a column in the dataset and must be one of these:
+# classifier = 'SIGNATURE'
+# classifier = 'SAMPLE'
+# classifier = 'CANCER_TYPE'
+# if the column is missing, all mutations contribute to the signature
 
 
 # Include/exclude MNP mutations in the signature computation
@@ -112,25 +111,21 @@ mean_to_stop_function = '8.9168668946147314*np.exp(0.082688007694096191*x)'
 
 # Mathematical method to use to compare observed and simulated values
 # Arithmetic mean
-method = amean
+method = 'amean'
 
 # Gemoetric mean
-# method = gmean
+# method = 'gmean'
 
-# Compute the observed values using only 1 mutation per sample
-#per_sample_analysis = 'max'
-#per_sample_analysis = 'amean'
-#per_sample_analysis = 'gmean'
 
 # Do not use/use MNP mutations in the analysis
 discard_mnp = False
 #dicard_mnp = True
 
 
-# Simulate mutations according to probabilites observed in the whole cohort
-# or in each individual region
-cohort_probabilities = True
-# cohort_probabilities = False
+# Compute the observed values using only 1 mutation per sample
+#per_sample_analysis = 'max'
+#per_sample_analysis = 'amean'
+#per_sample_analysis = 'gmean'
 
 
 # Minimum sampling
@@ -151,6 +146,7 @@ sampling_min_obs = 3
 include = True
 # include = False
 
+
 # Method used to simulate indels
 
 # Treat them as stops (for coding regions)
@@ -159,12 +155,25 @@ include = True
 # Treat them as a set of substitutions and take the maximum
 # method = 'max'
 
+
 # Number of consecutive times the indel appears to consider it falls in a repetitive region
 # Looking from the indel position and in the direction of the strand
 max_consecutive = 7
 
 # Do not discard indels that fall in repetitive regions
 # max_consecutive = 0
+
+
+# Indels simulated as substitutions take into account signature or not
+simulate_with_signature =  True
+# simulate_with_signature = False
+
+
+# Use exomic probabilities of frameshift indels in the dataset for the simulation
+gene_exomic_frameshift_ratio = False
+# or probabilities of each gene
+# gene_exomic_frameshift_ratio = True
+
 
 # Function applied to the scores of the stops in the gene to compute the observed score
 
@@ -180,10 +189,6 @@ stops_function = 'mean'
 # Random choice amongst the values
 # stops_function = 'random_choice'
 
-# Indels simulated as substitutions take into account signature or not
-simulate_with_signature =  True
-# simulate_with_signature = False
-
 
 
 [settings]
@@ -192,26 +197,33 @@ simulate_with_signature =  True
 # cores = 6
 
 
+
 # Configuration for the logging system
 [logging]
 version = 1
 disable_existing_loggers = False
+# Configuration for the handlers
 [[handlers]]
+# Log to stdout
 [[[console]]]
 class = 'logging.StreamHandler'
 formatter = 'bgformat'
 level = 'INFO'
 stream = 'ext://sys.stdout'
+# log to a file
 [[[file]]]
 class = 'logging.FileHandler'
 formatter = 'bgformat'
 filename = 'log.txt'
 mode = 'w'
+# Configuration for the formatters
 [[formatters]]
 [[[bgformat]]]
 format ='%(asctime)s %(levelname)s: %(message)s'
 datefmt ='%H:%M:%S'
+# Configuration for the loggers
 [[loggers]]
+# OncodriveFML logger
 [[[oncodrivefml]]]
 handlers = ['console', 'file']
 level = 'DEBUG'

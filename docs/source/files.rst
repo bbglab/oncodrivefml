@@ -23,8 +23,8 @@ The variants file is a text file with, at least, 5 columns separated by a tab ch
 * Column REF: Reference allelle. A single letter: A, C, G or T (upper case)
 * Column ALT: Alternate allelle. A single letter: A, C, G or T (upper case)
 * Column SAMPLE: Sample identifier. Any alphanumeric string.
-
-The variants file can contain more columns e.g. the cancer type. The more columns it contains, the more time it will take to read the file.
+* Column CANCER_TYPE: Cancer type. Any alphanumeric string. Optional.
+* Column SIGNATURE: User defined signature categories. Any alphanumeric string. Optional.
 
 .. _files region format:
 

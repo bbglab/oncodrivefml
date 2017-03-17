@@ -115,7 +115,7 @@ def load_mutations(file, blacklist=None, metadata_dict=None):
     mnp = 0
     mnp_length = 0
 
-    for row in readers.variants(file):
+    for row in readers.variants(file, extra=['CANCER_TYPE', 'SIGNATURE']):
         if row['SAMPLE'] in samples_blacklisted:
             continue
 

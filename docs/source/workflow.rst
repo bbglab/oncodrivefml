@@ -12,29 +12,30 @@ The command line interface
 By typing ``oncodrivefml -h`` you will have a brief
 description of how to use OncodriveFML:
 
+
 Options:
   -i, --input MUTATIONS_FILE      Variants file  [required]
                                   (:ref:`see format <files input format>`)
   -e, --elements ELEMENTS_FILE    Genomic elements to analyse  [required]
                                   (:ref:`see format <files input format>`)
-  --indels
-                                  Type of analysis performed with the indels [required]:
+  -t, --type                      Type of genomic elements file  [required]:
 
-                                  - *discard* to exclude indels from the analysis
-                                  - *coding* TODO
-                                  - *noncoding* TODO
+                                  - *coding*: the files corresponds to coding regions
+                                  - *noncoding*: the file corresponds to noncoding regions
 
                                   See :ref:`details about the command line interface <inside cli>`
                                   to find more information about this option.
-  --sequencing
-                                  Type of sequencing  [required]:
 
-                                  - *genome*: for datasets that come from whole genome analysis
-                                  - *exome*: for datasets that come from whole exome analysis
-                                  - *other*: for other types of datasets
+  -s, --sequencing
+                                  Type of sequencing [required]:
+
+                                  - *wgs*: whole genome sequencing
+                                  - *wes*: whole exome sequencing
+                                  - *targeted*: targeted sequencing
 
                                   See :ref:`details about the command line interface <inside cli>`
                                   to find more information about this option.
+
   -o, --output OUTPUT_FOLDER      Output folder. Default to regions file name
                                   without extensions.
   -c, --configuration CONFIG_FILE
@@ -45,12 +46,15 @@ Options:
   --samples-blacklist SAMPLES_BLACKLIST
                                   Remove these samples when loading the input
                                   file.
+  --no-indels                     Discard indels in your analysis
   --generate-pickle               Run OncodriveFML to generate pickle files
                                   that could speed up future executions and
                                   exit.
   --debug                         Show more progress details
   --version                       Show the version and exit.
   -h, --help                      Show this message and exit.
+
+
 
 
 If you prefer to call OncodriveFML from a Python script,

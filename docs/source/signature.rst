@@ -12,6 +12,8 @@ Check the different options for the signature in the
 :ref:`configuration file <config signature>`.
 In short, you can choose between not using any signature, using your own signature
 or computing the signature from the mutations file.
+Additionally, signatures can be grouped into different categories
+such as the sample.
 
 The signature array is computed by counting, for each Single Nucleotide Polymorphism,
 the reference and alternated triplets.
