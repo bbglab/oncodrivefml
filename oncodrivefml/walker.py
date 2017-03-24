@@ -1,9 +1,6 @@
 import numpy as np
-import pyximport
 
 from oncodrivefml.stats import STATISTIC_TESTS
-
-pyximport.install()
 from oncodrivefml.walker_cython import walker_sampling
 
 

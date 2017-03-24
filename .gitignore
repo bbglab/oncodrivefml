@@ -23,6 +23,11 @@ example/output
 *.egg-info/
 dist/
 
+# Cython compiled code
+build/*
+*.so
+*.c
+
 *.pickle.gz
 example/cds
 example/cdsOriginal
