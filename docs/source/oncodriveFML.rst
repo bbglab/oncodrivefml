@@ -11,3 +11,10 @@ Check the `OncodriveFML website <bg.upf.edu/oncodrivefml>`_ or download the sour
 from our `git repository <https://bitbucket.org/bbglab/oncodrivefml.git>`_.
 
 .. include:: group.rst
+
+
+----
+
+Check the :ref:`README <readme>` file
+to find infomation about :ref:`licensing <license file>`
+and :ref:`installation <readme install>`.

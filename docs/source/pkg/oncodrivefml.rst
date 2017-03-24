@@ -99,6 +99,22 @@ oncodrivefml.utils module
     :undoc-members:
     :show-inheritance:
 
+oncodrivefml.walker module
+--------------------------
+
+.. automodule:: oncodrivefml.walker
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+oncodrivefml.walker_cython module
+---------------------------------
+
+.. automodule:: oncodrivefml.walker_cython
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

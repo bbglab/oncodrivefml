@@ -5,4 +5,3 @@ oncodrivefml
    :maxdepth: 4
 
    oncodrivefml
-   setup
