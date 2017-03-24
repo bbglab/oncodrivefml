@@ -22,3 +22,4 @@ dependencies:
 - click=6.7
 - bgparsers=0.2
 - cython=0.25.2
+- python=3.5.*
