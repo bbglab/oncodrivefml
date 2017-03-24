@@ -34,7 +34,7 @@ Finally, you can get the latest code from the repository and install with ``pip`
 .. note::
 
    OncodriveFML has a set up dependency with `Cython <http://cython.org/>`_,
-   which is required to compile the :file:`*.pyx` files.
+   which is required to compile the ``*.pyx`` files.
 
 
 The first time that you run OncodriveFML it will download the genome reference from our servers.
@@ -53,7 +53,7 @@ Find OncodriveFML documentation in ReadTheDocs.
 .. TODO link
 
 You can also compile the documentation yourself using `Sphinx <http://www.sphinx-doc.org/en/stable/>`_.
-To do so, intall the optional packages in :file:`optional-requirements.txt` and build the
+To do so, intall the optional packages in ``optional-requirements.txt`` and build the
 documentation in the docs folder::
 
     $ cd docs
