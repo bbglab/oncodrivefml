@@ -242,11 +242,11 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
         else:
             continue
 
-    if mismatches / total > 0.05:
-        logger.warning('There are %d mismatches between your mutations and the reference genome.', mismatches)
     if mismatches / total > 0.1:
         logger.error('Too many mismatches. You are using %s as reference genome, please check it is right. Program stopped', ref_build)
         sys.exit(-1)
+    elif mismatches / total > 0.05:
+        logger.warning('There are %d mismatches between your mutations and the reference genome.', mismatches)
 
     signature = {}
     for k, v in signature_count.items():

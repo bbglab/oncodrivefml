@@ -46,7 +46,7 @@ mutations (:obj:`dict`)
                 'SAMPLE': sample_id,
                 'ALT_TYPE': type_of_the_mutation,
                 'CANCER_TYPE': group to which the mutation belongs to,
-                'SEGMENT': segment_id
+                'SIGNATURE': a different grouping category,
                 }
             ]
         }
