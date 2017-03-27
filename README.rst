@@ -42,15 +42,53 @@ By default the downloaded datasets go to ``~/.bgdata`` if you want to move this 
 
 The following command will show you the command help::
 
-	$ oncodrivefml --help 
+	$ oncodrivefml --help
+
+.. _readme example:
+
+Run the example
+---------------
+
+Download and extract example files (if you have clone the repository skip this step)::
+
+   $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples.tar.gz
+   $ tar xvzf oncodrivefml-examples.tar.gz
+
+To run this example OncodriveFML needs all precomputed CADD scores that is a 17Gb file.
+It will be automatically download the first time that you run OncodriveFML,
+but if you want to speed up the download is better if you first download it using
+our data package management tool (``BgData``) that is also installed when you install OncodriveFML.
+
+Run this command to download the CADD scores file to the default bgdata folder ~/.bgdata::
+
+   $ bg-data -n 10 genomicscores caddpack 1.0
+
+.. warning::
+
+   CADD scores are original from `<http://cadd.gs.washington.edu/>`_ and are freely available for all non-commercial applications.
+   If you are planning on using them in a commercial application, please contact them at `<http://cadd.gs.washington.edu/contact>`_.
+
+Additonally, if you want to speed up the download of the genome reference that is also needed,
+run this command::
+
+   $ bg-data -n 10 datasets genomereference hg19
+
+To run the example, we have included a :file:`run.sh` bash script
+than will execute OncodriveFML, that should be executed from
+the folder it is in::
+
+   $ cd example
+   $ ./run.sh
+
+The results will be saved in a folder named ``cds``.
+
 
 .. _readme docs:
 
 Documentation
 -------------
 
-Find OncodriveFML documentation in ReadTheDocs.
-.. TODO link
+Find OncodriveFML documentation in `ReadTheDocs <http://oncodrivefml.readthedocs.io/en/latest/>`_.
 
 You can also compile the documentation yourself using `Sphinx <http://www.sphinx-doc.org/en/stable/>`_.
 To do so, intall the optional packages in ``optional-requirements.txt`` and build the
