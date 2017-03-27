@@ -91,7 +91,7 @@ Documentation
 Find OncodriveFML documentation in `ReadTheDocs <http://oncodrivefml.readthedocs.io/en/latest/>`_.
 
 You can also compile the documentation yourself using `Sphinx <http://www.sphinx-doc.org/en/stable/>`_.
-To do so, intall the optional packages in ``optional-requirements.txt`` and build the
+To do so, install the optional packages in ``optional-requirements.txt`` and build the
 documentation in the docs folder::
 
     $ cd docs

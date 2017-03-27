@@ -159,6 +159,7 @@ def build_regions_tree(regions):
             }
 
     """
+    logger.info('Building regions tree')
     regions_tree = {}
     for i, (k, allr) in enumerate(regions.items()):
 
