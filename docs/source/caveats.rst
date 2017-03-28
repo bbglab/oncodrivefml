@@ -1,6 +1,6 @@
 
-Pitfalls
-========
+Caveats
+=======
 
 Considering that MNP mutations contribute to the
 signature as a set of SNPs mutations adds
@@ -36,3 +36,8 @@ and that is the default value OncodriveFML uses.
 If OncodriveFML does signature correction,
 it obtains the number of distinct triplets
 from the correction.
+
+Depending of the values of ``sampling_min_obs`` and
+``sampling_chunk``  in the configuration file
+the number of simulations performed
+for a particular genomic element can differ.
