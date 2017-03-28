@@ -215,7 +215,13 @@ certain limits.
 
 - ``sampling_chunk`` represents the maximum size (in millions)
   that a single process can handle. This value is
-  used to keep memory usage whitin certain limits.
+  used to keep memory usage within certain limits.
+
+  .. note::
+
+     With a value of 100, each process takes less than 4 GB
+     of RAM. We have not considered the memory taken by
+     the main process.
 
 - ``sampling_min_obs`` represents the minimum
   number of observations [#obs]_. When it is reached,

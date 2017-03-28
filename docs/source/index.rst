@@ -21,7 +21,7 @@ Contents:
    signature
    output
    inside
-   pitfalls
+   caveats
 
 
 .. toctree::
