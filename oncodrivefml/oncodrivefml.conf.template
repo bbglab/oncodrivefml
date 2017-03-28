@@ -138,7 +138,7 @@ sampling_max = 1000000
 sampling_chunk = 100
 
 # Minimum number of observed (if not reached, keeps computing)
-sampling_min_obs = 3
+sampling_min_obs = 10
 
 
 [[indels]]
