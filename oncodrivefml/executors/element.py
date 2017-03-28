@@ -227,8 +227,8 @@ class ElementExecutor(object):
             simulation_probs = subs_probs + indels_probs
 
             muts_count = len(self.result['mutations'])
-            chunk_size = (self.sampling_size * muts_count) // self.sampling_chunk
-            chunk_size = self.sampling_size if chunk_size == 0 else self.sampling_size // chunk_size
+            chunk_count = (self.sampling_size * muts_count) // self.sampling_chunk
+            chunk_size = self.sampling_size if chunk_count == 0 else self.sampling_size // chunk_count
 
             # Calculate sampling parallelization partitions
             self.result['partitions'] = partitions_list(self.sampling_size, chunk_size)
