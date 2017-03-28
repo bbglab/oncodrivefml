@@ -5,6 +5,7 @@ Contains the command line parsing and the main class of the method
 import io
 import os
 import sys
+import csv
 import click
 import logging
 from os.path import join, exists
@@ -266,6 +267,16 @@ class OncodriveFML(object):
             os.makedirs(self.output_folder, exist_ok=True)
         result_file = self.output_file_prefix + '.tsv'
         store_tsv(results_mtc, result_file)
+
+        lines = 0
+        gene_ids = {None, ''}
+        with open(result_file) as csvfile:
+            fd = csv.DictReader(csvfile, delimiter='\t')
+            for line in fd:
+                lines += 1
+                gene_ids.add(line['GENE_ID'])
+        if lines+2 != len(gene_ids):
+            logger.error('Number of genes does not match number of lines in the output file. Please check the logs of the execution to find more information.')
 
         logger.info("Creating figures")
         store_png(result_file, self.output_file_prefix + ".png")
