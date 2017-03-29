@@ -64,7 +64,7 @@ only_mapped_mutations = False
 
 [score]
 # Path to score file
-file = "%(bgdata://genomicscores/cadd/1.0)"
+file = "%(bgdata://genomicscores/caddpack/1.0)"
 # WARNING: The %(bgdata:...) will download (the first time that you use it) a score file from
 # our servers and install it into the ~/.bgdata folder.
 
@@ -73,8 +73,8 @@ file = "%(bgdata://genomicscores/cadd/1.0)"
 # commercial application, please contact them at http://cadd.gs.washington.edu/contact.
 
 # Format of the file
-# 'tabix': tab separated file compress with bgzip and next to a Tabix .tbi index file
-format = 'tabix'
+# 'pack': binary format
+format = 'pack'
 
 # Column that has the chromosome
 chr = 0
