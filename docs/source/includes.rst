@@ -41,7 +41,7 @@ Configuration template
 
 
 
-.. only:: builder_html
+.. only:: html
 
    .. _nb scoresfunct:
 

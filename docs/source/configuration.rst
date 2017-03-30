@@ -166,7 +166,7 @@ for :ref:`computing the indels <analysis indel>`.
   in this parameter to assign a value from the mean value
   of all the stops in the gene.
 
-  .. only:: builder_html
+  .. only:: html
 
      Download the :download:`IPython notebook <_static/ScoresFunction.html>` that
      has been created with the functions computed for
