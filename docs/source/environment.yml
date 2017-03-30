@@ -21,6 +21,7 @@ dependencies:
 - bgreference=0.1
 - click=6.7
 - bgparsers=0.2
+- bgcache=0.1
 - cython=0.25.2
 - python=3.5.*
 - sphinx=1.5.1
