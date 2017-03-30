@@ -159,11 +159,16 @@ class OncodriveFML(object):
                 indels_counter = counts['indels_mapped'] - counts['indels_mapped_multiple_of_3']
                 subs_counter += counts['indels_mapped_multiple_of_3']
 
-                p_indels = indels_counter / (indels_counter + subs_counter)
-                p_subs = 1 - p_indels
+                try:
+                    p_indels = indels_counter / (indels_counter + subs_counter)
+                    p_subs = 1 - p_indels
+                    self.configuration['p_indels'] = p_indels
+                    self.configuration['p_subs'] = p_subs
+                except ZeroDivisionError:
+                    logger.warning('Impossible to compute relative counts of indels and substitutions')
+                    self.configuration['p_indels'] = None
+                    self.configuration['p_subs'] = None
 
-                self.configuration['p_indels'] = p_indels
-                self.configuration['p_subs'] = p_subs
             else:
                 self.configuration['p_indels'] = 0
                 self.configuration['p_subs'] = 1
