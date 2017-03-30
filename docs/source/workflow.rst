@@ -143,10 +143,10 @@ Workflow
 #. Join the results and perform a multiple test correction.
    The multiple test correction is only done for regions with
    mutations from, at least, two samples.
-   ## TODO explain why
 
-#. Do some checks which include:
-
-    #TODO
+   .. todo explain why
 
 #. Create the :ref:`output files <output files>`.
+
+#. Check that the output file does not contain
+   missing or repeated genomic regions.

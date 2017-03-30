@@ -136,7 +136,10 @@ where other are mandatory.
 
 - ``file`` is a string with the path to the scores file.
 - ``format = 'tabix'`` indicates that the file is a
-  tab separated file compress with bgzip and next to a Tabix .tbi index file
+  tab separated file compress with bgzip and next to a Tabix .tbi index file.
+  The other option currently supported is ``format = 'pack'`` which is a
+  binary format we have implemented to reduce the size.
+  Thus, if you want to use your own file, use `tabix <http://www.htslib.org>`_ format.
 - ``chr`` column in the file where the chromosome is.
 - ``chr_prefix``: when asking the tabix file for the specif chromosome
   OncodriveFML only passes the number of the chromosome or 'X' or 'Y'. If the
@@ -162,6 +165,12 @@ for :ref:`computing the indels <analysis indel>`.
   In such cases, OncodriveFML uses the function specified
   in this parameter to assign a value from the mean value
   of all the stops in the gene.
+
+  .. only:: builder_html
+
+     Download the :download:`IPython notebook <_static/ScoresFunction.html>` that
+     has been created with the functions computed for
+     *CADD1.0* and *CADD1.3*, or :ref:`see it <nb scoresfunct>`.
 
 - When analysing a certain gene, OncodriveFML get all the scores
   associated with the mutations that produce a stop in that gene.

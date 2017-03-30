@@ -96,3 +96,4 @@ documentation in the docs folder::
 
     $ cd docs
     $ make html
+
