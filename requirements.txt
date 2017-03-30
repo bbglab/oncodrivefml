@@ -13,5 +13,5 @@ itab>=0.9
 bgreference>=0.1
 click>=6.7
 bgparsers>=0.1
-bgcache>=0.1
+#bgcache>=0.1
 cython>=0.25.2
