@@ -24,7 +24,7 @@ example/output
 dist/
 
 # Cython compiled code
-build/*
+build
 *.so
 *.c
 
@@ -32,4 +32,4 @@ build/*
 example/cds
 example/cdsOriginal
 
-docs/build/*
+docs/build
