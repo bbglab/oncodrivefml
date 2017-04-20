@@ -2,7 +2,7 @@ How it works
 ============
 
 This section will try to give an overview of
-how OncodriveFML performs the analysis.
+how OncodriveFML carries on the analysis.
 
 The command line interface
 --------------------------
@@ -67,7 +67,7 @@ you can download the source code, install it and call the
    function accepts less parameters than the command line
    interface. This is because the command line interface
    modifies some parameters in the configuration, while
-   calling direct Python code does not.
+   calling directly the Python code does not.
    Check :ref:`what is modified by the command line interface <inside cli>`.
 
    This implies that you should adapt the
@@ -82,7 +82,7 @@ Check the :ref:`different formats for
 the input files<oncodrive file formats>`.
 
 The configuration file is also a key part of the run,
-and understanding how to adapt it to your parameters is important.
+and understanding how to adapt it to your needs is important.
 Check :ref:`this section <project configuration>`
 to find more details about it.
 
@@ -94,8 +94,8 @@ Find information about the output :ref:`output files <output files>` section.
 Workflow
 --------
 
-1. The first thing that is done by OncodriveFML is loading
-   the configuration and creating the output folder if it does not exist.
+1. The first thing that is done by OncodriveFML is to load
+   the configuration file and to create the output folder if it does not exist.
 
    .. note::
 
@@ -111,25 +111,25 @@ Workflow
    This tree is used to find which mutations fall in the regions being
    analysed.
 
-#. Load the mutations file and keep only the ones that fall into the regions
+#. Loads the mutations file and keeps only the ones that fall into the regions
    being analysed.
 
-#. Compute the signature (see the :ref:`signature <signature>` section).
+#. Computes the signature (see the :ref:`signature <signature>` section).
 
-#. Analyse each region separately (only the ones that have mutations).
+#. Analyses each region separately (only the ones that have mutations).
    In each region the analysis is as follow:
 
-   1. Compute the score of each of the observed mutations.
+   1. Computes the score of each of the observed mutations.
 
-   #. Simulate the same number of mutations in the segments of the region under analysis.
+   #. Simulates the same number of mutations in the segments of the region under analysis.
       Save the scores of each of the simulated mutations.
       The simulation is done several times.
 
-   #. Apply a predefined function to the observed scores and to each of the simulated
+   #. Applies a predefined function to the observed scores and to each of the simulated
       groups of scores.
-      Count how many times the simulated value is higher or equal than the observed.
+      Counts how many times the simulated value is higher than, or equal to, the observed.
 
-   #. From these counts, compute the P value by dividing the counts by the number
+   #. From these counts, computes a P-value by dividing the counts by the number
       of simulations performed.
 
       .. warning::::
@@ -140,13 +140,13 @@ Workflow
 
    You can find more details in the :ref:`analysis section <analysis>`.
 
-#. Join the results and perform a multiple test correction.
+#. Joins the results and performs a multiple test correction.
    The multiple test correction is only done for regions with
-   mutations from, at least, two samples.
+   mutations from at least two samples.
 
    .. todo explain why
 
-#. Create the :ref:`output files <output files>`.
+#. Creates the :ref:`output files <output files>`.
 
-#. Check that the output file does not contain
+#. Checks that the output file does not contain
    missing or repeated genomic regions.

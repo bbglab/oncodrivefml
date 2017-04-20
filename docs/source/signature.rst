@@ -6,14 +6,14 @@ Signature
 
 The signature is an array that assigns a probability to
 a single nucleotide mutation taking into account its context [#context]_.
-It represents the chance of certain mutation to occur within a context.
+It represents the chance of a certain mutation to occur within a context.
 
 Check the different options for the signature in the
 :ref:`configuration file <config signature>`.
 In short, you can choose between not using any signature, using your own signature
 or computing the signature from the mutations file.
 Additionally, signatures can be grouped into different categories
-such as the sample.
+(such as the sample).
 
 The signature array is computed by counting, for each Single Nucleotide Polymorphism,
 the reference and alternated triplets.
@@ -22,14 +22,14 @@ the reference and alternated triplets.
 
    OncodriveFML also uses the MNP mutations to compute the
    signature, by treating them as a set of separate SNPs.
-   You can enable or disable this option with the ``include_mnp`` option in the
+   You can enable or disable this behaviour with the ``include_mnp`` option in the
    :ref:`configuration file <config signature>`.
 
 The counts are then divided by the total number of counts
 to generate a frequency of triplets. For a mutation :math:`i`
 the frequency is
 :math:`f_i = \frac{m_i}{M}` where :math:`M = \sum_j m_j`, and
-:math:`m_i` represent that number of times that the mutation
+:math:`m_i` represent the number of times that the mutation
 :math:`i` with its context [#context]_ has been observed.
 
 Optionally, the signature can be corrected taking into
@@ -54,7 +54,7 @@ to occur given the number of those triplets in the region:
 Then, the normalized frequency of the mutation :math:`i` is:
 :math:`\overline{f_i} = \frac{m_i/T_i}{\sum_j m_j/T_j}`.
 
-The results can be adapted in case our input are not absolute values but the relative frequencies.
+The results can be adapted in case our inputs are not absolute values but relative frequencies.
 :math:`f_i` is the frequency of mutations and :math:`t_i` the frequency of nucleotides:
 
 .. math::

@@ -39,7 +39,7 @@ SAMPLES
     number of mutated samples in the gene
 
 P_VALUE
-    times that the observed value is higher or equal than the
+    times that the observed value is higher than or equal to the
     expected value, divided by the number of randomizations
 
 Q_VALUE
@@ -47,7 +47,7 @@ Q_VALUE
     (for samples with at least 2 ``samples_mut``)
 
 P_VALUE_NEG
-    times that the observed value is lower or equal than the
+    times that the observed value is lower than or equal to the
     expected value, divided by the number of randomizations
 
 Q_VALUE_NEG
@@ -73,26 +73,26 @@ The plots
 Both plots (:file:`.png` and :file:`.html`) represent the same.
 They are similar to `Q-Q plots <https://en.wikipedia.org/wiki/Q%E2%80%93Q_plot>`_
 where in the Y axis the :math:`-log10` of the computed P-values are represented (sorted)
-and in the X axis the :math:`-log10` of the expected P-values.
+and in the X axis the :math:`-log10` of the expected P-values are reported (sorted).
 
-The expected P-values represented the null distribution: :math:`-log10(i/N)`
+The expected P-values represent the null distribution: :math:`-log10(i/N)`
 where :math:`i \in [1, N]` and ``N`` represents the number of computed
 P-values.
 
 .. note::
 
-   When the observed P-value is 0, it means that
-   OncodriveFML does not have enough power to
-   find the actual value. Thus, the value
-   assigned is the inverse of the number of
-   randomizations performed.
+   The P-values of OncodriveFML are always > 0, even when
+   all the simulated functional impact scores are lower 
+   than the observed functional impact score. In this case,
+   a pseudocount is added.
+   
 
-The genomic elements that in the plot have a lighter color,
-represents the ones for which the number of mutated sample
-does not reach the minimum to perform the
+The genomic elements that have a lighter color in the plot
+are the ones for which the number of mutated sample
+does not reach the minimum required to perform the
 multiple test correction.
 
 All the genomic regions above the red line in the plot
-represents those with a Q-value below 0.1.
+represent those with a Q-value below 0.1.
 The ones between the green line and the red line
 are the ones with a Q-value between 0.25 and 0.1.

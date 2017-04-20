@@ -9,14 +9,14 @@ File formats
 
 .. note::
 
-   All the files can be compressed using GZIP (extension ".gz"), BZIP2 (ext. ".bz2") or LZMA (ext. ".xz")
+   All the files can be compressed using GZIP (extension ".gz"), BZIP2 (extension ".bz2") or LZMA (extension ".xz")
 
 .. _files input format:
 
 Input file format
 ^^^^^^^^^^^^^^^^^
 
-The variants file is a text file with, at least, 5 columns separated by a tab character (header is required, but the order of the columns can change):
+The variants file is a text file with, at least, 5 columns separated by a tab character (the header is required, but the order of the columns can change):
 
 * Column CHROMOSOME: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
 * Column POSITION: Mutation position. A positive integer.
@@ -32,7 +32,7 @@ Regions file format
 ^^^^^^^^^^^^^^^^^^^
 
 The regions file is a text file with, at least, 4 columns separated by a tab character
-(header, between ``[]``, is optional, but the column order is fixed if header is not present):
+(the header, between ``[]``, is optional, but the column order is fixed if the header is not present):
 
 * Column 1 [CHROMOSOME]: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
 * Column 2 [START]: Start position. A positive integer.

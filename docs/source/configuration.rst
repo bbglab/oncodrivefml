@@ -32,16 +32,16 @@ The reference genome has been obtained from `<http://hgdownload.cse.ucsc.edu/dow
 
 Currently, only ``HG19`` is fully supported. Use :code:`build = 'hg19'` to use it.
 
-There is partial support for ``HG18`` and ``HG38``.
+There is a partial support for ``HG18`` and ``HG38``.
 The support is only partial because the values for the position and alterations
-of the stops in the these genomes has not been computed yet. If you want to
+of the stops in the these genomes have not been computed yet. If you want to
 run OncodriveFML with any of these genomes, make sure you do not use
-the ``stop`` method for the indels(:ref:`ref <config indels>`).
+the ``stop`` method for the indels (:ref:`ref <config indels>`).
 
 .. warning::
 
-   If you decide to use a refernce genome other than ``HG19``, make sure that the
-   scores file you use in compatible with it.
+   If you decide to use a reference genome other than ``HG19``, make sure that the
+   scores file you use is compatible with it.
 
 .. _config signature:
 
@@ -52,20 +52,20 @@ Signature
    :language: text
    :lines: 8,12-13,32-33,32-38,40-42,45-48,51-52,60-61
 
-The signature represents the probability of certain nucleotide
+The signature represents the probability of a certain nucleotide
 to mutate taking into account its context [#context]_.
 
 You can choose one of the following options for the signature:
 
-- Not use any signature, which is equivalent to assume that all changes
-  have equal probability: ``method = 'none'``.
-  This approach is recommended when the dataset is small.
+- To not use any signature, which is equivalent to assume that all changes
+  have equal probability to happen: ``method = 'none'``.
+  This approach is recommended for small datasets.
 
-- OncodriveFML can also compute a signature using the provided dataset.
+- OncodriveFML can also compute the signatures using the provided dataset.
   This option contains a set of parameters that you can use to decide how
   this computation is done.
 
-  - Select one of the methods to compute the signature from the dataset:
+  - Select one of the methods to compute the signatures from the dataset:
     ``method = 'full'`` to count each mutation once and
     ``method = 'complement'`` to collapse complementary mutations.
 
@@ -75,19 +75,19 @@ You can choose one of the following options for the signature:
        but forces the classifier (see below) to be ``SAMPLE``.
 
   - The classifier parameter indicates which column from the mutations file
-    is used to group the mutations when computing the signature. E.g. grouping
+    is used to group the mutations when computing the signatures. E.g. grouping
     by ``SAMPLE`` generates one signature for each sample.
     Only ``SAMPLE``, ``CANCER_TYPE`` and ``SIGNATURE`` columns can be used.
 
   - You can decide to use only SNP (``include_mnp = False``)
     or also use MNP mutations (``include_mnp = True``).
 
-  - You can choose between using only the mutation that are mapped
+  - You can choose between using only the mutations that are mapped
     to the regions under analysis (``only_mapped_mutations = True``)
     or use all the mutations (SNPs and optionally MNPs) in the dataset.
 
-  - The signature can be corrected by the frequency of sites.
-    If you do not specify anything, OncodriveFML will not correct the signature.
+  - The signatures can be corrected by the frequencies of sites.
+    If you do not specify anything, OncodriveFML will not correct the signatures.
     Use ``normalize_by_sites = 'whole_genome'`` or ``'wgs'`` to correct
     by the frequencies in the whole genome.
     Use ``normalize_by_sites = 'whole_exome'`` or ``'wes'`` or ``'wxs'`` to correct
@@ -127,32 +127,32 @@ which scores are going to be used.
    :language: text
    :lines: 65-67,75,77,79-80,82-83,85-86,88-89,91-92,94-95,101-103,105-106
 
-The scores should be a file that by for a particular
-SNP mutation in a given chromosome, at a given position,
-for each alteration gives a value to that mutation.
+The scores should be a file that for a given position, in a given chromosome, 
+gives a value to every possible alteration.
 
 Some of the parameters in this section are optional,
-where other are mandatory.
+while others are mandatory.
 
-- ``file`` is a string with the path to the scores file.
+- ``file`` is a string and represents the path to the scores file.
 - ``format = 'tabix'`` indicates that the file is a
-  tab separated file compress with bgzip and next to a Tabix .tbi index file.
+  tab separated file compressed with bgzip. This means that a .tbi index file should be present in the same location.
   The other option currently supported is ``format = 'pack'`` which is a
-  binary format we have implemented to reduce the size.
-  Thus, if you want to use your own file, use `tabix <http://www.htslib.org>`_ format.
-- ``chr`` column in the file where the chromosome is.
-- ``chr_prefix``: when asking the tabix file for the specif chromosome
-  OncodriveFML only passes the number of the chromosome or 'X' or 'Y'. If the
-  tabix file requires anything in front, use this option. If is not the case,
-  use the empty string: ``chr_prefix = ''``.
-- ``pos`` column that indicates the position
+  binary format we have implemented to reduce the file size.
+  Thus, if you want to use your own file, use the `tabix <http://www.htslib.org>`_ format.
+- ``chr`` column in the file where the chromosome is indicated.
+- ``chr_prefix``: when querying the tabix file for a specif chromosome
+  OncodriveFML only uses the number of the chromosome or 'X' or 'Y'. If the
+  tabix file requires a prefix before the chromosome, use this option. For instance, if the chromosomes in the
+  tabix file are labeled as ``chr1``, ``chr2``, .., ``chrY``, set this option to: ``chr_prefix = 'chr'``. 
+  If this is not the case, use an empty string: ``chr_prefix = ''``.
+- ``pos`` column that indicates the position of the scored alteration in the chromosome.
 - ``ref`` column that contains the reference allele. It is optional.
 - ``alt`` column that contains the alternate allele. It is optional.
   If is not specified, it is assumed that the 3 possible changes have the same score.
 - ``score`` column that contains the score.
 - ``element`` column that contains the element identifier. It is optional.
-  If it is provided and the value does not match with the one from the regions
-  those scores are discarded.
+  If it is provided and the value does not match with the one from the regions,
+  these scores are discarded.
 
 OncodriveFML uses two additional parameters,
 which are related only to the ``stop`` method
@@ -163,7 +163,7 @@ for :ref:`computing the indels <analysis indel>`.
   It might happen that the number of stops is 0
   or is below a certain threshold.
   In such cases, OncodriveFML uses the function specified
-  in this parameter to assign a value from the mean value
+  in this parameter to assign a score from the mean value
   of all the stops in the gene.
 
   .. only:: html
@@ -172,10 +172,10 @@ for :ref:`computing the indels <analysis indel>`.
      has been created with the functions computed for
      *CADD1.0* and *CADD1.3*, or :ref:`see it <nb scoresfunct>`.
 
-- When analysing a certain gene, OncodriveFML get all the scores
+- When analysing a certain gene, OncodriveFML gets all the scores
   associated with the mutations that produce a stop in that gene.
   ``minimum_number_of_stops`` indicates the minimum number of stops
-  that a gene must have in order to avoid using the function above.
+  that a gene is required to have in order to avoid using the function above.
 
 .. _config statistic:
 
@@ -197,24 +197,21 @@ There a different parameters you can configure:
   the geometric mean (``method = 'gmean'``) are supported.
   The recommended one is the arithmetic mean.
 
-- In some cases, you might be interested in performing they
-  analysis per sample. It means that when analysing one region
-  from all the mutations that come from the same sample,
-  OncodriveFML keeps only 1. That one has a score
-  which can be the maximum score of all the mutation that
-  come from the sample sample (``per_sample_analysis = 'max'``),
+- In some cases, you might be interested in performing the
+  analysis per sample. This means that all the mutations that come
+  from the same sample are reduced to a single score. This score
+  can be the maximum (``per_sample_analysis = 'max'``),
   the arithmetic mean (``per_sample_analysis = 'amean'``) or
-  the geometric mean (``per_sample_analysis = 'gmean'``).
-  Comment this option if you do not want this type of analysis.
+  the geometric mean (``per_sample_analysis = 'gmean'``) of all the mutation's 
+  scores that come from the sample sample.
+  Comment this option if you are not interested in this type of analysis.
 
-- MNP mutations can be included in the analysis optionally.
-  ``discard_mnp = False`` to include them
+- MNP mutations can optionally be included in the analysis.
+  Use ``discard_mnp = False`` to include them
   and ``discard_mnp = True`` to discard them.
 
-OncodriveFML includes a few more parameters,
+OncodriveFML includes a few more parameters
 that are related to how many simulations are performed.
-OnocdriveFML tries to keep memory usage within
-certain limits.
 
 - ``sampling`` represents the minimum number of
   simulations to be performed.
@@ -224,7 +221,7 @@ certain limits.
 
 - ``sampling_chunk`` represents the maximum size (in millions)
   that a single process can handle. This value is
-  used to keep memory usage within certain limits.
+  used to keep the memory usage within certain limits.
 
   .. note::
 
@@ -241,58 +238,59 @@ certain limits.
 Indels
 ^^^^^^
 
-Thd indels subsection of statistic contains
-the configuration for analysis indels.
+The indels subsection of statistic contains
+the configuration for the analysis of indels.
 
 .. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
    :language: text
    :lines: 144-146,149-150,155-156,158-161,166-168,171-173,177-178,180-181
 
-OncodriveFML accepts various parameters related to the indels
+OncodriveFML accepts various parameters related to the indels:
 
 - The main option is ``include``, which indicates
-  OncodriveFML whether to include indels in the anlysis
+  whether to include indels in the anlysis
   or not.
-  Use ``inlcude = True`` to include indels
-  and ``inlcude = False`` to exclude them.
+  Use ``include = True`` to include indels
+  and ``include = False`` to exclude them.
 
 - OncodriveFML can simulate indels in two ways.
-  ``method = 'max'`` simulates indels a set of
+  ``method = 'max'`` simulates indels as a set of
   substitutions. ``method = 'stop'`` simulates
-  the indels as stop. This option is recommended
-  to simulte indels in coding regions.
+  indels as stops. This option is recommended
+  for simulating indels in coding regions.
   Check the :ref:`analysis of indels <analysis indel>`
   section to find more details.
 
 - OncodriveFML discards indels that fall in
   repetitive regions. OncodriveFML considers that
   an indel is in a repetitive region when the
-  same sequence of the indel appears, at least,
-  certain number of times consecutive in the gene
-  following the direction of the strand.
-  That number of times is set with the
-  ``max_consecutive`` option.
+  same sequence of the indel appears consecutively 
+  in a genomic element a certain number of times 
+  (or even more) following the direction of the strand.
+  The maximum number of consecutve repetitions can be 
+  set with the ``max_consecutive`` option.
   OncodriveFML will not discard any indel
   due to repetitive regions if you set
   ``max_consecutive = 0``.
 
 - Indels that are simulated as substitutions [#indelsSubs]_
-  can be simulated with equal probabilities in all the positions
-  of the gene, or using the signature associated with them.
-  E.g. if the signature is represented by the cancer type,
-  and indel coming from a breast cancer will be simulated
-  with the signature of that cancer.
-  OncodriveFML has this option because as indels do not contribute to
-  the signature, you might decide that they should be be
-  simulated with none signature.
+  can be simulated assigning to all the positions of the genomic element 
+  under analysis the same probability to be mutated. Alternatively the 
+  probability of each position to be mutated can depend on the mutational 
+  signature. For instance if the signature is represented by the cancer type,
+  indels coming from a breast cancer dataset will be simulated
+  with the signature of that cancer type.
+  Indels do not contribute to the signature of a cancer type, therefore through
+  this option you can decide whether indels should be simulated following 
+  the mutational signature or not.
   Use ``simulate_with_signature = True`` to use the signature
-  or ``simulate_with_signature = False`` to simulate
-  equiprobable indels.
+  or ``simulate_with_signature = False`` to simulate indels with
+  the same probabilities.
 
 .. _exomic frameshift rate:
 
 - ``gene_exomic_frameshift_ratio`` is a flag that indicates OncodriveFML
-  which mutations influences the :ref:`probabilities <analysis probs>`
+  which mutations influence the :ref:`probabilities <analysis probs>`
   for frameshift indels and substitutions.
   When ``gene_exomic_frameshift_ratio = False`` the probabilities are taken
   from the mapped mutations discarding those whose length is
@@ -307,13 +305,13 @@ OncodriveFML accepts various parameters related to the indels
   ``method = 'stop'`` option is related to the score of the stops
   in its gene. You can decide how this relation is by choosing
   a function that is applied to all stops scores in the gene. E.g.
-  ``stops_function = 'mean'`` associates the indel a value wich is
+  ``stops_function = 'mean'`` associates the indel to a value that is
   equal to the mean of all stop scores in the gene.
   The options you can choose are:
-  - ``'mean'`` for arithmetic mean
-  - ``'median'`` for the median
-  - ``'random'`` for a random value between the maximum and the minimum
-  - ``'random_choice'`` for choosing a random value of all the possible ones
+    - ``'mean'`` for arithmetic mean
+    - ``'median'`` for the median
+    - ``'random'`` for a random value between the maximum and the minimum
+    - ``'random_choice'`` for choosing a random value between all the possible ones
 
 
 .. _config settings:
@@ -330,7 +328,7 @@ OncodriveFML includes the setting section:
 
 Use the ``cores`` option to indicate how many cores to
 use. You can comment this option in order to use
-all available cores.
+all the available cores.
 
 .. note::
 
@@ -372,10 +370,10 @@ The logging system can be configured through the logging section of the
 
 .. [#context] Previous and posterior nucleotides
 
-.. [#obs] An observation is counted when the simulated scores,
-   after applying the function in ``method``, is higher
-   the result of applying that same function to the observed
-   scores.
+.. [#obs] An observation is counted when a simulated value,
+   after applying the function in ``method`` to the simulated scores, 
+   is higher than the result of applying the same function to the 
+   observed scores.
 
 .. [#indelsSubs] All indels are simulated as substitutions when
    ``method = 'max'``. Indels that are in-frame

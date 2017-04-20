@@ -6,7 +6,7 @@ Analysis
 
 This sections explains how OncodriveFML
 compute the scores for the observed mutations
-and how they are simulated.
+and how mutations are simulated.
 
 The analysis is done for each element
 independently.
@@ -45,11 +45,11 @@ Indels are scored in two different ways:
 as stops or as substitutions.
 
 As stops
-   Indels are scored as stops when analysing coding regions
+   Indels are scored as stops in the analysis of coding regions
    and if their length is not a multiple of 3.
    In coding regions, a frameshift indel might cause,
-   at some point in the gene, an stop.
-   For that reason, OncodriveFML uses this approach.
+   somewhere in the gene, a stop.
+   This is why OncodriveFML uses this approach.
    The way OncodriveFML
    scores this type of indels is taking all the stop scores [#stopscores]_ in the gene
    under analysis and applying a user defined function to them.
@@ -73,7 +73,7 @@ As substitutions
 
    .. note::
 
-      If none of the changes produced by the indel can get
+      If none of the changes produced by the indel has
       a score, the indel is ignored [#obsIgnored]_.
 
 Indels with a length higher than 20 nucleotides
@@ -89,11 +89,11 @@ To perform the simulation two arrays are computed:
 
 - One contains the scores of all possible single nucleotide substitutions
   that can occur within the segments of the element under analysis.
-  Additionally, this array also contains the value of the stops in this region.
+  Additionally, this array also contains the values of the stops in this region.
 
 - The other array contains the probabilities of each of those changes.
 
-Using the probability array, a random sampling in the scores array is
+Using the probability array, a random sampling of the scores array is
 done to obtain the simulated scores.
 
 .. _analysis probs:
@@ -103,7 +103,7 @@ Probabilities
 
 The probability array is computed taking into account different parameters.
 
-The probability associated to any of the stop scores:
+The probability associated to any of the stop scores is:
 
 .. math::
 
@@ -121,14 +121,14 @@ and :math:`p_{subs}` represents the probability of simulating a substitution.
 - If the analysis type is ``stop`` (see :ref:`configuration <config indels>`),
   OncodriveFML assumes you are analysing coding regions.
   For coding regions, the probability of simulating a frameshift indel
-  depends whether you are analysing using the whole cohort percentages
+	depends on amonwhether you are analysing using the whole cohort percentages
   or only the mutations observed in each gene.
 
   - When using :ref:`exomic frameshift probabilities <exomic frameshift rate>`
     OncodriveFML computes how
     many indels you observe, and how many of those fall into the region
-    you are analysing (which should be coding). Amonst the mapped indels
-    OncodriveFML distinguishes between frameshift and in frame indels.
+    you are analysing (which should be coding). Among the mapped indels
+    OncodriveFML distinguishes between frameshift and in-frame indels.
     The ratio of frameshift indels against the total amount of mutations
     is used to compute :math:`p_{frameshift indel}`.
 
@@ -168,7 +168,7 @@ where :math:`{n_{substitutions}}` is the amount of substitutions in the gene.
 
 
 
-.. [#obsIgnored] When a observed mutation is ignored
+.. [#obsIgnored] When an observed mutation is ignored
    it means that it cannot be assigned a score, and thus
    it does not contribute to the observed scores and
    in the simulation the number of mutations simulated is
