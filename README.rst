@@ -40,7 +40,7 @@ Finally, you can get the latest code from the repository and install with ``pip`
 The first time that you run OncodriveFML it will download the genome reference from our servers.
 By default the downloaded datasets go to ``~/.bgdata`` if you want to move these datasets to another folder you have to define the system environment variable BGDATA_LOCAL with an export command.
 
-The following command will show you the command help::
+The following command will show you the help::
 
 	$ oncodrivefml --help
 
@@ -73,7 +73,7 @@ run this command::
 
    $ bg-data -n 10 datasets genomereference hg19
 
-To run the example, we have included a :file:`run.sh` bash script
+To run the example, we have included a bash script (``run.sh``)
 than will execute OncodriveFML. The script should be executed from
 the folder it is in::
 
@@ -90,7 +90,8 @@ Documentation
 
 Find OncodriveFML documentation in `ReadTheDocs <http://oncodrivefml.readthedocs.io/en/latest/>`_.
 
-You can also compile the documentation yourself using `Sphinx <http://www.sphinx-doc.org/en/stable/>`_.
+You can also compile the documentation yourself using `Sphinx <http://www.sphinx-doc.org/en/stable/>`_,
+if you have cloned the repository.
 To do so, install the optional packages in ``optional-requirements.txt`` and build the
 documentation in the docs folder::
 
