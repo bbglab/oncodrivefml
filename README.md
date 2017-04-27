@@ -104,8 +104,8 @@ The regions file is a text file with 4 columns separated by a tab character (wit
 
 Download and extract example files:
 
-    $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples.tar.gz
-    $ tar xvzf oncodrivefml-examples.tar.gz
+    $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples_v1.tar.gz
+    $ tar xvzf oncodrivefml-examples_v1.tar.gz
     
 To run this example OncodriveFML needs all precomputed CADD scores that is a 80Gb file. It will be 
 automatically download the first time that you run OncodriveFML, but if you want to speed up the download is better

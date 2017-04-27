@@ -27,3 +27,8 @@ example/cds*
 *pickle.gz
 
 docs/build/*
+
+# Cython compiled files
+*.c
+*.o
+*.so
