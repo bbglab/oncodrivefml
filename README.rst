@@ -51,8 +51,8 @@ Run the example
 
 Download and extract the example files (if you cloned the repository skip this step)::
 
-   $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples.tar.gz
-   $ tar xvzf oncodrivefml-examples.tar.gz
+   $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples2.0.tar.gz
+   $ tar xvzf oncodrivefml-examples2.0.tar.gz
 
 To run this example OncodriveFML needs all the precomputed CADD scores, that is a 17Gb file.
 It will be automatically downloaded the first time you run OncodriveFML,
