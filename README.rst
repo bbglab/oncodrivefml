@@ -51,8 +51,8 @@ Run the example
 
 Download and extract the example files (if you cloned the repository skip this step)::
 
-   $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples2.0.tar.gz
-   $ tar xvzf oncodrivefml-examples2.0.tar.gz
+   $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples_v2.0.tar.gz
+   $ tar xvzf oncodrivefml-examples_v2.0.tar.gz
 
 To run this example OncodriveFML needs all the precomputed CADD scores, that is a 17Gb file.
 It will be automatically downloaded the first time you run OncodriveFML,
@@ -74,10 +74,9 @@ run this command::
    $ bg-data -n 10 datasets genomereference hg19
 
 To run the example, we have included a bash script (``run.sh``)
-than will execute OncodriveFML. The script should be executed from
-the folder it is in::
+than will execute OncodriveFML. The script should be executed in
+the folder where the files have been extracted::
 
-   $ cd example
    $ ./run.sh
 
 The results will be saved in a folder named ``cds``.

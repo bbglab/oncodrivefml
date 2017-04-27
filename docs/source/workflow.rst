@@ -40,8 +40,8 @@ Options:
                                   without extensions.
   -c, --configuration CONFIG_FILE
                                   Configuration file. Default to
-                                  'oncodrivefml.conf' in the current folder if
-                                  exists or to ~/.bbglab/oncodrivefml.conf if
+                                  'oncodrivefml_v2.conf' in the current folder if
+                                  exists or to ~/.bbglab/oncodrivefml_v2.conf if
                                   not.
   --samples-blacklist SAMPLES_BLACKLIST
                                   Remove these samples when loading the input

@@ -22,7 +22,7 @@ License
 Configuration template specifications
 =====================================
 
-.. include:: ../../oncodrivefml/oncodrivefml.conf.template.spec
+.. include:: ../../oncodrivefml/oncodrivefml_v2.conf.template.spec
    :literal:
    :class: text
    :name: config template spec file
@@ -34,7 +34,7 @@ Configuration template specifications
 Configuration template
 ======================
 
-.. include:: ../../oncodrivefml/oncodrivefml.conf.template
+.. include:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :literal:
    :class: text
    :name: config template file

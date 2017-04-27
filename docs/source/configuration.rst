@@ -11,7 +11,7 @@ The method behaviour can be modified through a configuration file.
    Check how the command line interface changes the configuration in the :ref:`command line interface <inside cli>`
    section.
 
-Check the :file:`oncodrivefml.conf.template` that is included in the package
+Check the :file:`oncodrivefml_v2.conf.template` that is included in the package
 to find an example of the configuration file.
 
 This section will explain each of the parameters in the configuration file:
@@ -21,7 +21,7 @@ This section will explain each of the parameters in the configuration file:
 Genome
 ------
 
-.. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
+.. literalinclude:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :language: text
    :lines: 1-4
 
@@ -48,7 +48,7 @@ the ``stop`` method for the indels (:ref:`ref <config indels>`).
 Signature
 ---------
 
-.. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
+.. literalinclude:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :language: text
    :lines: 8,12-13,32-33,32-38,40-42,45-48,51-52,60-61
 
@@ -123,7 +123,7 @@ Score
 The score section is used to know
 which scores are going to be used.
 
-.. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
+.. literalinclude:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :language: text
    :lines: 65-67,75,77,79-80,82-83,85-86,88-89,91-92,94-95,101-103,105-106
 
@@ -185,7 +185,7 @@ Statistic
 The statistic section is related to the configuration
 of the analysis
 
-.. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
+.. literalinclude:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :language: text
    :lines: 110,112,114,119-121,130-132,134-135,137-138,140-141
 
@@ -241,7 +241,7 @@ Indels
 The indels subsection of statistic contains
 the configuration for the analysis of indels.
 
-.. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
+.. literalinclude:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :language: text
    :lines: 144-146,149-150,155-156,158-161,166-168,171-173,177-178,180-181
 
@@ -322,7 +322,7 @@ Settings
 To configure the system where the analysis is performed
 OncodriveFML includes the setting section:
 
-.. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
+.. literalinclude:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :language: text
    :lines: 194-197
 
@@ -344,7 +344,7 @@ The logging section is used to configure the
 logging system of OncodriveFML.
 
 
-.. literalinclude:: ../../oncodrivefml/oncodrivefml.conf.template
+.. literalinclude:: ../../oncodrivefml/oncodrivefml_v2.conf.template
    :language: text
    :lines: 201-230
 
