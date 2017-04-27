@@ -1,5 +1,5 @@
 OncodriveFML is the property of the Universitat Pompeu Fabra (UPF), which hold the copyright thereto.
-Copyright® 2012-2014 Universitat Pompeu Fabra.
+Copyright (C) 2016 Universitat Pompeu Fabra.
 
 OncodriveFML is made available to the general public subject to certain conditions described in its license.
 For the avoidance of doubt, you may use the software and any data accessed through UPF software for academic,
