@@ -27,7 +27,7 @@ def load_configuration(config_file, override=None):
         :class:`bgconfig.BGConfig`: configuration as a :obj:`dict`
 
     """
-    config_template = os.path.join(os.path.dirname(__file__), "oncodrivefml.conf.template")
+    config_template = os.path.join(os.path.dirname(__file__), "oncodrivefml_v2.conf.template")
 
     try:
         return BGConfig(config_template, config_file=config_file, use_env_vars=False, override_values=override, unrepr=True)
