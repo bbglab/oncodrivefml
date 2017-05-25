@@ -59,7 +59,6 @@ Build of the Reference Genome
 __CB = {"A": "T", "T": "A", "G": "C", "C": "G"}
 
 
-
 def change_ref_build(build):
     """
     Modify the default build fo the reference genome
@@ -216,6 +215,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
     mismatches = 0
     signature_count = defaultdict(lambda: defaultdict(int))
     for mut in signature_function():
+        pos = mut['POSITION']
         if mut['ALT_TYPE'] == 'snp':
             total += 1
             signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
@@ -228,12 +228,11 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
             signature_count[mut.get(classifier, classifier)][(signature_ref, signature_alt)] += 1
         elif include_mnp and mut['ALT_TYPE'] == 'mnp':
             total += 1
-            pos = mut['POSITION']
             for index, nucleotides in enumerate(zip(mut['REF'], mut['ALT'])):
                 ref_nucleotide, alt_nucleotide = nucleotides
                 signature_ref = get_ref_triplet(mut['CHROMOSOME'], pos - 1 + index)
                 if signature_ref[1] != ref_nucleotide:
-                    logger.debug('Discrepancy in MNP at position %d of chr %s', pos, mut['CHROMOSOME'])
+                    logger.debug('Discrepancy in MNP at position %d of chr %s', pos + index, mut['CHROMOSOME'])
                     mismatches += 1
                     continue
                 signature_alt = signature_ref[0] + alt_nucleotide + signature_ref[2]
