@@ -20,7 +20,7 @@ dependencies:
 - itab=0.9
 - bgreference=0.1
 - click=6.7
-- bgparsers=0.2
+- bgparsers=0.3
 - bgcache=0.1
 - cython=0.25.2
 - python=3.5.*
