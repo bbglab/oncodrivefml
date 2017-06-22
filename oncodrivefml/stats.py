@@ -39,11 +39,16 @@ class ArithmeticMean(object):
              observed value (as :obj:`int`).
 
         """
+        # filter out invalid mutations
+        observed = [v for v in observed if v > 0]  # remove undesired mutations
         observed_value = np.mean(observed)
-        values = np.mean(values, axis=1)
+        values[values == 0] = np.nan   # remove undesired mutations
+        values = np.nanmean(values, axis=1)
+        values = np.nan_to_num(values)
         obs = len(values[values >= observed_value])
         neg_obs = len(values[values <= observed_value])
         return obs, neg_obs
+
 
 
 class Maximum(object):

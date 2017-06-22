@@ -34,6 +34,7 @@ import struct
 import bgdata
 import logging
 import numpy as np
+import pandas as pd
 from typing import List
 from collections import defaultdict, namedtuple
 
@@ -202,6 +203,33 @@ class ScoresTabixReader:
             raise ReaderGetError(chromosome, start, stop)
 
 
+class DegronReader:
+    def __init__(self, conf):
+        file = conf['file']
+
+        self.df = pd.read_csv(file, sep='\t')
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return True
+
+    def get(self, chromosome, start, stop, element=None):
+        df = self.df[(self.df['CHR'] == chromosome) & (self.df['DEGRON'] == element.split('##'))]
+        for i in range(start, stop+1):
+            values_at_i = df[df['POS'] == i]
+            if values_at_i.emtpy:
+                yield 0,None,'.',i
+            else:
+                for v in values_at_i.iterrows():
+                    data = v[1]
+                    ref = data['REF']
+                    alt = data['ALT']
+                    score = data['SCORE']
+                    yield score, ref, alt, i
+
+
 def init_scores_module(conf):
     global min_stops, stops_file, scores_reader
 
@@ -216,6 +244,8 @@ def init_scores_module(conf):
         scores_reader = ScoresTabixReader(conf)
     elif conf['format'] == 'pack':
         scores_reader = PackScoresReader(conf)
+    elif conf['format'] == 'degron':
+        scores_reader == DegronReader(conf)
 
 
 class Scores(object):

@@ -254,9 +254,12 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
         # Get the interval that include that position in the same chromosome
         intervals = elements_tree[r['CHROMOSOME']][r['POSITION']]
 
+        seen_elements = []
         for interval in intervals:
             element, segment = interval.data
-            variants_dict[element].append(r)
+            if element not in seen_elements:
+                seen_elements.append(element)
+                variants_dict[element].append(r)
 
         if intervals:
             if r['ALT_TYPE'] == 'snp':

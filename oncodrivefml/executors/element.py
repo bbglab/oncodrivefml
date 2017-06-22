@@ -178,6 +178,14 @@ class ElementExecutor(object):
                         # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
                         signature_ids.append(mut.get(self.signature_column, self.signature_column))
 
+            if np.mean(observed) == 0:
+                # Do not compute elements without any mutation with a score higher than 0
+                self.result['partitions'] = []
+                self.result['sampling_size'] = self.sampling_size
+                self.result['obs'] = None
+                self.result['neg_obs'] = None
+                return self
+
             for signature_id in set(signature_ids):
                 subs_probs_by_signature.update({signature_id: []})
 
