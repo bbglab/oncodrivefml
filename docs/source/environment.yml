@@ -15,13 +15,13 @@ dependencies:
 - pandas=0.19
 - matplotlib=1.5.3
 - intervaltree=2.1
-- bgqmap=1.0
 - bgdata=1.0
 - itab=0.9
 - bgreference=0.1
 - click=6.7
 - bgparsers=0.3
 - bgcache=0.1
+- ago=0.0.8
 - cython=0.25.2
 - python=3.5.*
 - sphinx=1.5.1
