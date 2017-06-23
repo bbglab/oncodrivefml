@@ -32,7 +32,7 @@ Regions file format
 ^^^^^^^^^^^^^^^^^^^
 
 The regions file is a text file with, at least, 4 columns separated by a tab character
-(the header, between ``[]``, is optional, but the column order is fixed if the header is not present):
+(the column order must be preserved):
 
 * Column 1 [CHROMOSOME]: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
 * Column 2 [START]: Start position. A positive integer.
