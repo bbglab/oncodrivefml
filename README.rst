@@ -61,7 +61,7 @@ our data package management tool (``BgData``) that is also installed when you in
 
 Run this command to download the CADD scores file to the default bgdata folder ~/.bgdata::
 
-   $ bg-data -n 10 genomicscores caddpack 1.0
+   $ bg-data genomicscores caddpack 1.0
 
 .. warning::
 
@@ -71,7 +71,7 @@ Run this command to download the CADD scores file to the default bgdata folder ~
 Additonally, if you want to speed up the download of the genome reference that is also needed,
 run this command::
 
-   $ bg-data -n 10 datasets genomereference hg19
+   $ bg-data datasets genomereference hg19
 
 To run the example, we have included a bash script (``run.sh``)
 than will execute OncodriveFML. The script should be executed in
@@ -96,4 +96,3 @@ documentation in the docs folder::
 
     $ cd docs
     $ make html
-
