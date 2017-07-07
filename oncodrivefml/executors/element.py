@@ -65,7 +65,7 @@ class ElementExecutor(object):
         self.neg_obs = 0
         self.result = None
         self.scores = None
-
+        self.observed_mapped = 0
         self.p_subs = config['p_subs']
         self.p_indels = config['p_indels']
 
@@ -134,6 +134,8 @@ class ElementExecutor(object):
         # Compute observed mutations statistics and scores
         self.result = self.compute_muts_statistics()
 
+        self.result['symbol'] = self.symbol
+
         if len(self.result['mutations']) > 0:
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
 
@@ -149,9 +151,11 @@ class ElementExecutor(object):
             signature_ids = []
 
             indels_simulated_as_subs = 0
-
+            n_mapped = 0
             for mut in self.result['mutations']:
                 observed.append(mut['SCORE'])  # Observed mutations
+                if mut['SCORE'] > 0.0:
+                    n_mapped = n_mapped +1
 
                 # Indels treated as subs also count for the subs probs
                 if mut['ALT_TYPE'] == 'indel' and self.indels.simulated_as_subs:
@@ -174,35 +178,46 @@ class ElementExecutor(object):
 
                 else:  # SNP or MNP
                     if self.signature is not None:
+
                         # Count how many signature ids are and prepare a vector for each
                         # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
                         signature_ids.append(mut.get(self.signature_column, self.signature_column))
 
+            self.result['observed_mapped'] = n_mapped
+
             if np.mean(observed) == 0:
+
                 # Do not compute elements without any mutation with a score higher than 0
                 self.result['partitions'] = []
                 self.result['sampling_size'] = self.sampling_size
                 self.result['obs'] = None
                 self.result['neg_obs'] = None
+                self.result['observed_mapped'] = 0
+                logger.info('Mean value 0 in element %s', self.name)
                 return self
 
             for signature_id in set(signature_ids):
+
                 subs_probs_by_signature.update({signature_id: []})
 
             # When the probabilities of subs and indels are None, they are taken from
             # mutations seen in the gene
             if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
+
                 self.p_subs = (self.result['snps'] + self.result['mnps'] + indels_simulated_as_subs) / len(self.result['mutations'])
                 self.p_indels = 1 - self.p_subs
             # Compute the values for the substitutions
             if self.p_subs > 0:
+
                 for pos in positions:
                     for s in self.scores.get_score_by_position(pos):
                         subs_scores.append(s.value)
                         for k, v in subs_probs_by_signature.items():
                             if k in self.signature:
                                 v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
+
                             else:
+
                                 v.append(1/(self.signature.get('trinucleotides', 64)*3))
 
                 if len(subs_probs_by_signature) > 0:
@@ -212,6 +227,7 @@ class ElementExecutor(object):
                     for k, v in subs_probs_by_signature.items():
                         subs_probs += (np.array(v) * signature_ids_counter[k] / total_ids)
                     tot = sum(subs_probs)
+
                     if tot == 0.0:
                         logger.warning('Probability of substitutions equal to 0 in {}'.format(self.name))
                         self.result['partitions'] = []
@@ -230,7 +246,8 @@ class ElementExecutor(object):
 
                 # All indels have the same probability
                 indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []
-
+            logger.warning('Scores value {}'.format(self.name))
+            logger.warning('Scores value {}'.format(subs_scores))
             simulation_scores = subs_scores + indels_scores
             simulation_probs = subs_probs + indels_probs
 
@@ -258,6 +275,6 @@ class ElementExecutor(object):
                 self.result['statistic_name'] = self.statistic_name
 
         self.result['sampling_size'] = self.sampling_size
-        self.result['symbol'] = self.symbol
+
 
         return self

@@ -205,9 +205,9 @@ class ScoresTabixReader:
 
 class DegronReader:
     def __init__(self, conf):
-        file = conf['file']
+        self.file = conf['file']
 
-        self.df = pd.read_csv(file, sep='\t')
+        self.df = pd.read_csv(self.file, sep='\t')
 
     def __enter__(self):
         return self
@@ -216,9 +216,10 @@ class DegronReader:
         return True
 
     def get(self, chromosome, start, stop, element=None):
-        df = self.df[(self.df['CHR'] == chromosome) & (self.df['DEGRON'] == element.split('##'))]
+        logger.get('{} {} {}'.format(chromosome, start, stop))
+        df = self.df[(self.df['chr'] == chromosome) & (self.df['ELEMENT'] == element.split(':')[1])]
         for i in range(start, stop+1):
-            values_at_i = df[df['POS'] == i]
+            values_at_i = df[df['Coordinate'] == i]
             if values_at_i.emtpy:
                 yield 0,None,'.',i
             else:
@@ -245,7 +246,7 @@ def init_scores_module(conf):
     elif conf['format'] == 'pack':
         scores_reader = PackScoresReader(conf)
     elif conf['format'] == 'degron':
-        scores_reader == DegronReader(conf)
+        scores_reader = DegronReader(conf)
 
 
 class Scores(object):
@@ -342,31 +343,57 @@ class Scores(object):
             dict: for each positions get a list of ScoreValue
             (see :attr:`scores_by_pos`)
         """
+        df = pd.read_csv(scores_reader.file, sep='\t')
+        for region in self.segments:
+            chromosome = int(region['CHROMOSOME'])
+            start = region['START']
+            stop = region['STOP']
+            reg_df = df[(df['chr'] == chromosome) & (df['ELEMENT'] == self.element)]
+            for pos in range(start, stop+1):
+                values_at_i = reg_df[reg_df['Coordinate'] == pos]
+                ref_triplet = get_ref_triplet(region['CHROMOSOME'], pos - 1)
+                ref = ref_triplet[1]
 
-        try:
-            with scores_reader as reader:
-                for region in self.segments:
-                    try:
-                        for row in reader.get(region['CHROMOSOME'], region['START'], region['STOP'], self.element):
-                            score, ref, alt, pos = row
-                            ref_triplet = get_ref_triplet(region['CHROMOSOME'], pos - 1)
-                            ref = ref_triplet[1] if ref is None else ref
+                if values_at_i.empty:
+                    alts = 'ACGT'.replace(ref, '')
+                    for a in alts:
+                        alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+                        self.scores_by_pos[pos].append(ScoreValue(ref, a, 0, ref_triplet, alt_triplet))
+                else:
+                    for v in values_at_i.iterrows():
+                        data = v[1]
+                        alt = data['ALT']
+                        score = data['SCORE']
+                        alt_triplet = ref_triplet[0] + alt + ref_triplet[2]
+                        self.scores_by_pos[pos].append(ScoreValue(ref, alt, score, ref_triplet, alt_triplet))
 
-                            if ref_triplet[1] != ref:
-                                logger.warning("Background mismatch at position %d at '%s'", pos, self.element)
-
-                            # Expand funseq2 dots
-                            alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
-
-                            for a in alts:
-                                alt_triplet = ref_triplet[0] + a + ref_triplet[2]
-                                self.scores_by_pos[pos].append(ScoreValue(ref, a, score, ref_triplet, alt_triplet))
-
-                    except ReaderError as e:
-                        logger.warning(e.message)
-                        continue
-        except ReaderError as e:
-            logger.warning("Reader error: %s. Regions being analysed %s", e.message, self.segments)
+        #
+        #
+        # try:
+        #     with scores_reader as reader:
+        #         for region in self.segments:
+        #             try:
+        #                 logger.info('{}'.format(dir(scores_reader)))
+        #                 for row in reader.get(region['CHROMOSOME'], region['START'], region['STOP'], self.element):
+        #                     score, ref, alt, pos = row
+        #                     ref_triplet = get_ref_triplet(region['CHROMOSOME'], pos - 1)
+        #                     ref = ref_triplet[1] if ref is None else ref
+        #
+        #                     if ref_triplet[1] != ref:
+        #                         logger.warning("Background mismatch at position %d at '%s'", pos, self.element)
+        #
+        #                     # Expand funseq2 dots
+        #                     alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
+        #
+        #                     for a in alts:
+        #                         alt_triplet = ref_triplet[0] + a + ref_triplet[2]
+        #                         self.scores_by_pos[pos].append(ScoreValue(ref, a, score, ref_triplet, alt_triplet))
+        #
+        #             except ReaderError as e:
+        #                 logger.warning(e.message)
+        #                 continue
+        # except ReaderError as e:
+        #     logger.warning("Reader error: %s. Regions being analysed %s", e.message, self.segments)
 
     def get_stop_scores(self):
         """

@@ -345,8 +345,9 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.option('--no-indels', help="Discard indels in your analysis", is_flag=True)
 @click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions and exit.", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
+@click.option('-sg', '--signature', 'signature', type=click.Path(exists=True), help='Signature file', required=False, default=None)
 @click.version_option(version=__version__)
-def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist, no_indels, generate_pickle, debug):
+def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist, no_indels, generate_pickle, debug, signature):
     """
     Run OncodriveFML on the genomic regions in ELEMENTS FILE
     using the mutations in MUTATIONS FILE.
@@ -378,6 +379,9 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
         override_config['logging']['handlers']['console']['level'] = 'DEBUG'
     else:
         override_config['logging']['handlers']['console']['level'] = 'INFO'
+
+    if signature:
+        override_config['signature']['path'] = signature
 
     main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, override_config)
 

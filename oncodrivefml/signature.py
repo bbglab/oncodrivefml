@@ -290,9 +290,6 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
     column_probability = signature_config['column_probability']
     include_mnp = signature_config['include_mnp']
 
-    if path is not None and path.endswith(".pickle.gz"):
-        with gzip.open(path, 'rb') as fd:
-            return pickle.load(fd)
 
     signature_dict = None
     if method == "none":
@@ -305,10 +302,12 @@ def load_signature(signature_config, signature_function, trinucleotides_counts=N
             return -1
         else:
             logger.info("Loading signatures")
-            signature_probabilities = pd.read_csv(path, sep='\t')
-            signature_probabilities.set_index([column_ref, column_alt], inplace=True)
-            signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
-            return signature_dict
+            #signature_probabilities = pd.read_csv(path, sep='\t')
+            #signature_probabilities.set_index([column_ref, column_alt], inplace=True)
+            #signature_dict = {classifier: signature_probabilities.to_dict()[column_probability]}
+            signature_probabilities = pd.read_pickle(path)
+
+            return signature_probabilities
 
     elif method == "full" or method == "complement":
         if method == "complement":

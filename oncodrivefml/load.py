@@ -83,6 +83,8 @@ from os.path import exists
 from bgcache import bgcache
 from bgparsers import readers
 from collections import defaultdict
+
+from copy import deepcopy
 from intervaltree import IntervalTree
 
 from oncodrivefml import __logger_name__
@@ -259,7 +261,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             element, segment = interval.data
             if element not in seen_elements:
                 seen_elements.append(element)
-                variants_dict[element].append(r)
+                variants_dict[element].append(deepcopy(r))
 
         if intervals:
             if r['ALT_TYPE'] == 'snp':

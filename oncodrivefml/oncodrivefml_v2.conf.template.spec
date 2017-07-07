@@ -4,7 +4,7 @@ build = option('hg18', 'hg19', 'hg38', default='hg19')
 [signature]
 method = option('none', 'full', 'complement', 'bysample', 'file', default='full')
 
-classifier = option('CANCER_TYPE', 'SAMPLE', 'SIGNATURE', default='CANCER_TYPE')
+classifier = option('CANCER_TYPE', 'SAMPLE', 'SIGNATURE','probabilities', default='CANCER_TYPE')
 include_mnp = boolean(default=True)
 normalize_by_sites = option('whole_genome', 'wgs', 'whole_exome', 'wxs', 'wes', default=None)
 only_mapped_mutations = boolean(default=False)
@@ -16,13 +16,13 @@ column_probability = string(default=None)
 
 [score]
 file = string
-format = option('tabix', 'pack')
-chr = integer
-chr_prefix = string
-pos = integer
+
+chr = integer(default=0)
+chr_prefix = string(default="")
+pos = integer(default=0)
 ref = integer(default=None)
 alt = integer(default=None)
-score = integer
+score = integer(default=0)
 element = integer(default=None)
 extra = integer(default=None)
 
