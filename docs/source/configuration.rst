@@ -365,7 +365,13 @@ The logging system can be configured through the logging section of the
    the warning informing the user uses the root logger.
 
 
+OncodriveFML does override the configuration in two ways:
 
+- If the ``debug`` flag is set, the console logger level is set to ``DEBUG``.
+  Otherwise, it is set to ``INFO``.
+- If one of the handlers is named ``file``, its filename is set to
+  ``<mutations file name>__log.txt`` and saved in the same folder as
+  the OncodriveFML output.
 
 
 .. [#context] Previous and posterior nucleotides
