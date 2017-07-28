@@ -90,8 +90,8 @@ Variants
 Regions
    File containing the regions for the analysis.
    Only mutations that fall in these regions are analysed
-   and only these genomic positions they defined are used
-   for simulation.
+   and only the genomic positions defined in this file are used
+   for the simulation.
 
    You can define your own regions file
    based on your criteria. You can check
@@ -102,6 +102,12 @@ Regions
 
       It is not recommended to mix coding and
       non coding regions in your regions file.
+      In fact this will likely produce artifacts
+      in the results as coding and non-coding regions
+      of the genome have a very different functional
+      impact scores. A good set of genomic regions should
+      include elements that share biological functions
+      (e.g. CDS, UTRs, promoters, enhancers, etc.).
 
 
 Check the :ref:`formats for
