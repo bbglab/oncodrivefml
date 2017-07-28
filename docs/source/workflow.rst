@@ -101,7 +101,7 @@ Regions
    .. warning::
 
       It is not recommended to mix coding and
-      non coding regions in your regions file.
+      non-coding regions in your regions file.
       In fact this will likely produce artifacts
       in the results as coding and non-coding regions
       of the genome have a very different functional
