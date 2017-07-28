@@ -308,10 +308,10 @@ OncodriveFML accepts various parameters related to the indels:
   ``stops_function = 'mean'`` associates the indel to a value that is
   equal to the mean of all stop scores in the gene.
   The options you can choose are:
-    - ``'mean'`` for arithmetic mean
-    - ``'median'`` for the median
-    - ``'random'`` for a random value between the maximum and the minimum
-    - ``'random_choice'`` for choosing a random value between all the possible ones
+  - ``'mean'`` for arithmetic mean
+  - ``'median'`` for the median
+  - ``'random'`` for a random value between the maximum and the minimum
+  - ``'random_choice'`` for choosing a random value between all the possible ones
 
 
 .. _config settings:

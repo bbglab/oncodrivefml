@@ -78,16 +78,43 @@ you can download the source code, install it and call the
 The files
 ---------
 
-Check the :ref:`different formats for
+Input files
+^^^^^^^^^^^
+
+OncodriveFML makes use of three files:
+
+Variants
+   Also named as input.
+   This file contains the observed mutations for the analysis.
+
+Regions
+   File containing the regions for the analysis.
+   Only mutations that fall in these regions are analysed
+   and only these genomic positions they defined are used
+   for simulation.
+
+   You can define your own regions file
+   based on your criteria. You can check
+   an example of a regions file
+   downloading `our example <https://bitbucket.org/bbglab/oncodrivefml/downloads/>`_.
+
+   .. warning::
+
+      It is not recommended to mix coding and
+      non coding regions in your regions file.
+
+
+Check the :ref:`formats for
 the input files<oncodrive file formats>`.
 
-The configuration file is also a key part of the run,
-and understanding how to adapt it to your needs is important.
-Check :ref:`this section <project configuration>`
-to find more details about it.
+Configuration
+   The configuration file is also a key part of the run,
+   and understanding how to adapt it to your needs is important.
+   Check :ref:`this section <project configuration>`
+   to find more details about it.
 
-Output file
-^^^^^^^^^^^
+Output files
+^^^^^^^^^^^^
 
 Find information about the output :ref:`output files <output files>` section.
 

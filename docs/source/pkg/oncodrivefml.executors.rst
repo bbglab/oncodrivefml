@@ -1,27 +1,27 @@
-oncodrivefml.executors package
-==============================
+oncodrivefml\.executors package
+===============================
 
 Submodules
 ----------
 
-oncodrivefml.executors.bymutation module
-----------------------------------------
+oncodrivefml\.executors\.bymutation module
+------------------------------------------
 
 .. automodule:: oncodrivefml.executors.bymutation
     :members:
     :undoc-members:
     :show-inheritance:
 
-oncodrivefml.executors.bysample module
---------------------------------------
+oncodrivefml\.executors\.bysample module
+----------------------------------------
 
 .. automodule:: oncodrivefml.executors.bysample
     :members:
     :undoc-members:
     :show-inheritance:
 
-oncodrivefml.executors.element module
--------------------------------------
+oncodrivefml\.executors\.element module
+---------------------------------------
 
 .. automodule:: oncodrivefml.executors.element
     :members:

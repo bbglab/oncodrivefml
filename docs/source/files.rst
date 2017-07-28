@@ -20,8 +20,8 @@ The variants file is a text file with, at least, 5 columns separated by a tab ch
 
 * Column CHROMOSOME: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
 * Column POSITION: Mutation position. A positive integer.
-* Column REF: Reference allelle. A single letter: A, C, G or T (upper case)
-* Column ALT: Alternate allelle. A single letter: A, C, G or T (upper case)
+* Column REF: Reference allele. A single letter: A, C, G or T (upper case)
+* Column ALT: Alternate allele. A single letter: A, C, G or T (upper case)
 * Column SAMPLE: Sample identifier. Any alphanumeric string.
 * Column CANCER_TYPE: Cancer type. Any alphanumeric string. Optional.
 * Column SIGNATURE: User defined signature categories. Any alphanumeric string. Optional.

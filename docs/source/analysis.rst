@@ -10,6 +10,11 @@ and how mutations are simulated.
 
 The analysis is done for each element
 independently.
+The same number of observed mutations
+is simulated within the element,
+taking only the positions
+indicated in the regions file.
+
 
 Observed
 --------
@@ -121,7 +126,7 @@ and :math:`p_{subs}` represents the probability of simulating a substitution.
 - If the analysis type is ``stop`` (see :ref:`configuration <config indels>`),
   OncodriveFML assumes you are analysing coding regions.
   For coding regions, the probability of simulating a frameshift indel
-	depends on amonwhether you are analysing using the whole cohort percentages
+  depends on amonwhether you are analysing using the whole cohort percentages
   or only the mutations observed in each gene.
 
   - When using :ref:`exomic frameshift probabilities <exomic frameshift rate>`
