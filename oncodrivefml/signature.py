@@ -221,7 +221,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
             signature_ref = get_ref_triplet(mut['CHROMOSOME'], mut['POSITION'] - 1)
             signature_alt = signature_ref[0] + mut['ALT'] + signature_ref[2]
             if signature_ref[1] != mut['REF']:
-                logger.debug('Discrepancy in substitution at position %d of chr %s', pos, mut['CHROMOSOME'])
+                logger.debug('Reference mismatch in substitution at position %d of chr %s', pos, mut['CHROMOSOME'])
                 mismatches += 1
                 continue
 
@@ -232,7 +232,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
                 ref_nucleotide, alt_nucleotide = nucleotides
                 signature_ref = get_ref_triplet(mut['CHROMOSOME'], pos - 1 + index)
                 if signature_ref[1] != ref_nucleotide:
-                    logger.debug('Discrepancy in MNP at position %d of chr %s', pos + index, mut['CHROMOSOME'])
+                    logger.debug('Reference mismatch in MNP at position %d of chr %s', pos + index, mut['CHROMOSOME'])
                     mismatches += 1
                     continue
                 signature_alt = signature_ref[0] + alt_nucleotide + signature_ref[2]

@@ -91,7 +91,7 @@ class ElementExecutor(object):
                     mutation['SCORE'] = v.value
                     break
             else:
-                logger.warning('Discrepancy in SNP at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
+                logger.warning('Reference mismatch in SNP at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
 
         elif mutation['ALT_TYPE'] == "mnp":
             pos = int(mutation['POSITION'])
@@ -104,7 +104,7 @@ class ElementExecutor(object):
                         mnp_scores.append(v.value)
                         break
                 else:
-                    logger.warning('Discrepancy in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
+                    logger.warning('Reference mismatch in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
             if not mnp_scores:
                 return
             mutation['SCORE'] = max(mnp_scores)
