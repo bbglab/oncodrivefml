@@ -1,5 +1,5 @@
 [genome]
-build = option('hg18', 'hg19', 'hg38', default='hg19')
+build = option('hg18', 'hg19', 'hg38', 'mm10', 'c3h', default='hg19')
 
 [signature]
 method = option('none', 'full', 'complement', 'bysample', 'file', default='full')

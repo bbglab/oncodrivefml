@@ -1,6 +1,7 @@
 [genome]
 # Build of the reference genome
-# Currently supported: hg19, hg38 and hg18
+# Currently human genomes supported: hg19, hg38 and hg18
+# mouse genomes: c3h and mm10
 build = 'hg19'
 
 
