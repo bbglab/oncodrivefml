@@ -20,7 +20,7 @@ setup(
     license='UPF Free Source Code',
     author='BBGLab (Barcelona Biomedical Genomics Lab)',
     author_email='bbglab@irbbarcelona.org',
-    description='',
+    description='Identify signals of positive selection in somatic mutations',
     setup_requires=[
         'cython',
     ],
