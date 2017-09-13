@@ -20,8 +20,8 @@ The variants file is a text file with, at least, 5 columns separated by a tab ch
 
 * Column CHROMOSOME: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
 * Column POSITION: Mutation position. A positive integer.
-* Column REF: Reference allele. A single letter: A, C, G or T (upper case)
-* Column ALT: Alternate allele. A single letter: A, C, G or T (upper case)
+* Column REF: Reference allele [#refalt]_.
+* Column ALT: Alternate allele [#refalt]_.
 * Column SAMPLE: Sample identifier. Any alphanumeric string.
 * Column CANCER_TYPE: Cancer type. Any alphanumeric string. Optional.
 * Column SIGNATURE: User defined signature categories. Any alphanumeric string. Optional.
@@ -51,3 +51,11 @@ extension ".tsv".
 
 Check the :ref:`output section <output files>` to find a detailed description
 regarding the output.
+
+
+.. [#refalt] The alleles consist on a single letter or a set of letters using A, C, G or T (upper case).
+   Single Nucleotide Variants are indentified because both, REF and ALT contain only one letter.
+   In Multi-Nucleotide Variants REF and ALT columns contain a set of letters of the same length.
+   Insertions use ``-`` in the REF and a set of letters as ALT
+   while deletions contain the set of deleted characters in the REF and ``-`` in the ALT columns.
+
