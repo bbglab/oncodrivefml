@@ -37,10 +37,10 @@ def generate_vep_mutations(regions_file):
             strand = segment['STRAND']
             if strand == '.':  # unknown strand treated as forward  TODO check is fine
                 strand = '+'
-            for ref in refseq(build, chr, start, stop - start + 1):
+            for index, ref in enumerate(refseq(build, chr, start, stop - start + 1)):
                 for n in nucleotides:
                     if n != ref:
-                        muts_row.append([chr, start, stop, ref+'/'+n, strand])
+                        muts_row.append([chr, start+index, start+index, ref+'/'+n, strand])  # TODO check that position is fine
     return pd.DataFrame(muts_row)
 
 
