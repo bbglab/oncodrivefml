@@ -15,7 +15,7 @@ START = 'START'
 STOP = 'STOP'
 
 
-CHROMOSOMES = [str(c) for c in range(1,23)] + ['X', 'Y']
+CHROMOSOMES = ['chr{}'.format(c) for c in range(1,23)] + ['chrX', 'chrY']
 
 
 def triplets(sequence):
@@ -124,7 +124,7 @@ def chromosome_counter_executor(chr):
     """
     counts = Counter()
     with open(os.path.join(_get_dataset(build), "{}.txt".format(chr)), 'rt') as fd:
-        counts.update(triplets(fd))
+        counts.update(triplets(fd.read()))
     return counts
 
 
@@ -152,7 +152,7 @@ def load_counts(file):
 
 
 def load_regions(file):
-    df = pd.read_csv(file, sep='\t')
+    df = pd.read_csv(file, sep='\t', header=None, names=[CHR, START, STOP, 'strand', 'gene', 'transcript', 'symbol'])
     regions = df[[CHR, START, STOP]]
     return regions.to_dict(orient='records')
 
@@ -175,7 +175,7 @@ def regions(regions_file, output_file, cores):
 @click.option('--cores', type=int)
 def genome(output_file, cores):
     """Count trinucleotes in genome and save to file"""
-    counts = chromosome_counter(build, cores)
+    counts = chromosome_counter(cores)
     save_counts(counts,output_file)
 
 
