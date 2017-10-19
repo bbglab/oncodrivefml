@@ -124,7 +124,7 @@ def chromosome_counter_executor(chr):
     """
     counts = Counter()
     with open(os.path.join(_get_dataset(build), "{}.txt".format(chr)), 'rt') as fd:
-        counts.update(triplets(fd.read()))
+        counts.update(triplets(fd.read().upper()))
     return counts
 
 
