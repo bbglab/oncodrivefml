@@ -367,7 +367,7 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
     elif type == 'noncoding':
         override_config['statistic']['indels']['method'] = 'max'
 
-    if sequencing == 'wex':
+    if sequencing == 'wes':
         override_config['signature']['normalize_by_sites'] = 'whole_exome'
     elif sequencing == 'wgs':
         override_config['signature']['normalize_by_sites'] = 'whole_genome'
