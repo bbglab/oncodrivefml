@@ -33,3 +33,6 @@ example/cds
 example/cdsOriginal
 
 docs/build
+
+# External users tests
+external_checks
