@@ -45,7 +45,7 @@ class QQPlot(object):
     """
 
     def __init__(self, input_file, cutoff=True, rename_fields=None, extra_fields=None):
-        basic_tools = "pan,box_zoom,resize,wheel_zoom,reset,previewsave,crosshair"
+        basic_tools = "pan,box_zoom,wheel_zoom,reset,previewsave,crosshair"
         self.figure = figure(width=600, plot_height=600, tools=basic_tools, toolbar_location="above")
         # labels
         self.figure.xaxis.axis_label = 'Expected p-values'
