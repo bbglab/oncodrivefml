@@ -1,7 +1,6 @@
 import numpy as np
 
 from oncodrivefml.stats import STATISTIC_TESTS
-from oncodrivefml.walker_cython import walker_sampling
 
 
 def flatten_partitions(results):
@@ -31,73 +30,18 @@ def partitions_list(total_size, chunk_size):
 def compute_sampling(value):
     name, samples, result = value
 
-    scores = result['simulation_scores']
     muts_count = result['muts_count']
-    probs = result['simulation_probs']
     observed = result['observed']
-    statistic_name = result['statistic_name']
+    items_to_simulate = result['simulation_items']
+    items_to_simulate_prob = result['simulation_probs']
 
-    if statistic_name == "amean":
-        obs, neg_obs = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
-    else:
-        obs, neg_obs = compute_sampling_python(samples, muts_count, observed, scores, probs, statistic_name)
+    r = _compute_sampling(samples, muts_count, observed, items_to_simulate, items_to_simulate_prob)
 
-    return name, obs, neg_obs
+    # TODO update result
 
-
-def compute_sampling_python(samples, muts, observed, scores, probs, statistic_name):
-    statistic_test = STATISTIC_TESTS.get(statistic_name)
-    background = np.random.choice(scores, size=(samples, muts), p=probs, replace=True)
-    return statistic_test.calc_observed(background, np.array(observed))
+    return
 
 
-def compute_sampling_cython(samples, muts, obs_val, scores, probs):
-
-    # Walker alias initialization
-    size = len(scores)
-    probs = probs * size
-    inx = -np.ones(size, dtype=int)
-    short = np.where(probs < 1)[0].tolist()
-    long = np.where(probs > 1)[0].tolist()
-    while short and long:
-        j = short.pop()
-        k = long[-1]
-
-        inx[j] = k
-        probs[k] -= (1 - probs[j])
-        if probs[k] < 1:
-            short.append(k)
-            long.pop()
-
-    # Check maximum to avoid long overflow
-    if samples < 2000000000:
-        return walker_sampling(samples, muts, obs_val, scores, probs, inx)
-    else:
-        obs, neg_obs = 0, 0
-        for p in partitions_list(samples, 2000000000):
-            o, no = walker_sampling(p, muts, obs_val, scores, probs, inx)
-            obs += o
-            neg_obs += no
-
-    return obs, neg_obs
-
-
-if __name__ == "__main__":
-    import time
-
-    size = 1000
-    samples = 1000000
-    muts = 50
-
-    scores = np.random.rand(size)
-    probs = np.random.rand(size)
-    probs = probs / sum(probs)
-    obs_val = np.mean(np.random.rand(muts))
-
-    s = time.time()
-    obs, neg_obs = compute_sampling_python(samples, muts, obs_val, scores, probs, 'amean')
-    print("Python time: {} Obs:{} Neg_obs:{}".format(time.time() - s, obs, neg_obs))
-
-    s = time.time()
-    obs, neg_obs = compute_sampling_cython(samples, muts, obs_val, scores, probs)
-    print("Cython time: {} Obs:{} Neg_obs:{}".format(time.time() - s, obs, neg_obs))
+def _compute_sampling(samples, muts, observed, items, probs):
+    # TODO add test
+    raise NotImplementedError

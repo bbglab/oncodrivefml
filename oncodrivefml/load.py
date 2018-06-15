@@ -111,9 +111,6 @@ def load_mutations(file, blacklist=None, metadata_dict=None):
     samples_blacklisted = set([s.strip() for s in open(blacklist).readlines()]) if blacklist is not None else set()
 
     snp = 0
-    indel = 0
-    mnp = 0
-    mnp_length = 0
 
     for row in readers.variants(file, extra=['CANCER_TYPE', 'SIGNATURE'], required=['CHROMOSOME', 'POSITION', 'REF', 'ALT', 'SAMPLE']):
         if row['SAMPLE'] in samples_blacklisted:
@@ -121,22 +118,13 @@ def load_mutations(file, blacklist=None, metadata_dict=None):
 
         if row['ALT_TYPE'] == 'snp':
             snp += 1
-        elif row['ALT_TYPE'] == 'mnp':
-            mnp += 1
-            mnp_length += len(row['REF'])
-        elif row['ALT_TYPE'] == 'indel':
-            # very long indels are discarded
-            if max(len(row['REF']), len(row['ALT'])) > 20:
-                continue
-            indel += 1
+        else:
+            continue
 
         yield row
 
     if metadata_dict is not None:
         metadata_dict['snp'] = snp
-        metadata_dict['indel'] = indel
-        metadata_dict['mnp'] = mnp
-        metadata_dict['mnp_length'] = mnp_length
 
 
 def build_regions_tree(regions):
@@ -181,7 +169,7 @@ def load_elements_tree(elements_file):
     return build_regions_tree(elements)
 
 
-def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pickle=False):
+def load_and_map_variants(variants_file, elements_file, regions_of_interest_file, blacklist=None, save_pickle=False):
     """
     From the elements and variants file, get dictionaries with the segments grouped by element ID and the
     mutations grouped in the same way, as well as some information related to the mutations.
@@ -236,10 +224,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     i = 0
     show_small_progress_at = 100000
     show_big_progress_at = 1000000
-    indels_mapped_multiple_of_3 = 0
     snp_mapped = 0
-    mnp_mapped = 0
-    indels_mapped = 0
     for i, r in enumerate(load_mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist)):
 
         if r['CHROMOSOME'] not in elements_tree:
@@ -261,20 +246,11 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
         if intervals:
             if r['ALT_TYPE'] == 'snp':
                 snp_mapped += 1
-            elif r['ALT_TYPE'] == 'mnp':
-                mnp_mapped += 1
-            else:
-                indels_mapped += 1
-                if max(len(r['REF']), len(r['ALT'])) % 3 == 0:
-                    indels_mapped_multiple_of_3 += 1
 
     if i > show_small_progress_at:
         print('{} [{} muts]'.format(' '*(((show_big_progress_at-(i % show_big_progress_at)) // show_small_progress_at)+1), i), flush=True)
 
     variants_metadata_dict['snp_mapped'] = snp_mapped
-    variants_metadata_dict['mnp_mapped'] = mnp_mapped
-    variants_metadata_dict['indels_mapped'] = indels_mapped
-    variants_metadata_dict['indels_mapped_multiple_of_3'] = indels_mapped_multiple_of_3
     mutations_data_dict = {'data': variants_dict, 'metadata': variants_metadata_dict}
 
     if save_pickle:
@@ -285,4 +261,20 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
         except OSError:
             logger.debug("Imposible to write precomputed mutations mapping here: %s", variants_dict_precomputed)
 
-    return mutations_data_dict, elements
+    regions_of_interest = defaultdict(IntervalTree)
+    logger.info("Mapping regions of interest")
+
+    for r in readers.elements(regions_of_interest_file):
+        if r['CHROMOSOME'] not in elements_tree:
+            continue
+
+        intervals = elements_tree[r['CHROMOSOME']][r['START']]
+
+        if len(intervals) == 0:
+            logger.warning('Region %s-%s (%s-%s) cannot be mapped' % (r['CHROMOSOME'], r['ELEMENT'], r['START'], r['STOP']))
+        else:
+            for interval in intervals:
+                element, segment = interval.data
+                regions_of_interest[element].addi(r['START'], r['STOP']+1)
+
+    return mutations_data_dict, elements, regions_of_interest

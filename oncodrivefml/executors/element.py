@@ -1,18 +1,14 @@
-import math
 import logging
 import numpy as np
-from collections import Counter
 
 from oncodrivefml import __logger_name__
-from oncodrivefml.indels import Indel
-from oncodrivefml.scores import Scores
-from oncodrivefml.signature import triplet_counter_executor
-from oncodrivefml.stats import STATISTIC_TESTS
+from oncodrivefml.signature import get_ref_triplet
 from oncodrivefml.walker import partitions_list
 
 logger = logging.getLogger(__logger_name__)
 
-class ElementExecutor(object):
+
+class ElementExecutor:
     """
     Base class for executors that do the analysis per genomic element.
     The mutations are simulated to compute a p_value
@@ -29,227 +25,96 @@ class ElementExecutor(object):
 
     """
 
-    def __init__(self, element_id, muts, segments, signature, config):
+    def __init__(self, element_id, muts, segments, regions_of_interest, vep_reader, signature, config):
         # Input attributes
         self.name = element_id
-        self.use_mnp = not config['statistic']['discard_mnp']
-        self.indels_conf = config['statistic']['indels']
-        self.use_indels = self.indels_conf['include']
-        self.indels = None
 
-        if self.use_indels and self.use_mnp:
-            self.muts = muts
-        else:
-            self.muts = [m for m in muts if m['ALT_TYPE'] == 'snp']
-            if self.use_mnp:
-                self.muts += [m for m in muts if m['ALT_TYPE'] == 'mnp']
-            if self.use_indels:
-                self.muts += [m for m in muts if m['ALT_TYPE'] == 'indel']
+        self.muts = muts
 
         self.signature = signature
         self.segments = segments
         self.symbol = self.segments[0].get('SYMBOL', None)
-        self.strand = self.segments[0]['STRAND']
+
+        self.regions_of_interest = regions_of_interest
+
+        self.vep_reader = vep_reader
 
         # Configuration parameters
-        self.score_config = config['score']
         self.sampling_size = config['statistic']['sampling']
-        self.min_obs = config['statistic']['sampling_min_obs']
         self.sampling_chunk = config['statistic']['sampling_chunk'] * 10**6
         self.statistic_name = config['statistic']['method']
-        self.signature_column = config['signature']['classifier']
-        self.samples_method = config['statistic']['per_sample_analysis']
 
         # Output attributes
-        self.obs = 0
-        self.neg_obs = 0
-        self.result = None
-        self.scores = None
-
-        self.p_subs = config['p_subs']
-        self.p_indels = config['p_indels']
-
-    def compute_muts_statistics(self):
-        """
-        Assigns scores to the mutations and retrieve the ones that are going
-        to be simulated
-
-        Returns:
-            dict: several information about the mutations and a list of them with the scores
-
-        """
-        raise RuntimeError("The classes that extend ElementExecutor must override, at least the compute_muts_statistics() method")
-
-    def compute_mutation_score(self, mutation):
-
-        # Get substitutions scores
-        if mutation['ALT_TYPE'] == "snp":
-            mutation['POSITION'] = int(mutation['POSITION'])
-            values = self.scores.get_score_by_position(mutation['POSITION'])
-            for v in values:
-                if v.ref == mutation['REF'] and v.alt == mutation['ALT']:
-                    mutation['SCORE'] = v.value
-                    break
-            else:
-                logger.warning('Reference mismatch or missing score in SNP at position {} of chr {}'.format(mutation['POSITION'], mutation['CHROMOSOME']))
-
-        elif mutation['ALT_TYPE'] == "mnp":
-            pos = int(mutation['POSITION'])
-            mnp_scores = []
-            for index, nucleotides in enumerate(zip(mutation['REF'], mutation['ALT'])):
-                ref_nucleotide, alt_nucleotide = nucleotides
-                values = self.scores.get_score_by_position(pos + index)
-                for v in values:
-                    if v.ref == ref_nucleotide and v.alt == alt_nucleotide:
-                        mnp_scores.append(v.value)
-                        break
-                else:
-                    logger.warning('Reference mismatch or missing score in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
-            if not mnp_scores:
-                return
-            mutation['SCORE'] = max(mnp_scores)
-            mutation['POSITION'] = pos + mnp_scores.index(mutation['SCORE'])
-
-        elif mutation['ALT_TYPE'] == "indel":
-
-            score = self.indels.get_indel_score(mutation)
-
-            mutation['SCORE'] = score if not math.isnan(score) else None
+        self.result = {}
 
     def run(self):
         """
-        Loads the scores and compute the statistics for the observed mutations.
-        Perform simulations to compute a set of randomized scores.
-        By comparing those scores with the observed through different
-        statistical tests, a p-value can be obtained.
-
         """
 
-        # Load element scores
-        self.scores = Scores(self.name, self.segments, self.score_config)
+        observed = [(m['POSITION'], m['ALT']) for m in self.muts]
 
-        if self.use_indels:
-            self.indels = Indel(self.scores, self.strand)
+        if len(self.muts) > 0:
 
-        # Compute observed mutations statistics and scores
-        self.result = self.compute_muts_statistics()
+            items_to_simulate = []
+            items_to_simulate_prob = []
 
-        if len(self.result['mutations']) > 0:
-            statistic_test = STATISTIC_TESTS.get(self.statistic_name)
+            with self.vep_reader as reader:
 
-            positions = self.scores.get_all_positions()
+                for region in self.segments:
 
-            observed = []
-            subs_scores = []
-            subs_probs = []
-            indels_scores = []
-            indels_probs = []
+                    for row in reader.get(region['CHROMOSOME'], region['START'], region['STOP']):
 
-            subs_probs_by_signature = {}
-            signature_ids = []
+                        pos, conseqs = row
 
-            indels_simulated_as_subs = 0
+                        ref_triplet = get_ref_triplet(region['CHROMOSOME'], pos - 1)
+                        ref = ref_triplet[1]
 
-            for mut in self.result['mutations']:
-                observed.append(mut['SCORE'])  # Observed mutations
+                        for alt, conseq in zip('ACGT', conseqs):
+                            if alt == ref:
+                                continue
 
-                # Indels treated as subs also count for the subs probs
-                if mut['ALT_TYPE'] == 'indel' and self.indels.simulated_as_subs:
-                    self.p_subs = 1
-                    self.p_indels = 0
-                    if self.signature is not None:
-                        if self.indels_conf['simulate_with_signature']:
-                            signature_ids.append(mut.get(self.signature_column, self.signature_column))
-                        else:
-                            signature_ids.append('equiprobable_signature')
-                # When only in frame indels are simulated as subs
-                elif mut['ALT_TYPE'] == 'indel' and self.indels.in_frame_simulated_as_subs:
-                    if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
-                        indels_simulated_as_subs += 1
-                    if self.signature is not None:
-                        if self.indels_conf['simulate_with_signature']:
-                            signature_ids.append(mut.get(self.signature_column, self.signature_column))
-                        else:
-                            signature_ids.append('equiprobable_signature')
+                            alt_triplet = ref_triplet[0] + alt + ref_triplet[2]
 
-                else:  # SNP or MNP
-                    if self.signature is not None:
-                        # Count how many signature ids are and prepare a vector for each
-                        # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
-                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
+                            items_to_simulate.append((pos, alt))
 
-            for signature_id in set(signature_ids):
-                subs_probs_by_signature.update({signature_id: []})
-
-            # When the probabilities of subs and indels are None, they are taken from
-            # mutations seen in the gene
-            if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
-                self.p_subs = (self.result['snps'] + self.result['mnps'] + indels_simulated_as_subs) / len(self.result['mutations'])
-                self.p_indels = 1 - self.p_subs
-            # Compute the values for the substitutions
-            if self.p_subs > 0:
-                for pos in positions:
-                    for s in self.scores.get_score_by_position(pos):
-                        subs_scores.append(s.value)
-                        for k, v in subs_probs_by_signature.items():
-                            if k in self.signature:
-                                v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
+                            if conseq == 'missense' or conseq == 'missense_variant':
+                                if self.signature is None:
+                                    items_to_simulate_prob.append(1)
+                                else:
+                                    items_to_simulate_prob.append(self.signature.get((ref_triplet, alt_triplet), 0.0))
                             else:
-                                v.append(1/(self.signature.get('trinucleotides', 64)*3))
+                                items_to_simulate_prob.append(0.0)
 
-                if len(subs_probs_by_signature) > 0:
-                    signature_ids_counter = Counter(signature_ids)
-                    total_ids = len(signature_ids)
-                    subs_probs = np.array([0.0] * len(subs_scores))
-                    for k, v in subs_probs_by_signature.items():
-                        subs_probs += (np.array(v) * signature_ids_counter[k] / total_ids)
-                    tot = sum(subs_probs)
-                    if tot == 0.0:
-                        logger.warning('Probability of substitutions equal to 0 in {}'.format(self.name))
-                        self.result['partitions'] = []
-                        self.result['sampling_size'] = self.sampling_size
-                        self.result['obs'] = None
-                        self.result['neg_obs'] = None
-                        return self
-                    else:
-                        subs_probs = subs_probs * self.p_subs / tot
-                    subs_probs = list(subs_probs)
-                else:  # Same prob for all values (according to the prob of substitutions)
-                    subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []
+            if sum(items_to_simulate_prob) == 0:
+                logger.warning('Probability of simulation equal to 0 in {}'.format(self.name))
+                self.result['partitions'] = []
+            else:
+                # normalize probs
+                items_to_simulate_prob = np.array(items_to_simulate_prob)
+                items_to_simulate_prob = items_to_simulate_prob / sum(items_to_simulate_prob)
 
-            if self.use_indels and self.p_indels > 0:
-                indels_scores = self.indels.get_background_indel_scores()
+                muts_count = len(self.result['mutations'])
+                chunk_count = (self.sampling_size * muts_count) // self.sampling_chunk
+                chunk_size = self.sampling_size if chunk_count == 0 else self.sampling_size // chunk_count
 
-                # All indels have the same probability
-                indels_probs = [self.p_indels/len(indels_scores)] * len(indels_scores) if len(indels_scores) > 0 else []
+                # Calculate sampling parallelization partitions
+                self.result['partitions'] = partitions_list(self.sampling_size, chunk_size)
+                self.result['sampling'] = {}
 
-            simulation_scores = subs_scores + indels_scores
-            simulation_probs = subs_probs + indels_probs
+                # Run first partition
+                first_partition = self.result['partitions'].pop(0)
+                background = np.random.choice(items_to_simulate, size=(first_partition, muts_count), p=items_to_simulate_prob, replace=True)
 
-            muts_count = len(self.result['mutations'])
-            chunk_count = (self.sampling_size * muts_count) // self.sampling_chunk
-            chunk_size = self.sampling_size if chunk_count == 0 else self.sampling_size // chunk_count
+                # TODO statitical test and store results
 
-            # Calculate sampling parallelization partitions
-            self.result['partitions'] = partitions_list(self.sampling_size, chunk_size)
-            self.result['sampling'] = {}
-
-            # Run first partition
-            first_partition = self.result['partitions'].pop(0)
-            background = np.random.choice(simulation_scores, size=(first_partition, muts_count), p=simulation_probs, replace=True)
-            obs, neg_obs = statistic_test.calc_observed(background, np.array(observed))
-            self.result['obs'] = obs
-            self.result['neg_obs'] = neg_obs
-
-            # Sampling parallelization (if more than one partition)
-            if len(self.result['partitions']) > 0 or obs < self.min_obs:
-                self.result['muts_count'] = muts_count
-                self.result['simulation_scores'] = simulation_scores
-                self.result['simulation_probs'] = simulation_probs
-                self.result['observed'] = observed
-                self.result['statistic_name'] = self.statistic_name
+                # Sampling parallelization (if more than one partition)
+                if len(self.result['partitions']) > 0:
+                    self.result['muts_count'] = muts_count
+                    self.result['simulation_items'] = items_to_simulate
+                    self.result['simulation_probs'] = items_to_simulate_prob
 
         self.result['sampling_size'] = self.sampling_size
         self.result['symbol'] = self.symbol
+        self.result['observed'] = observed
 
         return self
