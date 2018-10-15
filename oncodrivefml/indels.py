@@ -30,7 +30,7 @@ the impact of the indels.
 """
 
 import math
-import random
+
 import numpy as np
 
 from oncodrivefml.signature import get_ref
@@ -94,10 +94,10 @@ class StopsScore:
     def random(self, x):
         p2 = max(x)
         p1 = min(x)
-        return random.uniform(p1, p2)
+        return np.random.uniform(p1, p2)
 
     def choose(self, x):
-        return random.choice(x)
+        return np.random.choice(x)
 
 
 class Indel:

@@ -29,9 +29,11 @@ class ElementExecutor(object):
 
     """
 
-    def __init__(self, element_id, muts, segments, signature, config):
+    def __init__(self, element_id, muts, segments, signature, config, seed):
         # Input attributes
         self.name = element_id
+        self.seed = seed
+
         self.use_mnp = not config['statistic']['discard_mnp']
         self.indels_conf = config['statistic']['indels']
         self.use_indels = self.indels_conf['include']
@@ -124,6 +126,8 @@ class ElementExecutor(object):
         statistical tests, a p-value can be obtained.
 
         """
+        # as this method in run as a separate process, we need to fix a seed here too
+        np.random.seed(self.seed)
 
         # Load element scores
         self.scores = Scores(self.name, self.segments, self.score_config)
@@ -248,6 +252,7 @@ class ElementExecutor(object):
                 self.result['simulation_probs'] = simulation_probs
                 self.result['observed'] = observed
                 self.result['statistic_name'] = self.statistic_name
+                self.result['seed'] = np.random.randint(0, 2 ** 32 - 1)  # generate a new seed for further executions
 
         self.result['sampling_size'] = self.sampling_size
         self.result['symbol'] = self.symbol

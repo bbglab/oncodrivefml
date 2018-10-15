@@ -13,6 +13,8 @@ from collections import defaultdict
 from multiprocessing.pool import Pool
 from logging.config import dictConfig
 
+import numpy as np
+
 from oncodrivefml import __version__, __logger_name__
 from oncodrivefml.config import load_configuration, file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
@@ -45,7 +47,7 @@ class OncodriveFML(object):
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, generate_pickle):
+    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, seed, generate_pickle):
         logger.debug('Using OncodriveFML version %s', __version__)
 
         # Required parameters
@@ -91,6 +93,8 @@ class OncodriveFML(object):
         logger.debug('Configuration used:\n' + s.getvalue().decode())
         s.close()
 
+        np.random.seed(seed)
+
     def __create_element_executor(self, element_id, element_mutations):
         """
         To enable parallelization, for each element ID,
@@ -105,12 +109,13 @@ class OncodriveFML(object):
             :class:`~oncodrivefml.executors.bysample.GroupBySampleExecutor`.
 
         """
+        seed = np.random.randint(0, 2 ** 32 - 1)
         if self.samples_statistic_method is None:
             return GroupByMutationExecutor(element_id, element_mutations, self.elements[element_id], self.signatures,
-                                           self.configuration)
+                                           self.configuration, seed)
         else:
             return GroupBySampleExecutor(element_id, element_mutations, self.elements[element_id], self.signatures,
-                                         self.configuration)
+                                         self.configuration, seed)
 
     def __compute_signature(self):
         conf = self.configuration['signature']
@@ -204,7 +209,7 @@ class OncodriveFML(object):
 
         # Create one executor per element
         element_executors = [self.__create_element_executor(element_id, muts) for
-                             element_id, muts in self.mutations.items()]
+                             element_id, muts in sorted(self.mutations.items())]
 
         # Remove elements that don't have mutations to compute
         element_executors = [e for e in element_executors if len(e.muts) > 0]
@@ -290,7 +295,7 @@ class OncodriveFML(object):
         logger.info("Done")
 
 
-def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, config_override_dict=None):
+def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, seed, generate_pickle, config_override_dict=None):
     """
     Run OncodriveFML analysis
 
@@ -325,13 +330,11 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
             dictConfig(configuration['logging'])
 
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
-                            samples_blacklist, generate_pickle)
+                            samples_blacklist, seed, generate_pickle)
 
     logger.info('Running analysis')
     # Run the analysis
     analysis.run()
-
-
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
@@ -343,16 +346,16 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), metavar='CONFIG_FILE', help="Configuration file. Default to 'oncodrivefml_v2.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml_v2.conf if not.")
 @click.option('--samples-blacklist', default=None, type=click.Path(exists=True), metavar='SAMPLES_BLACKLIST', help="Remove these samples when loading the input file.")
 @click.option('--no-indels', help="Discard indels in your analysis", is_flag=True)
+@click.option('--seed', help="Set up an initial random seed to have reproducible results", type=click.IntRange(0, 2**32-1), default=None)
 @click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions and exit.", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
-def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist, no_indels, generate_pickle, debug):
+def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist, no_indels, seed, generate_pickle, debug):
     """
     Run OncodriveFML on the genomic regions in ELEMENTS FILE
     using the mutations in MUTATIONS FILE.
 
     """
-
 
     dd = lambda: defaultdict(dd)
     override_config = dd()
@@ -379,7 +382,7 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
     else:
         override_config['logging']['handlers']['console']['level'] = 'INFO'
 
-    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, generate_pickle, override_config)
+    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, seed, generate_pickle, override_config)
 
 
 if __name__ == "__main__":

@@ -11,9 +11,6 @@ class GroupBySampleExecutor(ElementExecutor):
 
     """
 
-    def __init__(self, element_id, muts, segments, signature, config):
-        super(GroupBySampleExecutor, self).__init__(element_id, muts, segments, signature, config)
-
     def compute_muts_statistics(self):
         """
         Gets the score of each mutation.

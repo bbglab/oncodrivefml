@@ -36,6 +36,9 @@ def compute_sampling(value):
     probs = result['simulation_probs']
     observed = result['observed']
     statistic_name = result['statistic_name']
+    seed = result['seed']
+    np.random.seed(seed)
+    result['seed'] = np.random.randint(0, 2 ** 32 - 1)
 
     if statistic_name == "amean":
         obs, neg_obs = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
@@ -71,11 +74,13 @@ def compute_sampling_cython(samples, muts, obs_val, scores, probs):
 
     # Check maximum to avoid long overflow
     if samples < 2000000000:
-        return walker_sampling(samples, muts, obs_val, scores, probs, inx)
+        seed = np.random.randint(0, 2 ** 31 - 1)
+        return walker_sampling(samples, muts, obs_val, scores, probs, inx, seed)
     else:
         obs, neg_obs = 0, 0
         for p in partitions_list(samples, 2000000000):
-            o, no = walker_sampling(p, muts, obs_val, scores, probs, inx)
+            seed = np.random.randint(0, 2 ** 31 - 1)
+            o, no = walker_sampling(p, muts, obs_val, scores, probs, inx, seed)
             obs += o
             neg_obs += no
 
@@ -88,6 +93,8 @@ if __name__ == "__main__":
     size = 1000
     samples = 1000000
     muts = 50
+
+    np.random.seed(0)
 
     scores = np.random.rand(size)
     probs = np.random.rand(size)
