@@ -82,7 +82,7 @@ def element_counter_executor(elements):
         stop = segment[STOP]
         try:
             seq = refseq(build, chrom, start, stop-start+1)
-        except ValueError:
+        except (ValueError, RuntimeError):
             logging.warning('Error in ref for CHR: {} positions: {}:{}'.format(chrom, start, stop))
             continue
         counts.update(triplets(seq))
