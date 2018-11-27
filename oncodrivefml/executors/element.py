@@ -252,7 +252,6 @@ class ElementExecutor(object):
                 self.result['simulation_probs'] = simulation_probs
                 self.result['observed'] = observed
                 self.result['statistic_name'] = self.statistic_name
-                self.result['seed'] = np.random.randint(0, 2 ** 32 - 1)  # generate a new seed for further executions
 
         self.result['sampling_size'] = self.sampling_size
         self.result['symbol'] = self.symbol

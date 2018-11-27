@@ -109,7 +109,7 @@ class OncodriveFML(object):
             :class:`~oncodrivefml.executors.bysample.GroupBySampleExecutor`.
 
         """
-        seed = np.random.randint(0, 2 ** 32 - 1)
+        seed = np.random.randint(0, 2**32-1)
         if self.samples_statistic_method is None:
             return GroupByMutationExecutor(element_id, element_mutations, self.elements[element_id], self.signatures,
                                            self.configuration, seed)
@@ -233,7 +233,7 @@ class OncodriveFML(object):
             while len(partitions) > 0 or i == 0:
 
                 i += 1
-                logger.info("Parallel sampling. Iteration %d, genes %d, partitions %d", i, len(set([n for n,p,r in partitions])), len(partitions))
+                logger.info("Parallel sampling. Iteration %d, genes %d, partitions %d", i, len(set([n for n, p, r, s in partitions])), len(partitions))
 
                 # Pending sampling execution
                 for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
@@ -254,7 +254,7 @@ class OncodriveFML(object):
 
                         result['sampling_size'] = next_sampling_size
                         for partition in partitions_list(pending_sampling_size, chunk_size):
-                            partitions.append((name, partition, result))
+                            partitions.append((name, partition, result, np.random.randint(0, 2**32-1)))
 
             # Compute p-values
             logger.info("Compute p-values")
@@ -338,7 +338,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 
 
 @click.command(context_settings=CONTEXT_SETTINGS)
-@click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', metavar='MUTATIONS_FILE',required=True)
+@click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', metavar='MUTATIONS_FILE', required=True)
 @click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), metavar='ELEMENTS_FILE', help='Genomic elements to analyse', required=True)
 @click.option('-t', '--type', type=click.Choice(['coding', 'noncoding']), help='Type of genomic elements file', required=True)
 @click.option('-s', '--sequencing', type=click.Choice(['wgs', 'wes', 'targeted']), help='Type of sequencing: whole genome, whole exome or targeted.', required=True)
