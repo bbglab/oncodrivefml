@@ -47,7 +47,7 @@ class OncodriveFML(object):
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, seed, generate_pickle):
+    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, cores, seed, generate_pickle):
         logger.debug('Using OncodriveFML version %s', __version__)
 
         # Required parameters
@@ -65,7 +65,7 @@ class OncodriveFML(object):
         genome_reference_build = self.configuration['genome']['build']
         change_ref_build(genome_reference_build)
 
-        self.cores = self.configuration['settings']['cores']
+        self.cores = cores if cores is not None else self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
         logger.debug('Using %s cores', self.cores)
@@ -295,7 +295,8 @@ class OncodriveFML(object):
         logger.info("Done")
 
 
-def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, seed, generate_pickle, config_override_dict=None):
+def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed, generate_pickle,
+         config_override_dict=None):
     """
     Run OncodriveFML analysis
 
@@ -307,6 +308,8 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
         config_file (str): path to configuration file
         samples_blacklist (str): path to samples blacklist file. Set to :obj:`None`
            if you are not using any blacklist file
+        cores (int): cores to use for parallelization
+        seed (int): initial random seed
         generate_pickle (bool): whether run OncodriveFML to generate pickle files or full analysis
         config_override_dict (dict, optional): override configuration from file
 
@@ -330,7 +333,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
             dictConfig(configuration['logging'])
 
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
-                            samples_blacklist, seed, generate_pickle)
+                            samples_blacklist, cores, seed, generate_pickle)
 
     logger.info('Running analysis')
     # Run the analysis
@@ -346,11 +349,13 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), metavar='CONFIG_FILE', help="Configuration file. Default to 'oncodrivefml_v2.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml_v2.conf if not.")
 @click.option('--samples-blacklist', default=None, type=click.Path(exists=True), metavar='SAMPLES_BLACKLIST', help="Remove these samples when loading the input file.")
 @click.option('--no-indels', help="Discard indels in your analysis", is_flag=True)
+@click.option('--cores', help="Cores to use. Default: all", default=None, type=int)
 @click.option('--seed', help="Set up an initial random seed to have reproducible results", type=click.IntRange(0, 2**32-1), default=None)
 @click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions and exit.", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
-def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist, no_indels, seed, generate_pickle, debug):
+def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist,
+            no_indels, cores, seed, generate_pickle, debug):
     """
     Run OncodriveFML on the genomic regions in ELEMENTS FILE
     using the mutations in MUTATIONS FILE.
@@ -382,7 +387,8 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
     else:
         override_config['logging']['handlers']['console']['level'] = 'INFO'
 
-    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, seed, generate_pickle, override_config)
+    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed, generate_pickle,
+         override_config)
 
 
 if __name__ == "__main__":
