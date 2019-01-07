@@ -187,7 +187,7 @@ class ScoresTabixReader:
 
     def get(self, chromosome, start, stop, element=None):
         try:
-            for row in self.tb.query("{}{}".format(self.conf_chr_prefix, chromosome), start - 1, stop):
+            for row in self.tb.query("{}{}".format(self.conf_chr_prefix, chromosome), start, stop):
                 try:
                     r = self._read_row(row)
                 except IndexError:
@@ -348,7 +348,7 @@ class Scores(object):
         tb = tabix.open(stops_file)
         for region in self.segments:
             try:
-                for row in tb.query(region['CHROMOSOME'], region['START'] - 1, region['STOP']):
+                for row in tb.query(region['CHROMOSOME'], region['START'], region['STOP']):
                     pos = int(row[1])
                     ref = row[2]
                     alt = row[3]
