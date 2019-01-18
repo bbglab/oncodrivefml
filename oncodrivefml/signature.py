@@ -132,7 +132,7 @@ def get_alternate_signature(line):
     return line['Signature_reference'][0] + line['ALT'] + line['Signature_reference'][2]
 
 
-def complementary_sequence(seq):
+def reverse_complementary_sequence(seq):
     """
 
     Args:
@@ -142,7 +142,7 @@ def complementary_sequence(seq):
         str: complementary sequence
 
     """
-    return "".join([__CB[base] if base in __CB else base for base in seq.upper()])
+    return "".join([__CB[base] if base in __CB else base for base in seq.upper()[::-1]])
 
 
 def collapse_complementaries(signature):
@@ -160,7 +160,7 @@ def collapse_complementaries(signature):
     comp_sig = defaultdict(int)
     for k, v in signature.items():
         comp_sig[k] += v
-        comp_k = (complementary_sequence(k[0]), complementary_sequence(k[1]))
+        comp_k = (reverse_complementary_sequence(k[0]), reverse_complementary_sequence(k[1]))
         comp_sig[comp_k] += v
     return comp_sig
 
