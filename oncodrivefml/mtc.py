@@ -39,5 +39,5 @@ def multiple_test_correction(results, num_significant_samples=2):
         results_good['qvalue_neg'] = np.nan
 
     # Concat results
-    results_concat = pd.concat([results_good, results_masked])
+    results_concat = pd.concat([results_good, results_masked], sort=False)
     return results_concat
