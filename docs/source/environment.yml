@@ -6,22 +6,23 @@ channels:
 - conda-forge
 - r
 dependencies:
-- bgconfig=0.5
-- numpy=1.11.2
-- scipy=0.18
+- bgconfig=0.6
+- numpy=1.14.2
+- scipy=1.0.0
 - statsmodels=0.8
-- pytabix=0.1
+- pytabix=0.0.2
 - bokeh=0.12
-- pandas=0.19
+- pandas=0.22
 - matplotlib=1.5.3
 - intervaltree=2.1
-- bgdata=1.0
+- bgdata=1.5
 - itab=0.9
-- bgreference=0.1
+- bgreference=0.5
 - click=6.7
-- bgparsers=0.3
+- bgparsers=0.6
 - bgcache=0.1
-- ago=0.0.8
-- cython=0.25.2
-- python=3.5.*
+- ago=0.0.9
+- cython=0.27.3
+- python=3.6.*
 - sphinx=1.5.1
+
