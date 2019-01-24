@@ -15,3 +15,4 @@ bgparsers>=0.3
 bgcache>=0.1
 ago>=0.0.8
 cython>=0.25.2
+bglogs>=0.6

@@ -196,36 +196,3 @@ stops_function = 'mean'
 # Number of cores to use in the analysis
 # Comment this option to use all avaliable cores
 # cores = 6
-
-
-
-# Configuration for the logging system
-[logging]
-version = 1
-disable_existing_loggers = False
-# Configuration for the handlers
-[[handlers]]
-# Log to stdout
-[[[console]]]
-class = 'logging.StreamHandler'
-formatter = 'bgformat'
-level = 'INFO'
-stream = 'ext://sys.stdout'
-# log to a file
-[[[file]]]
-class = 'logging.FileHandler'
-formatter = 'bgformat'
-filename = 'log.txt'
-mode = 'w'
-# Configuration for the formatters
-[[formatters]]
-[[[bgformat]]]
-format ='%(asctime)s %(levelname)s: %(message)s'
-datefmt ='%H:%M:%S'
-# Configuration for the loggers
-[[loggers]]
-# OncodriveFML logger
-[[[oncodrivefml]]]
-handlers = ['console', 'file']
-level = 'DEBUG'
-propagate = 0
