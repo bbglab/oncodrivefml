@@ -54,6 +54,3 @@ per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 
 [settings]
 cores = integer(default=None)
-
-[logging]
-version = integer(default=1)
