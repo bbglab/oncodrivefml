@@ -241,7 +241,7 @@ def compute_signature(signature_function, classifier, collapse=False, include_mn
         else:
             continue
 
-    if mismatches / total > 0.1:
+    if mismatches / total > 0.2:
         logger.error('Too many mismatches. You are using %s as reference genome, please check it is right. Program stopped', ref_build)
         sys.exit(-1)
     elif mismatches / total > 0.05:
