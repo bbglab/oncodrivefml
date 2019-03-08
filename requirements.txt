@@ -4,7 +4,7 @@ scipy>=0.18
 statsmodels>=0.8
 pytabix==0.0.2
 bokeh>=0.12.4
-pandas>=0.19
+pandas>=0.23
 matplotlib>=1.5.3
 intervaltree>=2.1
 bgdata>=1.0
