@@ -3,6 +3,8 @@ Contains the command line parsing
 """
 
 import os
+import warnings
+
 import click
 import logging
 from os.path import join, exists
@@ -36,8 +38,6 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 
     """
 
-    configuration = load_configuration(config_file, override=config_override_dict)
-
     output_folder = file_name(elements_file) if output_folder is None else output_folder
     output_file = join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv')
     # Skip if done
@@ -47,6 +47,10 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
     else:
         if not exists(output_folder):
             os.makedirs(output_folder, exist_ok=True)
+
+    configuration = load_configuration(config_file, override=config_override_dict)
+    if 'logging' in configuration:
+        warnings.warn('"logging" option from configuration is no longer supported', DeprecationWarning)
 
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
                             samples_blacklist, cores, seed, generate_pickle)
@@ -99,6 +103,7 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
         override_config['signature']['normalize_by_sites'] = None
 
     bglogs.configure(debug=debug)
+    warnings.filterwarnings("default", category=DeprecationWarning, module='oncodrivefml*')
 
     main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed, generate_pickle,
          override_config)
