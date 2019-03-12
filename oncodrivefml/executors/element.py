@@ -1,16 +1,16 @@
 import math
 import logging
 import numpy as np
-from collections import Counter
 
 from oncodrivefml import __logger_name__
+from oncodrivefml.executors import sig2probs
 from oncodrivefml.indels import Indel
 from oncodrivefml.scores import Scores
-from oncodrivefml.signature import triplet_counter_executor
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.walker import partitions_list
 
 logger = logging.getLogger(__logger_name__)
+
 
 class ElementExecutor(object):
     """
@@ -146,11 +146,11 @@ class ElementExecutor(object):
             observed = []
             subs_scores = []
             subs_probs = []
+
             indels_scores = []
             indels_probs = []
 
-            subs_probs_by_signature = {}
-            signature_ids = []
+            probs_of_subs = sig2probs.build(self.signature, self.signature_column)
 
             indels_simulated_as_subs = 0
 
@@ -161,62 +161,42 @@ class ElementExecutor(object):
                 if mut['ALT_TYPE'] == 'indel' and self.indels.simulated_as_subs:
                     self.p_subs = 1
                     self.p_indels = 0
-                    if self.signature is not None:
-                        if self.indels_conf['simulate_with_signature']:
-                            signature_ids.append(mut.get(self.signature_column, self.signature_column))
-                        else:
-                            signature_ids.append('equiprobable_signature')
+                    probs_of_subs.add_observed(mut)
                 # When only in frame indels are simulated as subs
                 elif mut['ALT_TYPE'] == 'indel' and self.indels.in_frame_simulated_as_subs:
                     if max(len(mut['REF']), len(mut['ALT'])) % 3 == 0:
                         indels_simulated_as_subs += 1
-                    if self.signature is not None:
-                        if self.indels_conf['simulate_with_signature']:
-                            signature_ids.append(mut.get(self.signature_column, self.signature_column))
-                        else:
-                            signature_ids.append('equiprobable_signature')
-
+                        probs_of_subs.add_observed(mut)
+                elif mut['ALT_TYPE'] == 'indel':
+                    pass
                 else:  # SNP or MNP
-                    if self.signature is not None:
-                        # Count how many signature ids are and prepare a vector for each
-                        # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
-                        signature_ids.append(mut.get(self.signature_column, self.signature_column))
-
-            for signature_id in set(signature_ids):
-                subs_probs_by_signature.update({signature_id: []})
+                    # Count how many signature ids are and prepare a vector for each
+                    # IMPORTANT: this implies that only the signature of the observed mutations is taken into account
+                    probs_of_subs.add_observed(mut)
 
             # When the probabilities of subs and indels are None, they are taken from
             # mutations seen in the gene
             if self.p_subs is None or self.p_indels is None: # use the probabilities based on observed mutations
                 self.p_subs = (self.result['snps'] + self.result['mnps'] + indels_simulated_as_subs) / len(self.result['mutations'])
                 self.p_indels = 1 - self.p_subs
+
             # Compute the values for the substitutions
             if self.p_subs > 0:
                 for pos in positions:
                     for s in self.scores.get_score_by_position(pos):
                         subs_scores.append(s.value)
-                        for k, v in subs_probs_by_signature.items():
-                            if k in self.signature:
-                                v.append(self.signature[k].get((s.ref_triplet, s.alt_triplet), 0.0))
-                            else:
-                                v.append(1/(self.signature.get('trinucleotides', 64)*3))
+                        probs_of_subs.add_background(s.ref_triplet + '>' + s.alt_triplet[1])
 
-                if len(subs_probs_by_signature) > 0:
-                    signature_ids_counter = Counter(signature_ids)
-                    total_ids = len(signature_ids)
-                    subs_probs = np.array([0.0] * len(subs_scores))
-                    for k, v in subs_probs_by_signature.items():
-                        subs_probs += (np.array(v) * signature_ids_counter[k] / total_ids)
-                    tot = sum(subs_probs)
-                    if tot == 0.0:
+                if probs_of_subs.size > 0:
+                    subs_probs = probs_of_subs.probs
+                    if sum(subs_probs) == 0.0:
                         logger.warning('Probability of substitutions equal to 0 in {}'.format(self.name))
                         self.result['partitions'] = []
                         self.result['sampling_size'] = self.sampling_size
                         self.result['obs'] = None
                         self.result['neg_obs'] = None
                         return self
-                    else:
-                        subs_probs = subs_probs * self.p_subs / tot
+                    subs_probs = subs_probs * self.p_subs
                     subs_probs = list(subs_probs)
                 else:  # Same prob for all values (according to the prob of substitutions)
                     subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []

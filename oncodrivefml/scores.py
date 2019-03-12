@@ -24,21 +24,21 @@ values.
     totally nonsense values.
 
 """
-
-import os
-import mmap
-import gzip
-import json
-import tabix
-import struct
-import bgdata
 import logging
-import numpy as np
-from typing import List
+import gzip
+import mmap
+import json
+import os
+import struct
 from collections import defaultdict, namedtuple
+from typing import List
+
+import bgdata
+import numpy as np
+import tabix
 
 from oncodrivefml import __logger_name__
-from oncodrivefml.signature import get_ref_triplet, get_build
+from oncodrivefml.reference import get_ref_triplet, get_build
 
 logger = logging.getLogger(__logger_name__)
 
@@ -73,8 +73,8 @@ class ReaderError(Exception):
 
 class ReaderGetError(ReaderError):
 
-    def __init__(self, chr, start, stop):
-        self.message = 'Error reading chr: {} start: {} stop: {}'.format(chr, start, stop)
+    def __init__(self, chr, start, end):
+        self.message = 'Error reading chr: {} start: {} end: {}'.format(chr, start, end)
 
 
 class PackScoresReader:
@@ -317,7 +317,7 @@ class Scores(object):
             with scores_reader as reader:
                 for region in self.segments:
                     try:
-                        for row in reader.get(region['CHROMOSOME'], region['START'], region['STOP'], self.element):
+                        for row in reader.get(region['CHROMOSOME'], region['START'], region['END'], self.element):
                             score, ref, alt, pos = row
                             ref_triplet = get_ref_triplet(region['CHROMOSOME'], pos - 1)
                             ref = ref_triplet[1] if ref is None else ref
@@ -348,7 +348,7 @@ class Scores(object):
         tb = tabix.open(stops_file)
         for region in self.segments:
             try:
-                for row in tb.query(region['CHROMOSOME'], region['START'], region['STOP']):
+                for row in tb.query(region['CHROMOSOME'], region['START'], region['END']):
                     pos = int(row[1])
                     ref = row[2]
                     alt = row[3]
@@ -358,7 +358,7 @@ class Scores(object):
 
             except tabix.TabixError:
                 logger.warning(
-                    "Tabix error at %s='%s:%d-%d'", self.element, region['CHROMOSOME'], region['START'] - 1, region['STOP'])
+                    "Tabix error at %s='%s:%d-%d'", self.element, region['CHROMOSOME'], region['START'], region['END'])
                 continue
 
         self.stop_scores = []

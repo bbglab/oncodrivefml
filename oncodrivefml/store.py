@@ -8,14 +8,15 @@ This module contains the methods used to store the results.
     - **html** graph: uses the *tsv* file and bokeh
 """
 
+import logging
 import gzip
 import os
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import logging
-import pandas as pd
 import numpy as np
+import pandas as pd
 from bokeh import __version__ as bokeh_version
 from bokeh.plotting import output_notebook
 from bokeh.embed import components

@@ -2,14 +2,14 @@
 Contains the command line parsing
 """
 
+import logging
 import os
 import warnings
-
-import click
-import logging
-from os.path import join, exists
 from collections import defaultdict
+from os import path
+
 import bglogs
+import click
 
 from oncodrivefml import __version__
 from oncodrivefml.config import load_configuration, file_name
@@ -18,7 +18,7 @@ from oncodrivefml.oncodrivefml import OncodriveFML
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed, generate_pickle,
+def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed,
          config_override_dict=None):
     """
     Run OncodriveFML analysis
@@ -39,13 +39,13 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
     """
 
     output_folder = file_name(elements_file) if output_folder is None else output_folder
-    output_file = join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv')
+    output_file = path.join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv')
     # Skip if done
-    if exists(output_file):
+    if path.exists(output_file):
         logging.warning("Already calculated at '{}'".format(output_file))
         return
     else:
-        if not exists(output_folder):
+        if not path.exists(output_folder):
             os.makedirs(output_folder, exist_ok=True)
 
     configuration = load_configuration(config_file, override=config_override_dict)
@@ -53,7 +53,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
         warnings.warn('"logging" option from configuration is no longer supported', DeprecationWarning)
 
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
-                            samples_blacklist, cores, seed, generate_pickle)
+                            samples_blacklist, cores, seed)
 
     bglogs.info('Running analysis')
     # Run the analysis
@@ -105,8 +105,11 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
     bglogs.configure(debug=debug)
     warnings.filterwarnings("default", category=DeprecationWarning, module='oncodrivefml*')
 
-    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed, generate_pickle,
-         override_config)
+    if generate_pickle:
+        warnings.warn('--generate-pickle option is no longer supported', DeprecationWarning)
+        return
+
+    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed, override_config)
 
 
 if __name__ == "__main__":

@@ -33,7 +33,7 @@ import math
 
 import numpy as np
 
-from oncodrivefml.signature import get_ref
+from oncodrivefml.reference import get_ref
 
 
 # Global variables

@@ -1,0 +1,3 @@
+
+class OncodriveFMLError(Exception):
+    pass

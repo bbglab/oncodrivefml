@@ -12,6 +12,7 @@ from oncodrivefml import __logger_name__
 
 logger = logging.getLogger(__logger_name__)
 
+
 def executor_run(executor):
     """
     Method to call the run method

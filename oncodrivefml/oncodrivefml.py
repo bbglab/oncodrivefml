@@ -7,21 +7,19 @@ import os
 import sys
 import csv
 import logging
+import warnings
 from os.path import join, exists
 from multiprocessing.pool import Pool
 
 import numpy as np
 
-from oncodrivefml import __version__, __logger_name__
+from oncodrivefml import __version__, __logger_name__, signature, load, reference
 from oncodrivefml.config import file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
-from oncodrivefml.load import load_and_map_variants, load_mutations
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.scores import init_scores_module
 from oncodrivefml.store import store_tsv, store_png, store_html
-from oncodrivefml.signature import load_signature, yield_mutations, change_ref_build, load_trinucleotides_counts, \
-    compute_regions_signature
 from oncodrivefml.utils import executor_run, loop_logging
 from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
@@ -40,11 +38,10 @@ class OncodriveFML(object):
        output_folder: Folder where the results will be stored
        config: configuration (see :ref:`configuration <project configuration>`)
        blacklist: File with sample ids (one per line) to remove when loading the input file
-       generate_pickle (bool): flag to only generate pickle files and exit
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, cores, seed, generate_pickle):
+    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, cores, seed):
         logger.debug('Using OncodriveFML version %s', __version__)
 
         # Required parameters
@@ -57,10 +54,9 @@ class OncodriveFML(object):
         if self.blacklist is not None:
             logger.debug('Blacklist file: %s', self.blacklist)
             logger.debug('Using a blacklist causes some pickle files not to be saved/loaded')
-        self.generate_pickle = generate_pickle
 
         genome_reference_build = self.configuration['genome']['build']
-        change_ref_build(genome_reference_build)
+        reference.change_build(genome_reference_build)
 
         self.cores = cores if cores is not None else self.configuration['settings']['cores']
         if self.cores is None:
@@ -70,6 +66,12 @@ class OncodriveFML(object):
         if self.configuration['signature']['method'] == 'bysample':
             self.configuration['signature']['method'] = 'complement'
             self.configuration['signature']['classifier'] = 'SAMPLE'
+
+        if self.configuration['statistic']['indels']['include'] and \
+                'simulate_with_signature' in self.configuration['statistic']['indels']:
+            warnings.warn('"simulate_with_signature" option deprecated. '
+                          'Indels simulated as substitutions follow the signature',
+                          DeprecationWarning)
 
         self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
@@ -117,24 +119,27 @@ class OncodriveFML(object):
     def __compute_signature(self):
         conf = self.configuration['signature']
 
-        precomputed_signature = self.mutations_file + '_signature_' + conf['method'] + '_' + conf['classifier'] + ".pickle.gz"
-        load_signature_pickle = precomputed_signature if self.blacklist is None else None
-        save_signature_pickle = precomputed_signature if self.generate_pickle else None
+        if conf.get('only_mapped_mutations', False):
+            warnings.warn('only_mapped_mutations for signature configuration is no longer used. Build your signature as a separate file.', DeprecationWarning)
 
-        trinucleotides_counts = None
-        if conf['only_mapped_mutations']:
-            signature_function = lambda: yield_mutations(self.mutations)
+        if conf.get('include_mnp', False):
+            warnings.warn(
+                'include_mnp for signature configuration is no longer used',
+                DeprecationWarning)
+
+        if conf['method'] == 'none':
+            logger.warning('Not using any signature')
+            self.signatures = None
+
+        elif conf['method'] == 'file':
             if conf['normalize_by_sites'] is not None:
-                trinucleotides_counts = compute_regions_signature(self.elements.values(), self.cores)
+                logger.warning('Cannot normalize precomputed signatures. Normalization of signatures omitted.')
+
+            self.signatures = signature.load(conf['path'])
+
         else:
-            signature_function = lambda: load_mutations(self.mutations_file, blacklist=self.blacklist)
-            if conf['normalize_by_sites'] is not None:
-                trinucleotides_counts = load_trinucleotides_counts(conf['normalize_by_sites'])
-
-        # Load signatures
-        self.signatures = load_signature(conf, signature_function, trinucleotides_counts,
-                                         load_pickle=load_signature_pickle,
-                                         save_pickle=save_signature_pickle)
+            self.signatures = signature.compute(load.snp(self.mutations_file, blacklist=self.blacklist),
+                                               conf['method'], conf['classifier'], conf['normalize_by_sites'])
 
     def __compute_simulation_probs(self, counts):
         """
@@ -180,13 +185,10 @@ class OncodriveFML(object):
         Run the OncodriveFML analysis.
         """
 
-        # TODO add explanation
-
         # Load mutations mapping
-        mutations_data, self.elements = load_and_map_variants(self.mutations_file,
-                                                              self.elements_file,
-                                                              blacklist=self.blacklist,
-                                                              save_pickle=self.generate_pickle)
+        mutations_data, self.elements = load.mutations_and_elements(self.mutations_file,
+                                                               self.elements_file,
+                                                               blacklist=self.blacklist)
 
         self.mutations = mutations_data['data']
 
@@ -194,10 +196,6 @@ class OncodriveFML(object):
 
         # Load signatures
         self.__compute_signature()
-
-        if self.generate_pickle:
-            logger.info('Pickles generated. Exiting')
-            return
 
         init_scores_module(self.configuration['score'])
 

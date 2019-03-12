@@ -16,7 +16,7 @@ elements (:obj:`dict`)
                 {
                 'CHROMOSOME': chromosome,
                 'START': start_position_of_the_segment,
-                'STOP': end_position_of_the_segment,
+                'END': end_position_of_the_segment,
                 'STRAND': strand (+ -> positive | - -> negative)
                 'ELEMENT': element_id,
                 'SEGMENT': segment_id,
@@ -77,21 +77,20 @@ mutations_data (:obj:`dict`)
 """
 
 import gzip
-import pickle
 import logging
-from os.path import exists
+import pickle
+
 from bgcache import bgcache
 from bgparsers import readers
 from collections import defaultdict
 from intervaltree import IntervalTree
 
 from oncodrivefml import __logger_name__
-from oncodrivefml.config import remove_extension_and_replace_special_characters as get_name
 
 logger = logging.getLogger(__logger_name__)
 
 
-def load_mutations(file, blacklist=None, metadata_dict=None):
+def mutations(file, blacklist=None, metadata_dict=None):
     """
     Parsed the mutations file
 
@@ -139,6 +138,13 @@ def load_mutations(file, blacklist=None, metadata_dict=None):
         metadata_dict['mnp_length'] = mnp_length
 
 
+def snp(file, blacklist=None):
+    """Load only SNP"""
+    for row in mutations(file, blacklist=blacklist):
+        if row['ALT_TYPE'] == 'snp':
+            yield row
+
+
 def build_regions_tree(regions):
     """
     Generates a binary tree with the intervals of the regions
@@ -155,12 +161,13 @@ def build_regions_tree(regions):
         .. code-block:: python
 
             { chromosome:
-                (start_position, stop_position +1): (element, segment)
+                (start_position, end_position +1): (element, segment)
             }
 
     """
     logger.info('Building regions tree')
     regions_tree = {}
+    i = 0
     for i, (k, allr) in enumerate(regions.items()):
 
         if i % 7332 == 0:
@@ -168,7 +175,7 @@ def build_regions_tree(regions):
 
         for r in allr:
             tree = regions_tree.get(r['CHROMOSOME'], IntervalTree())
-            tree[r['START']:(r['STOP']+1)] = (r['ELEMENT'], r['SEGMENT'])
+            tree[r['START']:(r['END']+1)] = (r['ELEMENT'], r['SEGMENT'])
             regions_tree[r['CHROMOSOME']] = tree
 
     logger.info("[%d of %d]", i+1, len(regions))
@@ -176,12 +183,12 @@ def build_regions_tree(regions):
 
 
 @bgcache
-def load_elements_tree(elements_file):
-    elements = readers.elements(elements_file)
+def elements_tree(elements_file):
+    elements = readers.elements_dict(elements_file)
     return build_regions_tree(elements)
 
 
-def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pickle=False):
+def mutations_and_elements(variants_file, elements_file, blacklist=None):
     """
     From the elements and variants file, get dictionaries with the segments grouped by element ID and the
     mutations grouped in the same way, as well as some information related to the mutations.
@@ -191,7 +198,6 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
         elements_file: elements file (see :class:`~oncodrivefml.main.OncodriveFML`)
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
            If the blacklist option is passed, the mutations are not loaded from a pickle file.
-        save_pickle (:obj:`bool`, optional): save pickle files
 
     Returns:
         tuple: mutations and elements
@@ -204,30 +210,21 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     The process is done in 3 steps:
        1. :meth:`load_regions`
        #. :meth:`build_regions_tree`.
-       #. each mutation (:meth:`load_mutations`) is associated with the right
+       #. each mutation (:meth:`mutations`) is associated with the right
           element ID
 
     """
     # Load elements file
-    elements = readers.elements(elements_file)
+    # TODO add extra and required
+    elements = readers.elements_dict(elements_file)
 
     # If the input file is a pickle file do nothing
     if variants_file.endswith(".pickle.gz"):
         with gzip.open(variants_file, 'rb') as fd:
             return pickle.load(fd), elements
 
-    # Check if it's already done
-    variants_dict_precomputed = variants_file + "_mapping_" + get_name(elements_file) + '.pickle.gz'
-    if exists(variants_dict_precomputed) and blacklist is None:
-        try:
-            logger.info("Using precomputed mutations mapping")
-            with gzip.open(variants_dict_precomputed, 'rb') as fd:
-                return pickle.load(fd), elements
-        except EOFError:
-            logger.error("Loading file %s", variants_dict_precomputed)
-
     # Loading elements tree
-    elements_tree = load_elements_tree(elements_file)
+    elements_tree_ = elements_tree(elements_file)
 
     # Mapping mutations
     variants_dict = defaultdict(list)
@@ -240,9 +237,9 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     snp_mapped = 0
     mnp_mapped = 0
     indels_mapped = 0
-    for i, r in enumerate(load_mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist)):
+    for i, r in enumerate(mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist)):
 
-        if r['CHROMOSOME'] not in elements_tree:
+        if r['CHROMOSOME'] not in elements_tree_:
             continue
 
         if i % show_small_progress_at == 0:
@@ -252,7 +249,7 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
             print(' [{} muts]'.format(i), flush=True)
 
         # Get the interval that include that position in the same chromosome
-        intervals = elements_tree[r['CHROMOSOME']][r['POSITION']]
+        intervals = elements_tree_[r['CHROMOSOME']][r['POSITION']]
 
         for interval in intervals:
             element, segment = interval.data
@@ -276,13 +273,5 @@ def load_and_map_variants(variants_file, elements_file, blacklist=None, save_pic
     variants_metadata_dict['indels_mapped'] = indels_mapped
     variants_metadata_dict['indels_mapped_multiple_of_3'] = indels_mapped_multiple_of_3
     mutations_data_dict = {'data': variants_dict, 'metadata': variants_metadata_dict}
-
-    if save_pickle:
-        # Try to store as precomputed
-        try:
-            with gzip.open(variants_dict_precomputed, 'wb') as fd:
-                pickle.dump(mutations_data_dict, fd)
-        except OSError:
-            logger.debug("Imposible to write precomputed mutations mapping here: %s", variants_dict_precomputed)
 
     return mutations_data_dict, elements

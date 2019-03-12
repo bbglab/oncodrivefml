@@ -1,8 +1,9 @@
 [genome]
 # Build of the reference genome
-# Currently human genomes supported: hg19, hg38 and hg18
-# mouse genomes: c3h and mm10
+# Currently human genomes supported: hg19 and hg38
 build = 'hg19'
+# It might work with hg18 and mouse genomes: c3h and mm10
+# if indels are not computed and signature not corrected
 
 
 
@@ -11,10 +12,10 @@ build = 'hg19'
 # Choose the method to calculate the trinuclotide singature:
 
 # "full" : Use a 192 matrix with all the possible signatures
-method = 'full'
+# method = 'full'
 
 # "complemented" : Use a 96 matrix with the signatures complemented
-# method = 'complement'
+method = 'complement'
 
 # "none": Don't use signature
 # method = 'none'
@@ -23,31 +24,17 @@ method = 'full'
 # method = 'bysample'
 
 # "file": Provide a file with the signature to use
-# The format is a tab separated file with header, and you have to set the columns to use.
+# The file should be created using bgsignatures package
 # method = 'file'
-# path = [path to the file that contains the signature]
-# column_ref = [column that contains the reference signature]
-# column_alt = [column that contains the alternate signature]
-# column_probability = [column that contaions the probability]
 
 
-# Choose the classifier (categorical value for the signature:
+# Choose the classifier (categorical value for the signature):
 # The classifier is a column in the dataset and must be one of these:
 # classifier = 'SIGNATURE'
 # classifier = 'SAMPLE'
 # classifier = 'CANCER_TYPE'
-# if the column is missing, all mutations contribute to the signature
-
-
-# Include/exclude MNP mutations in the signature computation
-include_mnp = True
-# include_mnp = False
-
-
-# Choose if the signature must be computed using the whole cohort or
-# only the elements that fall into the regions you are analysing:
-only_mapped_mutations = False
-# only_mapped_mutations = True
+# by default, all mutations contribute to the signature
+# If the signature is loaded from the a file, the same classifier must have been used.
 
 
 # The frequency of trinucleotides can be normalized by the frequency of sites
@@ -163,11 +150,6 @@ max_consecutive = 7
 
 # Do not discard indels that fall in repetitive regions
 # max_consecutive = 0
-
-
-# Indels simulated as substitutions take into account signature or not
-simulate_with_signature =  True
-# simulate_with_signature = False
 
 
 # Use exomic probabilities of frameshift indels in the dataset for the simulation
