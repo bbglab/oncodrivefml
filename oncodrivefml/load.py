@@ -175,7 +175,7 @@ def build_regions_tree(regions):
 
         for r in allr:
             tree = regions_tree.get(r['CHROMOSOME'], IntervalTree())
-            tree[r['START']:(r['END']+1)] = (r['ELEMENT'], r['SEGMENT'])
+            tree[r['START']:(r['END']+1)] = r['ELEMENT']
             regions_tree[r['CHROMOSOME']] = tree
 
     logger.info("[%d of %d]", i+1, len(regions))
@@ -184,7 +184,7 @@ def build_regions_tree(regions):
 
 @bgcache
 def elements_tree(elements_file):
-    elements = readers.elements_dict(elements_file)
+    elements = readers.elements_dict(elements_file, required=['CHROMOSOME', 'START', 'END', 'ELEMENT'])
     return build_regions_tree(elements)
 
 
@@ -216,7 +216,8 @@ def mutations_and_elements(variants_file, elements_file, blacklist=None):
     """
     # Load elements file
     # TODO add extra and required
-    elements = readers.elements_dict(elements_file)
+    elements = readers.elements_dict(elements_file, required=['CHROMOSOME', 'START', 'END', 'ELEMENT'],
+                                     extra=['SEGMENT', 'SYMBOL', 'STRAND'])
 
     # If the input file is a pickle file do nothing
     if variants_file.endswith(".pickle.gz"):
@@ -252,7 +253,7 @@ def mutations_and_elements(variants_file, elements_file, blacklist=None):
         intervals = elements_tree_[r['CHROMOSOME']][r['POSITION']]
 
         for interval in intervals:
-            element, segment = interval.data
+            element = interval.data
             variants_dict[element].append(r)
 
         if intervals:

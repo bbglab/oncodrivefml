@@ -51,7 +51,6 @@ class ElementExecutor(object):
         self.signature = signature
         self.segments = segments
         self.symbol = self.segments[0].get('SYMBOL', None)
-        self.strand = self.segments[0]['STRAND']
 
         # Configuration parameters
         self.score_config = config['score']
@@ -133,7 +132,7 @@ class ElementExecutor(object):
         self.scores = Scores(self.name, self.segments, self.score_config)
 
         if self.use_indels:
-            self.indels = Indel(self.scores, self.strand)
+            self.indels = Indel(self.scores)
 
         # Compute observed mutations statistics and scores
         self.result = self.compute_muts_statistics()

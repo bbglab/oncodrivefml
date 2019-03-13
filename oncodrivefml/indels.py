@@ -115,9 +115,8 @@ class Indel:
 
     """
 
-    def __init__(self, scores, strand):
+    def __init__(self, scores):
         self.scores = scores
-        self.has_positive_strand = False if strand == '-' else True
         self.simulated_as_subs = False
         self.in_frame_simulated_as_subs = False
 
@@ -177,7 +176,6 @@ class Indel:
         # Check if it's repeated
         seq = alt if '-' in ref else ref
         size = max_repeats * len(seq)
-        pos = pos if self.has_positive_strand else pos - size
         ref = get_ref(chrom, pos, size)
         return ref.count(seq) >= max_repeats
 
@@ -197,21 +195,13 @@ class Indel:
         position = mutation['POSITION']
         is_insertion = True if '-' in mutation['REF'] else False
         indel_size = max(len(mutation['REF']), len(mutation['ALT']))
-        if self.has_positive_strand:
-            reference = get_ref(mutation['CHROMOSOME'], position, indel_size + size)  # ensure we have enough values
-            # TODO check if we are looking for values outside the element
-            if is_insertion:
-                alteration = mutation['ALT'] + reference
-            else:
-                alteration = reference[indel_size:]
-            return reference[:size], alteration[:size]
-        else:  # negative strand
-            reference = get_ref(mutation['CHROMOSOME'], position - (indel_size + size), indel_size + size)  # ensure we have enough values
-            if is_insertion:
-                alteration = reference + mutation['ALT']
-            else:
-                alteration = reference[:-indel_size]  # remove the last indels_size elements
-            return reference[-size:], alteration[-size:]  # return only last size elements
+        reference = get_ref(mutation['CHROMOSOME'], position, indel_size + size)  # ensure we have enough values
+        # TODO check if we are looking for values outside the element
+        if is_insertion:
+            alteration = mutation['ALT'] + reference
+        else:
+            alteration = reference[indel_size:]
+        return reference[:size], alteration[:size]
 
     def compute_scores(self, reference, alternation, initial_position, size):
         """
@@ -258,10 +248,7 @@ class Indel:
 
         ref, alt = self.get_mutation_sequences(mutation, indel_size)
 
-        if self.has_positive_strand:
-            init_pos = position
-        else:
-            init_pos = position - indel_size
+        init_pos = position
 
         indel_scores = self.compute_scores(ref, alt, init_pos, indel_size)
 
@@ -292,10 +279,7 @@ class Indel:
             position = int(mutation['POSITION'])
             ref, alt = self.get_mutation_sequences(mutation, indel_size)
 
-            if self.has_positive_strand:
-                init_pos = position
-            else:
-                init_pos = position - indel_size
+            init_pos = position
             indel_scores = self.compute_scores(ref, alt, init_pos, indel_size)
 
             cleaned_scores = [score for score in indel_scores if not math.isnan(score)]
