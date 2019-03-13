@@ -43,7 +43,7 @@ from oncodrivefml.reference import get_ref_triplet, get_build
 logger = logging.getLogger(__logger_name__)
 
 
-ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'ref_triplet', 'alt_triplet'])
+ScoreValue = namedtuple('ScoreValue', ['ref', 'alt', 'value', 'change'])
 """
 Tuple that contains the reference, the alteration, the score value and the triplets
 
@@ -51,8 +51,7 @@ Parameters:
     ref (str): reference base
     alt (str): altered base
     value (float): score value of that substitution
-    ref_triplet (str): reference triplet
-    alt_triplet (str): altered triplet
+    change (str): reference triplet > alt (e.g. ACG>T)
 """
 
 
@@ -237,22 +236,19 @@ class Scores(object):
                                 ref,
                                 alt_1,
                                 value,
-                                ref_triplet,
-                                alt_triple
+                                change
                             ),
                             ScoreValue(
                                 ref,
                                 alt_2,
                                 value,
-                                ref_triplet,
-                                alt_triple
+                                change
                             ),
                             ScoreValue(
                                 ref,
                                 alt_3,
                                 value,
-                                ref_triplet,
-                                alt_triple
+                                change
                             )
                         ]
                     }
@@ -329,8 +325,7 @@ class Scores(object):
                             alts = alt if alt is not None and alt != '.' else 'ACGT'.replace(ref, '')
 
                             for a in alts:
-                                alt_triplet = ref_triplet[0] + a + ref_triplet[2]
-                                self.scores_by_pos[pos].append(ScoreValue(ref, a, score, ref_triplet, alt_triplet))
+                                self.scores_by_pos[pos].append(ScoreValue(ref, a, score, ref_triplet+'>'+a))
 
                     except ReaderError as e:
                         logger.warning(e.message)

@@ -184,7 +184,7 @@ class ElementExecutor(object):
                 for pos in positions:
                     for s in self.scores.get_score_by_position(pos):
                         subs_scores.append(s.value)
-                        probs_of_subs.add_background(s.ref_triplet + '>' + s.alt_triplet[1])
+                        probs_of_subs.add_background(s.change)
 
                 if probs_of_subs.size > 0:
                     subs_probs = probs_of_subs.probs
