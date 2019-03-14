@@ -5,11 +5,22 @@ OncodriveFML
 
 Recent years saw the development of methods to detect signals of positive selection in the pattern of somatic mutations in genes across cohorts of tumors, and the discovery of hundreds of driver genes. The next major challenge in tumor genomics is the identification of non-coding regions which may also drive tumorigenesis. We present OncodriveFML, a method that estimates the accumulated functional impact bias of somatic mutations in any genomic region of interest based on a local simulation of the mutational process affecting it. It may be applied to all genomic elements to detect likely drivers amongst them. OncodriveFML can discover signals of positive selection when only a small fraction of the genome, like a panel of genes, has been sequenced.
 
+
 .. _readme license:
 
 License
 -------
 OncodriveFML is made available to the general public subject to certain conditions described in its `LICENSE <LICENSE>`_. For the avoidance of doubt, you may use the software and any data accessed through UPF software for academic, non-commercial and personal use only, and you may not copy, distribute, transmit, duplicate, reduce or alter in any way for commercial purposes, or for the purpose of redistribution, without a license from the Universitat Pompeu Fabra (UPF). Requests for information regarding a license for commercial use or redistribution of OncodriveFML may be sent via e-mail to innovacio@upf.edu.
+
+Usage
+-----
+
+OncodriveFML is meant to be used through the command line.
+
+By default, OncodriveFML is prepared to analyse mutations
+using HG19 reference genome. For other genomes,
+update the `configuration <https://oncodrivefml.readthedocs.io/en/latest/configuration.html>`_
+accordingly.
 
 .. _readme install:
 
@@ -51,8 +62,8 @@ Run the example
 
 Download and extract the example files (if you cloned the repository skip this step)::
 
-   $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples_v2.0.tar.gz
-   $ tar xvzf oncodrivefml-examples_v2.0.tar.gz
+   $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples_v2.2.tar.gz
+   $ tar xvzf oncodrivefml-examples_v2.2.tar.gz
 
 To run this example OncodriveFML needs all the precomputed CADD scores, that is a 17Gb file.
 It will be automatically downloaded the first time you run OncodriveFML,
