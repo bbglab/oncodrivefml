@@ -12,17 +12,18 @@ dependencies:
 - statsmodels=0.8
 - pytabix=0.0.2
 - bokeh=0.12
-- pandas=0.22
+- pandas=0.23
 - matplotlib=1.5.3
 - intervaltree=2.1
 - bgdata=1.5
 - itab=0.9
 - bgreference=0.5
 - click=6.7
-- bgparsers=0.6
+- bgparsers=0.9
+- bgsignature=0.2
 - bgcache=0.1
 - ago=0.0.9
 - cython=0.27.3
 - python=3.6.*
 - sphinx=1.5.1
-
+- bglogs=0.6
