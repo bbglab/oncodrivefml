@@ -61,6 +61,19 @@ Optional columns are:
 
 
 
+Signature file format
+^^^^^^^^^^^^^^^^^^^^^
+
+The signature file is a JSON file, where
+pairs of key-values represent the changes
+and the probabilities of those changes.
+
+Changes are represented as
+``AAA>C`` (reference triplet, ``>`` and alternate).
+
+See the `bgsignature package <https://bitbucket.org/bgframework/bgsignature>`_
+for more information.
+
 
 Output file format
 ^^^^^^^^^^^^^^^^^^
