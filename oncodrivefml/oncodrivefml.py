@@ -197,7 +197,12 @@ class OncodriveFML(object):
         # Load signatures
         self.__compute_signature()
 
-        init_scores_module(self.configuration['score'])
+        if self.configuration['statistic']['indels']['include'] and \
+            self.configuration['statistic']['indels']['method'] == 'stop':
+            stops_file_required = True
+        else:
+            stops_file_required = False
+        init_scores_module(self.configuration['score'], stops_required=stops_file_required)
 
         # initialize the indels module
         init_indels_module(self.configuration['statistic']['indels'])
