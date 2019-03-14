@@ -28,6 +28,14 @@ oncodrivefml.executors.element module
     :undoc-members:
     :show-inheritance:
 
+oncodrivefml.executors.sig2probs module
+---------------------------------------
+
+.. automodule:: oncodrivefml.executors.sig2probs
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

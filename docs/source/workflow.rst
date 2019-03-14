@@ -13,6 +13,8 @@ By typing ``oncodrivefml -h`` you will have a brief
 description of how to use OncodriveFML:
 
 
+
+
 Options:
   -i, --input MUTATIONS_FILE      Variants file  [required]
                                   (:ref:`see format <files input format>`)
@@ -41,15 +43,17 @@ Options:
   -c, --configuration CONFIG_FILE
                                   Configuration file. Default to
                                   'oncodrivefml_v2.conf' in the current folder if
-                                  exists or to ~/.bbglab/oncodrivefml_v2.conf if
+                                  exists or to ~/.config/bbglab/oncodrivefml_v2.conf if
                                   not.
   --samples-blacklist SAMPLES_BLACKLIST
                                   Remove these samples when loading the input
                                   file.
+  --signature SIGNATURE           File with the signatures to use
+
+                                  See :ref:`details about the command line interface <inside cli>`
+                                  to find more information about this option.
+
   --no-indels                     Discard indels in your analysis
-  --generate-pickle               Run OncodriveFML to generate pickle files
-                                  that could speed up future executions and
-                                  exit.
   --debug                         Show more progress details
   --version                       Show the version and exit.
   -h, --help                      Show this message and exit.

@@ -1,0 +1,78 @@
+[genome]
+# Build of the reference genome
+build = 'hg19'
+
+
+[signature]
+# Choose the method to calculate the trinuclotide singature:
+method = 'complement'
+
+# Choose the classifier (categorical value for the signature):
+classifier = 'SAMPLE'
+
+# None: do not correct (comment the option)
+# normalize_by_sites = ''
+
+
+[score]
+# Path to score file
+file = "/path/to/scores/file"
+
+# Format of the file
+format = 'tabix'
+
+# Column that has the chromosome
+chr = 0
+# If the chromosome has a prefix like 'chr'. Example: chrX chr1 ...
+chr_prefix = ''
+# Column that has the position
+pos = 1
+# Column that has the reference allele
+ref = 2
+# Column that has the alternative allele
+alt = 3
+# Column that has the score value
+score = 5
+
+# Minimum number of stops per element to infer a for the stops using the mean of all scores
+minimum_number_of_stops = 3
+# Function to infer the value of the stops in an element using the mean (x is the mean value of the scores)
+mean_to_stop_function = '8.9168668946147314*np.exp(0.082688007694096191*x)'
+
+
+[statistic]
+# Mathematical method to use to compare observed and simulated values
+method = 'amean'
+
+# Do not use/use MNP mutations in the analysis
+discard_mnp = False
+
+# Compute the observed values using only 1 mutation per sample
+# per_sample_analysis = 'max'
+
+# Minimum sampling
+sampling = 100000
+# Maximum sampling
+sampling_max = 1000000
+# Sampling chunk (in millions)
+sampling_chunk = 100
+# Minimum number of observed (if not reached, keeps computing)
+sampling_min_obs = 10
+
+
+    [[indels]]
+    # Include/exclude indels from your analysis
+    # include = True
+    # Method used to simulate indels
+    # method = 'stop'
+    # Function applied to the scores of the stops in the gene to compute the observed score
+    stops_function = 'mean'
+    # Number of consecutive times the indel appears to consider it falls in a repetitive region
+    max_consecutive = 7
+    # Use exomic probabilities of frameshift indels in the dataset for the simulation
+    gene_exomic_frameshift_ratio = False
+
+
+[settings]
+# Number of cores to use in the analysis
+# cores = 6

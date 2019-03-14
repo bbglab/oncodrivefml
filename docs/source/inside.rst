@@ -18,6 +18,7 @@ parameters in the configuration file.
 
    This overwrite is performed regardless the parameter is set or not in the configuration file.
 
+.. _inside cli type:
 
 The :ref:`following table <cli type>` shows the
 modifications introduced
@@ -35,6 +36,7 @@ by the :command:`--type` flag:
    noncoding               ``method = 'max'``
    ======================  ========================================
 
+.. _inside cli noindels:
 
 The flag :command:`--no-indels` also affects the
 :ref:`indels configuration parameters <config indels>`.
@@ -42,6 +44,8 @@ Particularly, it has effect on the ``include`` option.
 The use of this flag discards the analysis of indels
 by setting ``include = False``, while not using it
 includes indels (``include = True``).
+
+.. _inside cli sequencing:
 
 The :ref:`table below <cli sequencing>` shows the effects of the
 :command:`--sequencing` flag in the :ref:`signature configuration <config signature>`:
@@ -58,72 +62,13 @@ The :ref:`table below <cli sequencing>` shows the effects of the
    targeted                ``normalize_by_sites = None``
    ======================  ========================================
 
+.. _inside cli signature:
 
-Finally, the use of the :command:`--debug` flag
-sets the level of the *console* handler in the :ref:`logging section <config logging>`
-to ``'DEBUG'``.
+Using the :command:`--signature` of the command line,
+set the signature configuration to
+``method = "file"`` and ``path = "<provided path>"``
 
-.. _inside pickles:
-
-Pickle files
-------------
-
-OncodriveFML can create and use intermediate files
-to speed up computations that use the same files.
-
-The regions file is loaded using the BgParsers library,
-so the cache of that file is out of the scope of
-OncodriveFML. In short, the file will be cached
-the first time you use it and rebuild
-if you change its name or content.
-
-There are 2 other items for which OncodriveFML
-can create or use a cache-like files to speed up future executions.
-Those files are saved in (or loaded from) the same folder
-as the mutations file.
-However, the systems is not as sophisticated as the BgParsers and may
-lead to few issues.
-To generate these cache-like files
-you need to run OncodriveFML with the
-:command:`--generate-pickle` option
-(you can list all the options :ref:`using the help <help cmd>`).
-
-.. warning::
-
-   Using this option can speed up computations as some steps
-   can be replaced by a single file read. However, changes
-   in the input files are not noticed by these pickle files
-   unless you rename them.
-   Thus we recommend its use only to advanced users that understand
-   the process.
-
-Mutations
-^^^^^^^^^
-
-One of the pickle files that can be created contains
-a dictionary with the mutations mapped to the genomic
-elements being analysed and some other useful metadata
-(such as the number of indels or SNP mutations).
-This file, named ``<mutations file>+__mapping__+<elements file>``,
-is helpful to skip the steps of loading and mapping
-mutations.
-If this file is in the same location as the mutations file, OncodriveFML loads it
-as long as it does not receive any file with blacklisted samples.
-
-Signature
-^^^^^^^^^
-
-The other pickle file created is the
-signature pickle.
-It is only created for signature methods: ``full`` and ``complement``
-Its name is: ``<mutations file>+_signature_+<method>+_+<classifier>``.
-See :ref:`signature configuration <config signature>` for more details
-(methods, classifiers, etc.) about the signature.
-
-If this file is located in the same directory as the mutations file, OncodriveFML loads it
-as long as it does not receive any file with  blacklisted samples
-and the ``only_mapped_mutations`` option is not used
-(see :ref:`signature configuration <config signature>`).
+.. note:: Signatures provided as an external file are not normalized.
 
 .. _inside bgdata:
 
@@ -149,23 +94,6 @@ and *HG38*.
 If you want to use a different genome, you need to
 modify the code in the :mod:`oncodrivefml.signature` module.
 
-Signature correction
-^^^^^^^^^^^^^^^^^^^^
-
-BgData includes the counts of the triplets
-in whole exome and whole genome.
-
-.. code-block:: bash
-
-   bgdata datasets exomesignature hg19
-
-   bgdata datasets genomesignature hg19
-
-
-Those counts are used to compute the trinucleotides
-frequencies and to perform signature correction
-(find more details in the :ref:`signature <signature>` section
-and in the :ref:`signature configuration <config signature>`).
 
 Gene stops
 ^^^^^^^^^^

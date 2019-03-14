@@ -15,22 +15,13 @@ or computing the signature from the mutations file.
 Additionally, signatures can be grouped into different categories
 (such as the sample).
 
-The signature array is computed by counting, for each Single Nucleotide Polymorphism,
-the reference and alternated triplets.
-
-.. note::
-
-   OncodriveFML also uses the MNP mutations to compute the
-   signature, by treating them as a set of separate SNPs.
-   You can enable or disable this behaviour with the ``include_mnp`` option in the
-   :ref:`configuration file <config signature>`.
-
-The counts are then divided by the total number of counts
-to generate a frequency of triplets. For a mutation :math:`i`
-the frequency is
+The signature is computed count all the Single Nucleotide Polymorphisms
+in the input file, taking into account their context.
+The counts are used to compute a frequency
 :math:`f_i = \frac{m_i}{M}` where :math:`M = \sum_j m_j`, and
 :math:`m_i` represent the number of times that the mutation
 :math:`i` with its context [#context]_ has been observed.
+
 
 Optionally, the signature can be corrected taking into
 account the frequency of trinucleotides in the
@@ -41,6 +32,24 @@ When using the command line interface, OncodriveFML
 does this correction automatically according to
 the value passed in the flag ``--sequencing``
 (you can list all the options :ref:`using the help <help cmd>`).
+
+.. important:: Signature correction is done
+   using precomputed counts of whole genome
+   and whole exome of HG19 reference genome.
+
+   This counts might be similar for other human genomes
+   but ensure that correction is not done
+   genomes of other species.
+   Check the `command line <inside cli>`_
+   and `configuration file <config signature>`_.
+
+
+More complex signatures
+(e.g. using only mutations that map to the regions
+under analysis, or normalizing by the frequency
+of trinucleotides in specific regions of the genome)
+can be computed using the `bgsignature package <https://bitbucket.org/bgframework/bgsignature>`_
+and passed to OncodriveFML via the `configuration file <config signature>`_.
 
 
 Reasoning behind the correction
@@ -74,5 +83,8 @@ Proof:
 .. math::
 
    \frac{f_i/t_i}{\sum_j f_j/t_j} = \frac{\frac{\frac{m_i}{\sum_j m_j}}{\frac{T_i}{\sum_j T_j}}}{\sum_k \frac{\frac{m_k}{\sum_j m_j}}{\frac{T_k}{\sum_j T_j}}} = \frac{\frac{m_i}{T_i} \cdot \frac{\sum_j T_j}{\sum_j m_j}}{\sum_k (\frac{m_k}{T_k} \cdot \frac{\sum_j T_j}{\sum_j m_j})} = \frac{\frac{m_i}{T_i} \cdot \frac{\sum_j T_j}{\sum_j m_j}}{\frac{\sum_j T_j}{\sum_j m_j} \cdot \sum_k \frac{m_k}{T_k}} = \frac{m_i / T_i}{\sum_k m_k/T_k}
+
+
+----
 
 .. [#context] The context is formed by the previous and posterior nucleotides.

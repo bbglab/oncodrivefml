@@ -20,6 +20,14 @@ oncodrivefml.config module
     :undoc-members:
     :show-inheritance:
 
+oncodrivefml.error module
+-------------------------
+
+.. automodule:: oncodrivefml.error
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 oncodrivefml.indels module
 --------------------------
 
@@ -48,6 +56,22 @@ oncodrivefml.mtc module
 -----------------------
 
 .. automodule:: oncodrivefml.mtc
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+oncodrivefml.oncodrivefml module
+--------------------------------
+
+.. automodule:: oncodrivefml.oncodrivefml
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+oncodrivefml.reference module
+-----------------------------
+
+.. automodule:: oncodrivefml.reference
     :members:
     :undoc-members:
     :show-inheritance:

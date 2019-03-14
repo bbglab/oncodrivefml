@@ -8,7 +8,6 @@ build = 'hg19'
 
 
 [signature]
-
 # Choose the method to calculate the trinuclotide singature:
 
 # "full" : Use a 192 matrix with all the possible signatures
@@ -145,7 +144,6 @@ include = True
 
 
 # Number of consecutive times the indel appears to consider it falls in a repetitive region
-# Looking from the indel position and in the direction of the strand
 max_consecutive = 7
 
 # Do not discard indels that fall in repetitive regions

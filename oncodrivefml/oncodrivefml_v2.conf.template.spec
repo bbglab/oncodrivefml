@@ -3,11 +3,8 @@ build = string(default='hg19')
 
 [signature]
 method = option('none', 'full', 'complement', 'bysample', 'file', default='complement')
-
 classifier = option('CANCER_TYPE', 'SAMPLE', 'SIGNATURE', default=None)
-
 normalize_by_sites = option('whole_genome', 'wgs', 'whole_exome', 'wxs', 'wes', default=None)
-
 path = string(default=None)
 
 [score]

@@ -26,21 +26,40 @@ The variants file is a text file with, at least, 5 columns separated by a tab ch
 * Column CANCER_TYPE: Cancer type. Any alphanumeric string. Optional.
 * Column SIGNATURE: User defined signature categories. Any alphanumeric string. Optional.
 
+
+Mutations are expected to be in the positive strand.
+
+
 .. _files region format:
 
 Regions file format
 ^^^^^^^^^^^^^^^^^^^
 
 The regions file is a text file with, at least, 4 columns separated by a tab character
-(the column order must be preserved):
+(header is required):
 
-* Column 1 [CHROMOSOME]: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
-* Column 2 [START]: Start position. A positive integer.
-* Column 3 [STOP]: End position. A positive integer.
-* Column 4 [STRAND]: Strand: ``+`` for positive, ``-`` for negative, ``.`` for unknown.
-* Column 5 [ELEMENT]: Element identifier.
-* Column 6 [SEGMENT]: Segment identifier. Optional column.
-* Column 7 [SYMBOL]: Symbol, a different identifier for the element that will also be printed in the output file. Optional column.
+* Column CHROMOSOME]: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
+* Column START: Start position. A positive integer.
+* Column END: End position. A positive integer.
+* Column ELEMENT: Element identifier. Can appear multiple times if the
+  element is divided in *segments*.
+
+
+.. important:: Analysis is perform element-wise.
+   One single element can have multiple *segments*
+   (even if you do not provide an identifier for them).
+
+   It is also important that different segments of
+   the same element do not overlap.
+
+
+Optional columns are:
+
+* Column STRAND: Strand: ``+`` for positive, ``-`` for negative, ``.`` for unknown.
+* Column SEGMENT: Segment identifier. Optional column.
+* Column SYMBOL: Symbol, a different identifier for the element that will also be printed in the output file. Optional column.
+
+
 
 
 Output file format
@@ -52,6 +71,7 @@ extension ".tsv".
 Check the :ref:`output section <output files>` to find a detailed description
 regarding the output.
 
+----
 
 .. [#refalt] The alleles consist on a single letter or a set of letters using A, C, G or T (upper case).
    Single Nucleotide Variants are indentified because both, REF and ALT contain only one letter.

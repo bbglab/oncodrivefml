@@ -171,6 +171,7 @@ However, if you are not using any signature (see :ref:`singature configuration <
 where :math:`{n_{substitutions}}` is the amount of substitutions in the gene.
 
 
+----
 
 
 .. [#obsIgnored] When an observed mutation is ignored
