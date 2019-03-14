@@ -20,14 +20,6 @@ Options:
                                   (:ref:`see format <files input format>`)
   -e, --elements ELEMENTS_FILE    Genomic elements to analyse  [required]
                                   (:ref:`see format <files input format>`)
-  -t, --type                      Type of genomic elements file  [required]:
-
-                                  - *coding*: the files corresponds to coding regions
-                                  - *noncoding*: the file corresponds to noncoding regions
-
-                                  See :ref:`details about the command line interface <inside cli>`
-                                  to find more information about this option.
-
   -s, --sequencing
                                   Type of sequencing [required]:
 

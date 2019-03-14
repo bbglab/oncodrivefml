@@ -18,24 +18,6 @@ parameters in the configuration file.
 
    This overwrite is performed regardless the parameter is set or not in the configuration file.
 
-.. _inside cli type:
-
-The :ref:`following table <cli type>` shows the
-modifications introduced
-in the :ref:`indels configuration parameters <config indels>`
-by the :command:`--type` flag:
-
-
-.. table:: Effects of --type
-   :name: cli type
-
-   ======================  ========================================
-   Value                   Effect in configurtion of indels
-   ======================  ========================================
-   coding                  ``method = 'stop'``
-   noncoding               ``method = 'max'``
-   ======================  ========================================
-
 .. _inside cli noindels:
 
 The flag :command:`--no-indels` also affects the

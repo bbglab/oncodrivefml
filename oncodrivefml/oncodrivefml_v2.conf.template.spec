@@ -36,7 +36,7 @@ per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 
     [[indels]]
         include = boolean(default=True)
-        method = option('stop', 'max')
+        method = option('stop', 'max', default='max')
         max_consecutive = integer(default=0)
 
         gene_exomic_frameshift_ratio = boolean(default=False)

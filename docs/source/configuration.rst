@@ -21,7 +21,7 @@ This section will explain each of the parameters in the configuration file:
 Genome
 ------
 
-.. literalinclude:: oncodrivefml_v2.conf.template
+.. literalinclude:: oncodrivefml.conf
    :language: text
    :lines: 1-4
 
@@ -50,7 +50,7 @@ the ``stop`` method for the indels (:ref:`ref <config indels>`).
 Signature
 ---------
 
-.. literalinclude:: oncodrivefml_v2.conf.template
+.. literalinclude:: oncodrivefml.conf
    :language: text
    :lines: 6-14
 
@@ -120,9 +120,9 @@ Score
 The score section is used to know
 which scores are going to be used.
 
-.. literalinclude:: oncodrivefml_v2.conf.template
+.. literalinclude:: oncodrivefml.conf
    :language: text
-   :lines: 17-40
+   :lines: 17-35
 
 The scores should be a file that for a given position, in a given chromosome, 
 gives a value to every possible alteration.
@@ -142,7 +142,8 @@ format
   - ``format = 'pack'`` is a
     binary format we have implemented to reduce the file size.
     It is only available for specific scores.
-    Thus, if you want to use your own file, use the `tabix <http://www.htslib.org>`_ format.
+
+  Thus, if you want to use your own file, use the `tabix <http://www.htslib.org>`_ format.
 
 chr
   Column in the file where the chromosome is indicated.
@@ -166,35 +167,6 @@ element
  If it is provided and the value does not match with the one from the regions,
  these scores are discarded.
 
-OncodriveFML uses two additional parameters
-(``mean_to_stop_function`` and ``minimum_number_of_stops``),
-which are related only to the ``stop`` method
-for :ref:`computing the indels <analysis indel>`.
-
-mean_to_stop_function
-  When analysing a certain gene, OncodriveFML might need
-  to score an indel according to the value of the stops in the gene.
-  It might happen that the number of stops is 0
-  or is below a certain threshold.
-  In such cases, OncodriveFML uses the function specified
-  in ``mean_to_stop_function`` parameter to assign a score from the mean value
-  of all the stops in the gene.
-
-  .. only:: html
-
-     Download the :download:`IPython notebook <_static/ScoresFunction.html>` that
-     has been created with the functions computed for
-     *CADD1.0* and *CADD1.3*, or :ref:`see it <nb scoresfunct>`.
-
-minimum_number_of_stops
-  When analysing a certain gene, OncodriveFML gets all the scores
-  associated with the mutations that produce a stop in that gene.
-  ``minimum_number_of_stops`` indicates the minimum number of stops
-  that a gene is required to have in order to avoid using the function above.
-
-.. attention:: These parameters must also be adjusted for
-   each scores file.
-
 .. _config statistic:
 
 Statistic
@@ -203,9 +175,9 @@ Statistic
 The statistic section is related to the configuration
 of the analysis
 
-.. literalinclude:: oncodrivefml_v2.conf.template
+.. literalinclude:: oncodrivefml.conf
    :language: text
-   :lines: 43-73
+   :lines: 38-64
 
 There a different parameters you can configure:
 
@@ -273,9 +245,9 @@ Indels
 The indels subsection of statistic contains
 the configuration for the analysis of indels.
 
-.. literalinclude:: oncodrivefml_v2.conf.template
+.. literalinclude:: oncodrivefml.conf
    :language: text
-   :lines: 63-73
+   :lines: 58-64
 
 OncodriveFML accepts various parameters related to the indels:
 
@@ -301,15 +273,11 @@ method
     Indels that are simulated as substitutions [#indelsSubs]_
     follow the same signature patter as the mutatinal signature.
   - ``method = 'stop'``: simulates
-    indels as stops. This option is recommended
-    for simulating indels in coding regions.
+    indels as stops.
+    See more infomation of this option :ref:`below <conf indels as stops>`.
 
   Check the :ref:`analysis of indels <analysis indel>`
   section to find more details.
-
-  This option *is* overridden by
-  the :ref:`--type opton <inside cli type>`
-  in the command line interface.
 
 max_consecutive
   OncodriveFML discards indels that fall in
@@ -325,6 +293,28 @@ max_consecutive
   ``max_consecutive = 0``.
 
 
+
+.. _conf indels as stops:
+
+Configuring indels as stops
+***************************
+
+As explained in the :ref:`analysis section <analysis indels as stop>`
+OncodriveFML can be configured to simulate indels as stops.
+
+This option should be used with care as it
+gives a lot of weight to the indels.
+
+To enable this option, a number of parameters needs to be modified
+or added to the configuration file.
+
+The :ref:`indels section <config indels>`
+of the configuration file,
+you need to change the method
+to ``method = 'stop'``
+and add the following parameters:
+
+
 .. _exomic frameshift rate:
 
 gene_exomic_frameshift_ratio
@@ -333,14 +323,10 @@ gene_exomic_frameshift_ratio
 
   - ``gene_exomic_frameshift_ratio = False``: the probabilities are taken
     from the mapped mutations discarding those whose length is
-    multiple of 3. Note that in order to work properly,
-    this option should be set only when the regions file corresponds to
-    coding regions.
+    multiple of 3.
   - ``gene_exomic_frameshift_ratio = True``:
     probabilities are taken from the observed mutations rate in each region.
 
-  This option is harmless when ``method = 'max'``,
-  as all indels are simulated as substitutions.
 
 stops_function
   The *observed* score of an indel that is computed with the
@@ -357,6 +343,37 @@ stops_function
   - ``stops_function = 'random_choice'``: associates the indel to a value that is
     a *random value* between all the possible stop scores in the gene
 
+
+In addition, the :ref:`score sections <config score>`
+of the configuration file needs to
+contain two new parameters:
+
+mean_to_stop_function
+  When analysing a certain gene, OncodriveFML might need
+  to score an indel according to the value of the stops in the gene.
+  It might happen that the number of stops is 0
+  or is below a certain threshold.
+  In such cases, OncodriveFML uses the function specified
+  in ``mean_to_stop_function`` parameter to assign a score from the mean value
+  of all the stops in the gene.
+
+  .. only:: html
+
+     Download the :download:`IPython notebook <_static/ScoresFunction.html>` that
+     has been created with the functions computed for
+     *CADD1.0* and *CADD1.3*, or :ref:`see it <nb scoresfunct>`.
+
+minimum_number_of_stops
+  When analysing a certain gene, OncodriveFML gets all the scores
+  associated with the mutations that produce a stop in that gene.
+  ``minimum_number_of_stops`` indicates the minimum number of stops
+  that a gene is required to have in order to avoid using the function above.
+
+.. attention:: These parameters must also be adjusted for
+   each scores file.
+
+
+
 .. _config settings:
 
 Settings
@@ -365,9 +382,9 @@ Settings
 To configure the system where the analysis is performed
 OncodriveFML includes the setting section:
 
-.. literalinclude:: oncodrivefml_v2.conf.template
+.. literalinclude:: oncodrivefml.conf
    :language: text
-   :lines: 76-78
+   :lines: 67-69
 
 Use the ``cores`` option to indicate how many cores to
 use. You can comment this option in order to use
@@ -380,6 +397,7 @@ The command line :command:`--cores` option
 
    OncodriveFML works on shared memory systems
    using the :mod:`multiprocessing` module.
+
 
 ----
 

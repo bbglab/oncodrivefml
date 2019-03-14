@@ -140,7 +140,7 @@ include = True
 # method = 'stop'
 
 # Treat them as a set of substitutions and take the maximum
-# method = 'max'
+method = 'max'
 
 
 # Number of consecutive times the indel appears to consider it falls in a repetitive region

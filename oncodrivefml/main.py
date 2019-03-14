@@ -63,7 +63,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.command(context_settings=CONTEXT_SETTINGS)
 @click.option('-i', '--input', 'mutations_file', type=click.Path(exists=True), help='Variants file', metavar='MUTATIONS_FILE', required=True)
 @click.option('-e', '--elements', 'elements_file', type=click.Path(exists=True), metavar='ELEMENTS_FILE', help='Genomic elements to analyse', required=True)
-@click.option('-t', '--type', type=click.Choice(['coding', 'noncoding']), help='Type of genomic elements file', required=True)
+@click.option('-t', '--type', type=click.Choice(['coding', 'noncoding']), help='Deprecated option')
 @click.option('-s', '--sequencing', type=click.Choice(['wgs', 'wes', 'targeted']), help='Type of sequencing: whole genome, whole exome or targeted.', required=True)
 @click.option('-o', '--output', 'output_folder', type=click.Path(), metavar='OUTPUT_FOLDER', help="Output folder. Default to regions file name without extensions.", default=None)
 @click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), metavar='CONFIG_FILE', help="Configuration file. Default to 'oncodrivefml_v2.conf' in the current folder if exists or to ~/.config/bbglab/oncodrivefml_v2.conf if not.")
@@ -83,6 +83,9 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
 
     """
 
+    bglogs.configure(debug=debug)
+    warnings.filterwarnings("default", category=DeprecationWarning, module='oncodrivefml*')
+
     dd = lambda: defaultdict(dd)
     override_config = dd()
 
@@ -91,10 +94,11 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
         override_config['statistic']['indels']['include'] = False
     else:
         override_config['statistic']['indels']['include'] = True
-    if type == 'coding':
-        override_config['statistic']['indels']['method'] = 'stop'
-    elif type == 'noncoding':
-        override_config['statistic']['indels']['method'] = 'max'
+
+    if type is not None:
+        warnings.warn('--type option is no longer supported. '
+                      'Edit the configuration file appropriately',
+                      DeprecationWarning)
 
     if sequencing == 'wes':
         override_config['signature']['normalize_by_sites'] = 'whole_exome'
@@ -106,9 +110,6 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
     if signature_file is not None:
         override_config['signature']['method'] = 'file'
         override_config['signature']['path'] = signature_file
-
-    bglogs.configure(debug=debug)
-    warnings.filterwarnings("default", category=DeprecationWarning, module='oncodrivefml*')
 
     if generate_pickle:
         warnings.warn('--generate-pickle option is no longer supported', DeprecationWarning)
