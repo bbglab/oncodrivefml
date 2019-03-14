@@ -66,16 +66,17 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.option('-t', '--type', type=click.Choice(['coding', 'noncoding']), help='Type of genomic elements file', required=True)
 @click.option('-s', '--sequencing', type=click.Choice(['wgs', 'wes', 'targeted']), help='Type of sequencing: whole genome, whole exome or targeted.', required=True)
 @click.option('-o', '--output', 'output_folder', type=click.Path(), metavar='OUTPUT_FOLDER', help="Output folder. Default to regions file name without extensions.", default=None)
-@click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), metavar='CONFIG_FILE', help="Configuration file. Default to 'oncodrivefml_v2.conf' in the current folder if exists or to ~/.bbglab/oncodrivefml_v2.conf if not.")
+@click.option('-c', '--configuration', 'config_file', default=None, type=click.Path(exists=True), metavar='CONFIG_FILE', help="Configuration file. Default to 'oncodrivefml_v2.conf' in the current folder if exists or to ~/.config/bbglab/oncodrivefml_v2.conf if not.")
 @click.option('--samples-blacklist', default=None, type=click.Path(exists=True), metavar='SAMPLES_BLACKLIST', help="Remove these samples when loading the input file.")
+@click.option('--signature', 'signature_file', default=None, type=click.Path(exists=True), metavar='SIGNATURE', help="File with the signatures to use")
 @click.option('--no-indels', help="Discard indels in your analysis", is_flag=True)
 @click.option('--cores', help="Cores to use. Default: all", default=None, type=int)
 @click.option('--seed', help="Set up an initial random seed to have reproducible results", type=click.IntRange(0, 2**32-1), default=None)
-@click.option('--generate-pickle', help="Run OncodriveFML to generate pickle files that could speed up future executions and exit.", is_flag=True)
+@click.option('--generate-pickle', help="Deprecated flag. Do not use.", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
 def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist,
-            no_indels, cores, seed, generate_pickle, debug):
+            signature_file, no_indels, cores, seed, generate_pickle, debug):
     """
     Run OncodriveFML on the genomic regions in ELEMENTS FILE
     using the mutations in MUTATIONS FILE.
@@ -101,6 +102,10 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
         override_config['signature']['normalize_by_sites'] = 'whole_genome'
     else:
         override_config['signature']['normalize_by_sites'] = None
+
+    if signature_file is not None:
+        override_config['signature']['method'] = 'file'
+        override_config['signature']['path'] = signature_file
 
     bglogs.configure(debug=debug)
     warnings.filterwarnings("default", category=DeprecationWarning, module='oncodrivefml*')
