@@ -204,14 +204,16 @@ class ScoresTabixReader:
 def init_scores_module(conf, stops_required=False):
     global min_stops, stops_file, scores_reader
 
-    min_stops = conf.get('minimum_number_of_stops', min_stops)
-    logger.debug('Below %d stops in the element the function for stops will be used', min_stops)
-    if conf['mean_to_stop_function'] is not None:
-        exec("def stop_function(x): return {}".format(conf['mean_to_stop_function']), globals())
-    else:
-        logger.warning('You have not provided any function for computing the stops')
     if stops_required:
         stops_file = bgdata.get_path('datasets', 'genestops', get_build())
+
+        min_stops = conf.get('minimum_number_of_stops', min_stops)
+        logger.debug('Below %d stops in the element the function for stops will be used', min_stops)
+        if conf['mean_to_stop_function'] is not None:
+            exec("def stop_function(x): return {}".format(conf['mean_to_stop_function']), globals())
+        else:
+            logger.warning('You have not provided any function for computing the stops')
+
     if conf['format'] == 'tabix':
         scores_reader = ScoresTabixReader(conf)
     elif conf['format'] == 'pack':
