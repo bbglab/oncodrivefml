@@ -1,25 +1,24 @@
 """
 Contains the main class of the method
 """
-
+import gzip
 import io
 import os
 import sys
 import csv
 import logging
 import warnings
-from os.path import join, exists
 from multiprocessing.pool import Pool
 
 import numpy as np
 
 from oncodrivefml import __version__, __logger_name__, signature, load, reference
-from oncodrivefml.config import file_exists_or_die, file_name
+from oncodrivefml.config import file_exists_or_die
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.scores import init_scores_module
-from oncodrivefml.store import store_tsv, store_png, store_html
+from oncodrivefml.store import store_tsv
 from oncodrivefml.utils import executor_run, loop_logging
 from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
@@ -41,7 +40,7 @@ class OncodriveFML(object):
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, cores, seed):
+    def __init__(self, mutations_file, elements_file, output_file, config, blacklist, cores, seed):
         logger.debug('Using OncodriveFML version %s', __version__)
 
         # Required parameters
@@ -76,9 +75,8 @@ class OncodriveFML(object):
         self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
         # Optional parameters
-        self.output_folder = output_folder
-        self.output_file_prefix = join(self.output_folder, file_name(self.mutations_file) + '-oncodrivefml')
-        logger.debug('Output: %s', self.output_folder)
+        self.output_file = output_file
+        logger.debug('Output: %s', self.output_file)
 
         # Output parameters
         self.mutations = None
@@ -273,23 +271,16 @@ class OncodriveFML(object):
 
         # Sort and store results
         logger.info("Storing results")
-        if not exists(self.output_folder):
-            os.makedirs(self.output_folder, exist_ok=True)
-        result_file = self.output_file_prefix + '.tsv'
-        store_tsv(results_mtc, result_file)
+        store_tsv(results_mtc, self.output_file)
 
         lines = 0
         gene_ids = {None, ''}
-        with open(result_file) as csvfile:
+        with gzip.open(self.output_file, 'rt') as csvfile:
             fd = csv.DictReader(csvfile, delimiter='\t')
             for line in fd:
                 lines += 1
                 gene_ids.add(line['GENE_ID'])
         if lines+2 != len(gene_ids):
             logger.error('Number of genes does not match number of lines in the output file. Please check the logs of the execution to find more information.')
-
-        logger.info("Creating figures")
-        store_png(result_file, self.output_file_prefix + ".png")
-        store_html(result_file, self.output_file_prefix + ".html")
 
         logger.info("Done")

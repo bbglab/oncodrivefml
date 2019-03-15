@@ -18,7 +18,7 @@ from oncodrivefml.oncodrivefml import OncodriveFML
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed,
+def main(mutations_file, elements_file, output_file, config_file, samples_blacklist, cores, seed,
          config_override_dict=None):
     """
     Run OncodriveFML analysis
@@ -38,21 +38,18 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 
     """
 
-    output_folder = file_name(elements_file) if output_folder is None else output_folder
-    output_file = path.join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv')
+    output_file = file_name(elements_file) + '-' + file_name(mutations_file) + '-oncodrivefml.tsv.gz' if \
+        output_file is None else output_file
     # Skip if done
     if path.exists(output_file):
         logging.warning("Already calculated at '{}'".format(output_file))
         return
-    else:
-        if not path.exists(output_folder):
-            os.makedirs(output_folder, exist_ok=True)
 
     configuration = load_configuration(config_file, override=config_override_dict)
     if 'logging' in configuration:
         warnings.warn('"logging" option from configuration is no longer supported', DeprecationWarning)
 
-    analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
+    analysis = OncodriveFML(mutations_file, elements_file, output_file, configuration,
                             samples_blacklist, cores, seed)
 
     bglogs.info('Running analysis')
