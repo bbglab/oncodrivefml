@@ -188,7 +188,8 @@ class OncodriveFML(object):
         # Load mutations mapping
         mutations_data, self.elements = load.mutations_and_elements(self.mutations_file,
                                                                self.elements_file,
-                                                               blacklist=self.blacklist)
+                                                               blacklist=self.blacklist,
+                                                                indels_max_size=self.configuration['statistic']['indels'].get('max_size', None))
 
         self.mutations = mutations_data['data']
 

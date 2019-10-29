@@ -2,6 +2,11 @@
 Changelog
 =========
 
+2.3.0
+-----
+
+- Added option to set the size limit for the indels
+
 2.2.0
 -----
 

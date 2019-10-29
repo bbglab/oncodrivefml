@@ -90,7 +90,7 @@ from oncodrivefml import __logger_name__
 logger = logging.getLogger(__logger_name__)
 
 
-def mutations(file, blacklist=None, metadata_dict=None):
+def mutations(file, blacklist=None, metadata_dict=None, indels_max_size=None):
     """
     Parsed the mutations file
 
@@ -99,6 +99,7 @@ def mutations(file, blacklist=None, metadata_dict=None):
         metadata_dict (dict): dict that the function will fill with useful information
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`).
             Defaults to None.
+        indels_max_size (int, optional): max size of indels. Indels with logner sizes will be discarded.
 
     Yields:
         One line from the mutations file as a dictionary. Each of the inner elements of
@@ -125,7 +126,7 @@ def mutations(file, blacklist=None, metadata_dict=None):
             mnp_length += len(row['REF'])
         elif row['ALT_TYPE'] == 'indel':
             # very long indels are discarded
-            if max(len(row['REF']), len(row['ALT'])) > 20:
+            if indels_max_size and max(len(row['REF']), len(row['ALT'])) > indels_max_size:
                 continue
             indel += 1
 
@@ -188,7 +189,7 @@ def elements_tree(elements_file):
     return build_regions_tree(elements)
 
 
-def mutations_and_elements(variants_file, elements_file, blacklist=None):
+def mutations_and_elements(variants_file, elements_file, blacklist=None, indels_max_size=None):
     """
     From the elements and variants file, get dictionaries with the segments grouped by element ID and the
     mutations grouped in the same way, as well as some information related to the mutations.
@@ -198,6 +199,7 @@ def mutations_and_elements(variants_file, elements_file, blacklist=None):
         elements_file: elements file (see :class:`~oncodrivefml.main.OncodriveFML`)
         blacklist (optional): file with blacklisted samples (see :class:`~oncodrivefml.main.OncodriveFML`). Defaults to None.
            If the blacklist option is passed, the mutations are not loaded from a pickle file.
+        indels_max_size (int, optional): max size of indels. Indels with logner sizes will be discarded.
 
     Returns:
         tuple: mutations and elements
@@ -238,7 +240,7 @@ def mutations_and_elements(variants_file, elements_file, blacklist=None):
     snp_mapped = 0
     mnp_mapped = 0
     indels_mapped = 0
-    for i, r in enumerate(mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist)):
+    for i, r in enumerate(mutations(variants_file, metadata_dict=variants_metadata_dict, blacklist=blacklist, indels_max_size=indels_max_size)):
 
         if r['CHROMOSOME'] not in elements_tree_:
             continue

@@ -36,6 +36,8 @@ per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 
     [[indels]]
         include = boolean(default=True)
+        # TODO future major releases should use default to 0, and the template set it to 20
+        max_size = integer(default=20)
         method = option('stop', 'max', default='max')
         max_consecutive = integer(default=0)
 

@@ -133,6 +133,10 @@ sampling_min_obs = 10
 include = True
 # include = False
 
+# Indels longer than this size will be discarded
+# set to 0 to include all indels
+max_size = 20
+
 
 # Method used to simulate indels
 
