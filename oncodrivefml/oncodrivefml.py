@@ -41,7 +41,7 @@ class OncodriveFML(object):
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist, cores, seed):
+    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist):
         logger.debug('Using OncodriveFML version %s', __version__)
 
         # Required parameters
@@ -58,7 +58,7 @@ class OncodriveFML(object):
         genome_reference_build = self.configuration['genome']['build']
         reference.change_build(genome_reference_build)
 
-        self.cores = cores if cores is not None else self.configuration['settings']['cores']
+        self.cores = self.configuration['settings']['cores']
         if self.cores is None:
             self.cores = os.cpu_count()
         logger.debug('Using %s cores', self.cores)
@@ -92,7 +92,7 @@ class OncodriveFML(object):
         logger.debug('Configuration used:\n' + s.getvalue().decode())
         s.close()
 
-        np.random.seed(seed)
+        np.random.seed(self.configuration['settings']['seed'])
 
     def __create_element_executor(self, element_id, element_mutations):
         """

@@ -48,3 +48,4 @@ per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 
 [settings]
 cores = integer(default=None)
+seed = integer(min=0, default=None)

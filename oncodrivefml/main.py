@@ -18,7 +18,7 @@ from oncodrivefml.oncodrivefml import OncodriveFML
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
-def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed,
+def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist,
          config_override_dict=None):
     """
     Run OncodriveFML analysis
@@ -31,7 +31,6 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
         config_file (str): path to configuration file
         samples_blacklist (str): path to samples blacklist file. Set to :obj:`None`
            if you are not using any blacklist file
-        cores (int): cores to use for parallelization
         seed (int): initial random seed
         generate_pickle (bool): whether run OncodriveFML to generate pickle files or full analysis
         config_override_dict (dict, optional): override configuration from file
@@ -53,7 +52,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
         warnings.warn('"logging" option from configuration is no longer supported', DeprecationWarning)
 
     analysis = OncodriveFML(mutations_file, elements_file, output_folder, configuration,
-                            samples_blacklist, cores, seed)
+                            samples_blacklist)
 
     bglogs.info('Running analysis')
     # Run the analysis
@@ -115,7 +114,13 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
         warnings.warn('--generate-pickle option is no longer supported', DeprecationWarning)
         return
 
-    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, cores, seed, override_config)
+    if seed is not None:
+        override_config['settings']['seed'] = seed
+
+    if cores is not None:
+        override_config['settings']['cores'] = cores
+
+    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, override_config)
 
 
 if __name__ == "__main__":

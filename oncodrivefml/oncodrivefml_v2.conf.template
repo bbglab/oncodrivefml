@@ -180,3 +180,6 @@ stops_function = 'mean'
 # Number of cores to use in the analysis
 # Comment this option to use all avaliable cores
 # cores = 6
+
+# seed for reproducible results
+# seed = 123
