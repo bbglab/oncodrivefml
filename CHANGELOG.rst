@@ -2,6 +2,11 @@
 Changelog
 =========
 
+2.4.0
+-----
+
+- Updated dependencies and dropped Python 3.5 support
+
 2.3.0
 -----
 

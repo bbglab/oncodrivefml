@@ -191,7 +191,7 @@ class QQPlot(object):
         code = \
             """
             if (cb_data.index['1d'].indices.length > 0) {
-                var s = source.get('data');
+                var s = source.data;
                 if ( $( ".bk-tooltip.bk-tooltip-custom.bk-left" ).length == 0 ){
                     $( ".bk-canvas-overlays" ).append( '<div class="bk-tooltip bk-tooltip-custom bk-left" style="z-index: 1010; top: 0px; left: 0px; display: block;"></div>' );
                 }
@@ -245,7 +245,6 @@ class QQPlot(object):
 
         self.layout = column(widgets, self.figure)
 
-
     @staticmethod
     def __get_search_box_code(field):
         """
@@ -260,10 +259,10 @@ class QQPlot(object):
         """
         code = \
             """
-            origSearch = cb_obj.get('value');
+            origSearch = cb_obj.value;
             search = origSearch.toUpperCase();
-            var selected = source.get('selected')['1d'].indices;
-            searcher = source.get('data').""" + field + """
+            var selected = source.selected['1d'].indices;
+            searcher = source.data.""" + field + """
             selected.length = 0
             for(index in searcher) {
                 if ( searcher[index].toUpperCase().indexOf(search) > -1) {
@@ -273,7 +272,7 @@ class QQPlot(object):
             if (selected.length == 0) {
                 swal("Error", "Value not found: '"+origSearch+"'", "error")
             }
-            source.trigger('change');
+            source.change.emit();
             """
 
         return code

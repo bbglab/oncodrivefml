@@ -27,7 +27,7 @@ accordingly.
 Installation
 ------------
 
-OncodriveFML depends on Python 3.5 and some external libraries.
+OncodriveFML depends on Python 3.6 and some external libraries.
 The easiest way to install all this software stack is using the well known `Anaconda Python distribution <http://continuum.io/downloads>`_::
 
     $ conda install -c bbglab oncodrivefml
