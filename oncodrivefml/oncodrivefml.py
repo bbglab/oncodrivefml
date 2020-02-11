@@ -1,7 +1,7 @@
 """
 Contains the main class of the method
 """
-
+import gzip
 import io
 import os
 import sys
@@ -276,12 +276,12 @@ class OncodriveFML(object):
         logger.info("Storing results")
         if not exists(self.output_folder):
             os.makedirs(self.output_folder, exist_ok=True)
-        result_file = self.output_file_prefix + '.tsv'
+        result_file = self.output_file_prefix + '.tsv.gz'
         store_tsv(results_mtc, result_file)
 
         lines = 0
         gene_ids = {None, ''}
-        with open(result_file) as csvfile:
+        with gzip.open(result_file, 'rt') as csvfile:
             fd = csv.DictReader(csvfile, delimiter='\t')
             for line in fd:
                 lines += 1

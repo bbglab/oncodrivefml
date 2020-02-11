@@ -38,7 +38,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
     """
 
     output_folder = file_name(elements_file) if output_folder is None else output_folder
-    output_file = path.join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv')
+    output_file = path.join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv.gz')
     # Skip if done
     if path.exists(output_file):
         logging.warning("Already calculated at '{}'".format(output_file))

@@ -557,5 +557,4 @@ def store_tsv(results, result_file):
                        'symbol': 'SYMBOL'}, inplace=True)
     df = add_symbol(df)
 
-    with open(result_file, 'wt') as fd:
-        df.to_csv(fd, sep="\t", header=True, index=False)
+    df.to_csv(result_file, sep="\t", header=True, index=False, compression="gzip")
