@@ -270,7 +270,7 @@ class QQPlot(object):
                 }
             }
             if (selected.length == 0) {
-                swal("Error", "Value not found: '"+origSearch+"'", "error")
+                Swal.fire({icon: 'error', title: 'Oops...', text: "Value not found: '"+origSearch+"'"});
             }
             source.change.emit();
             """
@@ -305,8 +305,8 @@ class QQPlot(object):
             script, div = components(layout)
             html = """  <!DOCTYPE html>
                         <html>
-                        <script src="https://code.jquery.com/jquery-1.11.3.min.js">
-                        </script><script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.js"></script>
+                        <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+                        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@9"></script>
                         <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/1.1.3/sweetalert.min.css">
                         <link href="http://cdn.pydata.org/bokeh/release/bokeh-""" + bokeh_version + """.min.css" rel="stylesheet" type="text/css">
                         <script src="http://cdn.pydata.org/bokeh/release/bokeh-""" + bokeh_version + """.min.js"></script>
