@@ -6,4 +6,5 @@ channels:
 - conda-forge
 - r
 dependencies:
+- bgdata=2.0.3
 - python=3.6.*
