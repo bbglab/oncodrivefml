@@ -187,9 +187,9 @@ class OncodriveFML(object):
 
         # Load mutations mapping
         mutations_data, self.elements = load.mutations_and_elements(self.mutations_file,
-                                                               self.elements_file,
-                                                               blacklist=self.blacklist,
-                                                                indels_max_size=self.configuration['statistic']['indels'].get('max_size', None))
+                                                                    self.elements_file,
+                                                                    blacklist=self.blacklist,
+                                                                    indels_max_size=self.configuration['statistic']['indels'].get('max_size', None))
 
         self.mutations = mutations_data['data']
 
@@ -203,6 +203,13 @@ class OncodriveFML(object):
             stops_file_required = True
         else:
             stops_file_required = False
+
+        if self.configuration['score'].get('minimum_number_of_stops', None) is not None:
+            warnings.warn('minimum_number_of_stops should be specified in the indels section',
+                          DeprecationWarning)
+        else:
+            self.configuration['score']['minimum_number_of_stops'] = self.configuration['statistic']['indels']['minimum_number_of_stops']
+
         init_scores_module(self.configuration['score'], stops_required=stops_file_required)
 
         # initialize the indels module

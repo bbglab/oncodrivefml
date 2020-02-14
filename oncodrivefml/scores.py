@@ -54,11 +54,6 @@ Parameters:
     change (str): reference triplet > alt (e.g. ACG>T)
 """
 
-
-def null(x):
-    return x
-
-stop_function = null
 min_stops = 1
 stops_file = None
 scores_reader = None
@@ -207,13 +202,7 @@ def init_scores_module(conf, stops_required=False):
     if stops_required:
         stops_file = bgdata.get_path('datasets', 'genestops', get_build())
 
-        min_stops = conf.get('minimum_number_of_stops', min_stops)
-        logger.debug('Below %d stops in the element the function for stops will be used', min_stops)
-        if conf['mean_to_stop_function'] is not None:
-            exec("def stop_function(x): return {}".format(conf['mean_to_stop_function']), globals())
-        else:
-            logger.warning('You have not provided any function for computing the stops')
-
+    min_stops = conf.get('minimum_number_of_stops', min_stops)
     if conf['format'] == 'tabix':
         scores_reader = ScoresTabixReader(conf)
     elif conf['format'] == 'pack':
@@ -275,6 +264,7 @@ class Scores(object):
 
         # Scores to load
         self.scores_by_pos = defaultdict(list)
+        self._stop_scores = None
 
         # Initialize background scores
         self._load_scores()
@@ -336,7 +326,13 @@ class Scores(object):
         except ReaderError as e:
             logger.warning("Reader error: %s. Regions being analysed %s", e.message, self.segments)
 
-    def get_stop_scores(self):
+    @property
+    def stop_scores(self):
+        if self._stop_scores is None:
+            self._get_stop_scores()  # compute the values
+        return self._stop_scores
+
+    def _get_stop_scores(self):
         """
         Get the scores of the stops in a gene that fall in the regions
         being analyzed
@@ -359,15 +355,16 @@ class Scores(object):
                     "Tabix error at %s='%s:%d-%d'", self.element, region['CHROMOSOME'], region['START'], region['END'])
                 continue
 
-        self.stop_scores = []
+        self._stop_scores = []
         for pos, alts in stops.items():
             for s in self.get_score_by_position(pos):
                 if s.alt in alts:
-                    self.stop_scores.append(s.value)
-        if len(self.stop_scores) < min_stops:
+                    self._stop_scores.append(s.value)
+        if len(self._stop_scores) < min_stops:
+            logger.debug('Not enough stops in the region, using the max')
             all_scores = []
             positions = self.get_all_positions()
             for pos in positions:
                 for s in self.get_score_by_position(pos):
                     all_scores.append(s.value)
-            self.stop_scores = [stop_function(np.mean(all_scores))]
+            self._stop_scores = [np.max(all_scores)]

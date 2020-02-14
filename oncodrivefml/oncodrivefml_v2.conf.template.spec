@@ -19,9 +19,6 @@ score = integer
 element = integer(default=None)
 extra = integer(default=None)
 
-minimum_number_of_stops = integer(default=3)
-mean_to_stop_function = string(default=None)
-
 
 [statistic]
 method = option('amean', 'gmean', default='amean')
@@ -43,6 +40,7 @@ per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 
         gene_exomic_frameshift_ratio = boolean(default=False)
         stops_function = option('mean', 'median', 'random', 'random_choice', default='mean')
+        minimum_number_of_stops = integer(default=1)
 
 
 

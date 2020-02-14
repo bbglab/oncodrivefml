@@ -124,7 +124,6 @@ class Indel:
             self.in_frame_simulated_as_subs = True
             self.get_indel_score = self.get_indel_score_from_stop
             self.get_background_indel_scores = self.get_background_indel_scores_as_stops
-            self.scores.get_stop_scores()
         elif analysis == 'noncoding':
             self.simulated_as_subs = True
             self.get_indel_score = self.get_indel_score_max_of_subs

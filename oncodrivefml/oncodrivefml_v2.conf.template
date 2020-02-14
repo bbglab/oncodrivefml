@@ -86,11 +86,6 @@ score = 5
 # that has the element id to match.
 # element = 6
 
-# Minimum number of stops per element to infer a for the stops using the mean of all scores
-minimum_number_of_stops = 3
-
-# Function to infer the value of the stops in an element using the mean (x is the mean value of the scores)
-mean_to_stop_function = '8.9168668946147314*np.exp(0.082688007694096191*x)'
 
 
 
@@ -147,7 +142,7 @@ max_size = 20
 method = 'max'
 
 
-# Number of consecutive times the indel appears to consider it falls in a repetitive region
+# Number of consecutive times the indel needs to appear to consider it falls in a repetitive region
 max_consecutive = 7
 
 # Do not discard indels that fall in repetitive regions
@@ -158,9 +153,11 @@ max_consecutive = 7
 gene_exomic_frameshift_ratio = False
 # or probabilities of each gene
 # gene_exomic_frameshift_ratio = True
+# This option is only used if method = 'stop'
 
 
 # Function applied to the scores of the stops in the gene to compute the observed score
+# Only used if method = 'stop'
 
 # Arithmetic mean
 stops_function = 'mean'
@@ -173,6 +170,10 @@ stops_function = 'mean'
 
 # Random choice amongst the values
 # stops_function = 'random_choice'
+
+# Minimum number of stops per element to consider those values or use the max
+# Only used if method = 'stop'
+minimum_number_of_stops = 1
 
 
 
