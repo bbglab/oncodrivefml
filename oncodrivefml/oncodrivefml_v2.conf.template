@@ -37,6 +37,7 @@ method = 'complement'
 
 
 # The frequency of trinucleotides can be normalized by the frequency of sites
+# This option can be overwritten in the command line
 
 # whole_genome/wgs: correct the signature for the whole genome frequencies
 # normalize_by_sites = 'whole_genome'
@@ -125,6 +126,7 @@ sampling_min_obs = 10
 
 [[indels]]
 # Include/exclude indels from your analysis
+# This option can be overwritten in the command line
 include = True
 # include = False
 
@@ -180,7 +182,9 @@ minimum_number_of_stops = 1
 [settings]
 # Number of cores to use in the analysis
 # Comment this option to use all avaliable cores
+# This value can be overwritten in the command line
 # cores = 6
 
 # seed for reproducible results
+# This value can be overwritten in the command line
 # seed = 123
