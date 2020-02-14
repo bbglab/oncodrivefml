@@ -103,8 +103,6 @@ def cmdline(mutations_file, elements_file, type, sequencing, output, config_file
     # Overrride the configuration
     if no_indels:
         override_config['statistic']['indels']['include'] = False
-    else:
-        override_config['statistic']['indels']['include'] = True
 
     if type is not None:
         warnings.warn('--type option is no longer supported. '
@@ -120,7 +118,7 @@ def cmdline(mutations_file, elements_file, type, sequencing, output, config_file
         override_config['signature']['normalize_by_sites'] = 'whole_exome'
     elif signature_correction == 'wg' or (signature_correction is None and sequencing == 'wgs'):
         override_config['signature']['normalize_by_sites'] = 'whole_genome'
-    else:
+    elif sequencing == 'targeted':
         override_config['signature']['normalize_by_sites'] = None
 
     if signature_file is not None:

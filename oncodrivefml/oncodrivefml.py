@@ -141,7 +141,7 @@ class OncodriveFML(object):
 
         else:
             self.signatures = signature.compute(load.snp(self.mutations_file, blacklist=self.blacklist),
-                                               conf['method'], conf['classifier'], conf['normalize_by_sites'])
+                                                conf['method'], conf['classifier'], conf['normalize_by_sites'])
 
     def __compute_simulation_probs(self, counts):
         """
