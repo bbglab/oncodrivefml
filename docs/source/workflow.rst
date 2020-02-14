@@ -14,21 +14,11 @@ description of how to use OncodriveFML:
 
 
 
-
 Options:
   -i, --input MUTATIONS_FILE      Variants file  [required]
                                   (:ref:`see format <files input format>`)
   -e, --elements ELEMENTS_FILE    Genomic elements to analyse  [required]
                                   (:ref:`see format <files input format>`)
-  -s, --sequencing
-                                  Type of sequencing [required]:
-
-                                  - *wgs*: whole genome sequencing
-                                  - *wes*: whole exome sequencing
-                                  - *targeted*: targeted sequencing
-
-                                  See :ref:`details about the command line interface <inside cli>`
-                                  to find more information about this option.
 
   -o, --output OUTPUT_FOLDER      Output folder. Default to regions file name
                                   without extensions.
@@ -45,30 +35,27 @@ Options:
                                   See :ref:`details about the command line interface <inside cli>`
                                   to find more information about this option.
 
+  --signature-correction [wg|wx]  Correct the computed signutares by genomic
+                                  or exomic signtures. Only valid for human
+                                  genomes (``hg19`` and ``hg38``)
+
+                                  - *wg*: correction using whole genome counts
+                                  - *wx*: correction using whole exome counts
+
+                                  See :ref:`details about the command line interface <inside cli>`
+                                  to find more information about this option.
+
   --no-indels                     Discard indels in your analysis
+  --cores INTEGER                 Cores to use. Default: all
+  --seed INTEGER                  Set up an initial random seed to have
+                                  reproducible results
+
   --debug                         Show more progress details
   --version                       Show the version and exit.
   -h, --help                      Show this message and exit.
 
 
 
-
-If you prefer to call OncodriveFML from a Python script,
-you can download the source code, install it and call the
-:func:`~oncodrivefml.main.main` function.
-
-.. note::
-
-   You might have notice that the :func:`~oncodrivefml.main.main`
-   function accepts less parameters than the command line
-   interface. This is because the command line interface
-   modifies some parameters in the configuration, while
-   calling directly the Python code does not.
-   Check :ref:`what is modified by the command line interface <inside cli>`.
-
-   This implies that you should adapt the
-   :ref:`configuration file <project configuration>`
-   to your needs.
 
 
 The files
@@ -124,17 +111,22 @@ Workflow
 --------
 
 1. The first thing that is done by OncodriveFML is to load
-   the configuration file and to create the output folder if it does not exist.
+   the configuration file.
+
+2. The output is checked. The default behaviour is that
+   OncodriveFML creates an output folder in the current directory
+   with the same name as the elements file (without extension).
+
+   If an output is provided and it exists and is a folder,
+   OncodriveFML checks whether a
+   file with the expected output name exits and, if so, it does not
+   run. Otherwise, it assumes it is a path name an uses that as output.
 
    .. note::
 
-      If you have not provided any output folder, OncodriveFML
-      will create one in the current directory with the same name
-      as the elements file (without extension).
+      If the output does not exits, OncodriveFML only computes
+      the tsv file with the results and skips the plots.
 
-   If the output folder exits, OncodriveFML checks whether a
-   file with the expected output name exits and, if so, it does not
-   run.
 
 #. The regions file is loaded, and a tree with the intervals is created.
    This tree is used to find which mutations fall in the regions being
@@ -143,7 +135,8 @@ Workflow
 #. Loads the mutations file and keeps only the ones that fall into the regions
    being analysed.
 
-#. Computes the signature (see the :ref:`signature <signature>` section).
+#. Computes the signature (see the :ref:`signature <signature>` section),
+   if not provided as an external file.
 
 #. Analyses each region separately (only the ones that have mutations).
    In each region the analysis is as follow:

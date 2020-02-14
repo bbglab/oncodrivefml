@@ -30,7 +30,7 @@ OncodriveFML introduces this feature because the
 distribution of triplets is not expected to be constant.
 When using the command line interface, OncodriveFML
 does this correction automatically according to
-the value passed in the flag ``--sequencing``
+the value passed in the flag ``--signature-correction``
 (you can list all the options :ref:`using the help <help cmd>`).
 
 .. important:: Signature correction is done
@@ -51,38 +51,39 @@ of trinucleotides in specific regions of the genome)
 can be computed using the `bgsignature package <https://bitbucket.org/bgframework/bgsignature>`_
 and passed to OncodriveFML via the `configuration file <config signature>`_.
 
+.. c
 
-Reasoning behind the correction
--------------------------------
+	Reasoning behind the correction
+	-------------------------------
 
 
-Let's first take the conditional probability of a mutation (with contectx [#context]_)
-to occur given the number of those triplets in the region:
-:math:`p_i = p(m = i | T_i) = \frac{m_i}{T_i}`.
+	Let's first take the conditional probability of a mutation (with contectx [#context]_)
+	to occur given the number of those triplets in the region:
+	:math:`p_i = p(m = i | T_i) = \frac{m_i}{T_i}`.
 
-Then, the normalized frequency of the mutation :math:`i` is:
-:math:`\overline{f_i} = \frac{m_i/T_i}{\sum_j m_j/T_j}`.
+	Then, the normalized frequency of the mutation :math:`i` is:
+	:math:`\overline{f_i} = \frac{m_i/T_i}{\sum_j m_j/T_j}`.
 
-The results can be adapted in case our inputs are not absolute values but relative frequencies.
-:math:`f_i` is the frequency of mutations and :math:`t_i` the frequency of nucleotides:
+	The results can be adapted in case our inputs are not absolute values but relative frequencies.
+	:math:`f_i` is the frequency of mutations and :math:`t_i` the frequency of nucleotides:
 
-.. math::
+	.. math::
 
-    f_i = \frac{m_i}{\sum_j m_j};      t_i = \frac{T_i}{\sum_j T_j} \simeq \frac{T_i}{N}
+		f_i = \frac{m_i}{\sum_j m_j};      t_i = \frac{T_i}{\sum_j T_j} \simeq \frac{T_i}{N}
 
-(:math:`N` is the number of nucleotides, :math:`\sum_j T_j = N - 2 \cdot s`, where :math:`s` is the number of segments)
+	(:math:`N` is the number of nucleotides, :math:`\sum_j T_j = N - 2 \cdot s`, where :math:`s` is the number of segments)
 
-Then:
+	Then:
 
-.. math::
+	.. math::
 
-   \overline{f_i} = \frac{f_i/t_i}{\sum_j f_j/t_j}
+	   \overline{f_i} = \frac{f_i/t_i}{\sum_j f_j/t_j}
 
-Proof:
+	Proof:
 
-.. math::
+	.. math::
 
-   \frac{f_i/t_i}{\sum_j f_j/t_j} = \frac{\frac{\frac{m_i}{\sum_j m_j}}{\frac{T_i}{\sum_j T_j}}}{\sum_k \frac{\frac{m_k}{\sum_j m_j}}{\frac{T_k}{\sum_j T_j}}} = \frac{\frac{m_i}{T_i} \cdot \frac{\sum_j T_j}{\sum_j m_j}}{\sum_k (\frac{m_k}{T_k} \cdot \frac{\sum_j T_j}{\sum_j m_j})} = \frac{\frac{m_i}{T_i} \cdot \frac{\sum_j T_j}{\sum_j m_j}}{\frac{\sum_j T_j}{\sum_j m_j} \cdot \sum_k \frac{m_k}{T_k}} = \frac{m_i / T_i}{\sum_k m_k/T_k}
+	   \frac{f_i/t_i}{\sum_j f_j/t_j} = \frac{\frac{\frac{m_i}{\sum_j m_j}}{\frac{T_i}{\sum_j T_j}}}{\sum_k \frac{\frac{m_k}{\sum_j m_j}}{\frac{T_k}{\sum_j T_j}}} = \frac{\frac{m_i}{T_i} \cdot \frac{\sum_j T_j}{\sum_j m_j}}{\sum_k (\frac{m_k}{T_k} \cdot \frac{\sum_j T_j}{\sum_j m_j})} = \frac{\frac{m_i}{T_i} \cdot \frac{\sum_j T_j}{\sum_j m_j}}{\frac{\sum_j T_j}{\sum_j m_j} \cdot \sum_k \frac{m_k}{T_k}} = \frac{m_i / T_i}{\sum_k m_k/T_k}
 
 
 ----

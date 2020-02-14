@@ -38,12 +38,14 @@ The support is only partial because the values for the position and alterations
 of the stops in the these genomes have not been computed yet. If you want to
 run OncodriveFML with any of these genomes, make sure you do not use
 the ``stop`` method for the indels (:ref:`ref <config indels>`).
+In addition, signature correction cannot be performed.
 
 .. warning::
 
-   If you decide to use a reference genome other than ``HG19``, make sure that the
-   scores file you use is compatible with it.
-   And you update all related parameters.
+   Make sure that the
+   scores file you use is compatible with your reference genome.
+   For human reference genomes, we have been using
+   `CADD scores <https://cadd.gs.washington.edu/download>`_
 
 .. _config signature:
 
@@ -83,6 +85,9 @@ method
     :ref:`--signature option <inside cli signature>`
     in the command line interface.
 
+	The precomputed signature can be obtained using
+    the `bgsignature package <https://pypi.org/project/bgsignature/>`_.
+
 
 classifier
   The signature by default is computed using the whole dataset.
@@ -98,7 +103,7 @@ classifier
 normalize_by_sites
   Compute a normalization of the signature.
   This option appears commented because it *is* overridden
-  by the :ref:`--sequencing option <inside cli sequencing>`
+  by the :ref:`--signature-correction option <inside cli signature correction>`
   of the command line interface.
 
   If you provide an external file with the signature,
@@ -196,6 +201,7 @@ discard_mnp
   - ``discard_mnp = False``: include them
   - ``discard_mnp = True``: discard them
 
+.. _per sample analysis:
 
 per_sample_analysis
   In some cases, you might be interested in performing the
@@ -247,7 +253,7 @@ the configuration for the analysis of indels.
 
 .. literalinclude:: oncodrivefml.conf
    :language: text
-   :lines: 58-64
+   :lines: 58-66
 
 OncodriveFML accepts various parameters related to the indels:
 
@@ -286,11 +292,16 @@ max_consecutive
   same sequence of the indel appears consecutively 
   in a genomic element a certain number of times 
   (or even more).
-  The maximum number of consecutve repetitions can be 
+  The maximum number of consecutive repetitions can be
   set with the ``max_consecutive`` option.
   OncodriveFML will not discard any indel
   due to repetitive regions if you set
   ``max_consecutive = 0``.
+
+max_size
+  Indels with a length bigger than this value are automatically
+  discarded by the analysis, as they are assumed to be
+  sequencing error or other artifacts.
 
 
 
@@ -298,6 +309,9 @@ max_consecutive
 
 Configuring indels as stops
 ***************************
+
+.. attention:: This feature is experimental and results
+   might be biased.
 
 As explained in the :ref:`analysis section <analysis indels as stop>`
 OncodriveFML can be configured to simulate indels as stops.
@@ -344,30 +358,12 @@ stops_function
     a *random value* between all the possible stop scores in the gene
 
 
-In addition, the :ref:`score sections <config score>`
-of the configuration file needs to
-contain two new parameters:
-
-mean_to_stop_function
-  When analysing a certain gene, OncodriveFML might need
-  to score an indel according to the value of the stops in the gene.
-  It might happen that the number of stops is 0
-  or is below a certain threshold.
-  In such cases, OncodriveFML uses the function specified
-  in ``mean_to_stop_function`` parameter to assign a score from the mean value
-  of all the stops in the gene.
-
-  .. only:: html
-
-     Download the :download:`IPython notebook <_static/ScoresFunction.html>` that
-     has been created with the functions computed for
-     *CADD1.0* and *CADD1.3*, or :ref:`see it <nb scoresfunct>`.
-
 minimum_number_of_stops
   When analysing a certain gene, OncodriveFML gets all the scores
   associated with the mutations that produce a stop in that gene.
   ``minimum_number_of_stops`` indicates the minimum number of stops
-  that a gene is required to have in order to avoid using the function above.
+  that a gene is required. If the minimum is not satisfied,
+  OncodriveFML uses the maximum possible score.
 
 .. attention:: These parameters must also be adjusted for
    each scores file.
@@ -384,7 +380,7 @@ OncodriveFML includes the setting section:
 
 .. literalinclude:: oncodrivefml.conf
    :language: text
-   :lines: 67-69
+   :lines: 69-73
 
 Use the ``cores`` option to indicate how many cores to
 use. You can comment this option in order to use
@@ -398,6 +394,11 @@ The command line :command:`--cores` option
    OncodriveFML works on shared memory systems
    using the :mod:`multiprocessing` module.
 
+The ``seed`` option can be used to fix the random seed,
+to get reproducible results.
+
+The command line :command:`--seed` option
+*can* override this value.
 
 ----
 

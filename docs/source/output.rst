@@ -5,9 +5,12 @@ Output
 
 OncodriveFML generates 3 output files:
 
-- A :file:`.tsv` with the analysis results
+- A :file:`.tsv.gz` with the analysis results
 - A :file:`.png` image with the most significant genes labeled.
 - A :file:`.html` interactive plot which can be used to search for specific genes.
+
+The plots are only generated if the ``--output`` option
+is not passed or is an existing directory.
 
 Naming
 ------

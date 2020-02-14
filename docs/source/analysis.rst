@@ -83,12 +83,16 @@ As stops
    the mean score of all mutations in the gene. See the :ref:`configuration of indel <config indels>`
    section for further information.
 
-   .. note:: This option needs to be manually set up in the
+   .. attention:: This feature is experimental.
+      Thus, it is only available for ``hg19`` and ``hg38`` genomes,
+      and it needs to be manually set up in the configuration
       using the configuration file.
 
 
 Indels with a length higher than 20 nucleotides
 are ignored [#obsIgnored]_.
+This value can be configured in the
+:ref:`configuration file <config indels>`.
 
 Simulated
 ---------
@@ -113,7 +117,7 @@ Probabilities
 
 The probability array is computed taking into account different parameters.
 
-If only substituions are simulated,
+If only substitutions are simulated,
 either because the analysis excludes indels or
 because they are simulated as substitutions,
 the probabilities are:

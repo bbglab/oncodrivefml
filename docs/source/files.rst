@@ -16,7 +16,8 @@ File formats
 Input file format
 ^^^^^^^^^^^^^^^^^
 
-The variants file is a text file with, at least, 5 columns separated by a tab character (the header is required, but the order of the columns can change):
+The variants file is a text file with, at least, 5 columns separated by a tab character
+(the header is required, but the order of the columns can change):
 
 * Column CHROMOSOME: Chromosome. A number between 1 and 22 or the letter X or Y (upper case)
 * Column POSITION: Mutation position. A positive integer.
@@ -26,8 +27,14 @@ The variants file is a text file with, at least, 5 columns separated by a tab ch
 * Column CANCER_TYPE: Cancer type. Any alphanumeric string. Optional.
 * Column SIGNATURE: User defined signature categories. Any alphanumeric string. Optional.
 
-
 Mutations are expected to be in the positive strand.
+
+.. note:: OncodriveFML, although reading the SAMPLE column, it does
+   not perform a per-sample analysis.
+
+   A **by-sample** option can be enabled in the configuration file,
+   in which only one mutation per sample is included in the analysis.
+   More details in the :ref:`configuration section <per sample analysis>`.
 
 
 .. _files region format:
@@ -72,14 +79,14 @@ Changes are represented as
 ``AAA>C`` (reference triplet, ``>`` and alternate).
 
 See the `bgsignature package <https://bitbucket.org/bgframework/bgsignature>`_
-for more information.
+for more information on how to create such signatures.
 
 
 Output file format
 ^^^^^^^^^^^^^^^^^^
 
 OncodriveFML generates a tabulated file with the results with the
-extension ".tsv".
+extension ".tsv.gz". It is compressed with gzip.
 
 Check the :ref:`output section <output files>` to find a detailed description
 regarding the output.

@@ -24,25 +24,7 @@ The flag :command:`--no-indels` also affects the
 :ref:`indels configuration parameters <config indels>`.
 Particularly, it has effect on the ``include`` option.
 The use of this flag discards the analysis of indels
-by setting ``include = False``, while not using it
-includes indels (``include = True``).
-
-.. _inside cli sequencing:
-
-The :ref:`table below <cli sequencing>` shows the effects of the
-:command:`--sequencing` flag in the :ref:`signature configuration <config signature>`:
-
-
-.. table:: Effects of --sequencing
-   :name: cli sequencing
-
-   ======================  ========================================
-   Value                   Effect in signature
-   ======================  ========================================
-   wgs                     ``normalize_by_sites = 'whole_genome'``
-   wes                     ``normalize_by_sites = 'whole_exome'``
-   targeted                ``normalize_by_sites = None``
-   ======================  ========================================
+by setting ``include = False``.
 
 .. _inside cli signature:
 
@@ -51,6 +33,26 @@ set the signature configuration to
 ``method = "file"`` and ``path = "<provided path>"``
 
 .. note:: Signatures provided as an external file are not normalized.
+
+
+.. _inside cli signature correction:
+
+The :ref:`table below <cli signature correction>` shows the effects of the
+:command:`--signature-correction` flag in the :ref:`signature configuration <config signature>`:
+
+
+.. table:: Effects of --signature-correction
+   :name: cli signature correction
+
+   ======================  ========================================
+   Value                   Effect in signature
+   ======================  ========================================
+   wg                      ``normalize_by_sites = 'whole_genome'``
+   wx                      ``normalize_by_sites = 'whole_exome'``
+   ======================  ========================================
+
+.. note:: This option does not have any impact if signatures
+   are passed with the ``--signature`` option.
 
 .. _inside bgdata:
 
@@ -70,7 +72,7 @@ and *HG38*.
 
 .. code-block:: bash
 
-   bgdata datasets genomereference hg19
+   bgdata datasets/genomereference/hg38
 
 
 If you want to use a different genome, you need to
@@ -86,4 +88,4 @@ positions and the alterations of the gene stops.
 
 .. code-block:: bash
 
-   bgdata datasets genestops hg19
+   bgdata datasets/genestops/hg38

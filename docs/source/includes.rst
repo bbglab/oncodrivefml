@@ -39,15 +39,3 @@ Configuration template
    :class: text
    :name: config template file
 
-
-
-.. only:: html
-
-   .. _nb scoresfunct:
-
-   Scores function notebook
-   =========================
-
-   .. raw:: html
-
-      <iframe style='width: 100%; height: 1000px' src='_static/ScoresFunction.html' frameborder="0" allowfullscreen></iframe>
