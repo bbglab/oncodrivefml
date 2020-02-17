@@ -1,6 +1,4 @@
-build:
-    image: latest
-
+conda:
+  file: docs/source/environment.yml
 python:
-    version: 3.6
-    setup_py_install: true
+  setup_py_install: true
