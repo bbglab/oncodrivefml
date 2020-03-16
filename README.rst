@@ -65,24 +65,13 @@ Download and extract the example files (if you cloned the repository skip this s
    $ wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples_v2.2.tar.gz
    $ tar xvzf oncodrivefml-examples_v2.2.tar.gz
 
-To run this example OncodriveFML needs all the precomputed CADD scores, that is a 17Gb file.
-It will be automatically downloaded the first time you run OncodriveFML,
-but if you want to speed up the process it is better to first download it using
-our data package management tool (``BgData``) that is also installed when you install OncodriveFML.
-
-Run this command to download the CADD scores file to the default bgdata folder ~/.bgdata::
-
-   $ bgdata get genomicscores/caddpack/1.0
+To run this example OncodriveFML needs all the precomputed CADD scores, that is a 17Gb file,
+that will be downloaded automatically, together with the reference genome.
 
 .. warning::
 
    CADD scores are originally from `<http://cadd.gs.washington.edu/>`_ and are freely available for all non-commercial applications.
    If you are planning on using them in a commercial application, please contact them at `<http://cadd.gs.washington.edu/contact>`_.
-
-Additonally, if you want to speed up the download of the genome reference that is also needed,
-run this command::
-
-   $ bgdata get datasets/genomereference/hg19
 
 To run the example, we have included a bash script (``run.sh``)
 than will execute OncodriveFML. The script should be executed in
@@ -91,6 +80,18 @@ the folder where the files have been extracted::
    $ ./run.sh
 
 The results will be saved in a folder named ``cds``.
+
+
+Run OncodriveFML
+----------------
+
+Although OncodriveFML includes a predefined configuration file,
+it is highly recommended to create one yourself.
+In fact, if you are interested in using a reference genome other than
+HG19, or a score other than CADD 1.0,
+it is mandatory.
+See `the documentation <https://oncodrivefml.readthedocs.io/en/latest/configuration.html>`_
+for more details.
 
 
 .. _readme docs:
