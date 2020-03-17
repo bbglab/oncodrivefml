@@ -35,14 +35,13 @@ class OncodriveFML(object):
     Args:
        mutations_file: Mutations input file (see :mod:`~oncodrivefml.load` for details)
        elements_file: Genomic element input file (see :mod:`~oncodrivefml.load` for details)
-       output_folder: Folder where the results will be stored. If None, only the TSV file is created
-       output_file: path to the output file
+       output_folder: Folder where the results will be stored
        config: configuration (see :ref:`configuration <project configuration>`)
        blacklist: File with sample ids (one per line) to remove when loading the input file
 
     """
 
-    def __init__(self, mutations_file, elements_file, output_folder, output_file, config, blacklist):
+    def __init__(self, mutations_file, elements_file, output_folder, config, blacklist):
         logger.debug('Using OncodriveFML version %s', __version__)
 
         # Required parameters
@@ -78,9 +77,8 @@ class OncodriveFML(object):
 
         # Optional parameters
         self.output_folder = output_folder
-        self.output_file = output_file
-        self.output_file_prefix = output_file.replace('.tsv.gz', '')
-        logger.debug('Output: %s', self.output_folder or self.output_file)
+        self.output_file_prefix = join(self.output_folder, file_name(self.mutations_file) + '-oncodrivefml')
+        logger.debug('Output: %s', self.output_folder)
 
         # Output parameters
         self.mutations = None
@@ -283,13 +281,14 @@ class OncodriveFML(object):
 
         # Sort and store results
         logger.info("Storing results")
-        if self.output_folder is not None and not exists(self.output_folder):
+        if not exists(self.output_folder):
             os.makedirs(self.output_folder, exist_ok=True)
-        store_tsv(results_mtc, self.output_file)
+        result_file = self.output_file_prefix + '.tsv.gz'
+        store_tsv(results_mtc, result_file)
 
         lines = 0
         gene_ids = {None, ''}
-        with gzip.open(self.output_file, 'rt') as csvfile:
+        with gzip.open(result_file, 'rt') as csvfile:
             fd = csv.DictReader(csvfile, delimiter='\t')
             for line in fd:
                 lines += 1
@@ -299,7 +298,7 @@ class OncodriveFML(object):
 
         if self.output_folder is not None:
             logger.info("Creating figures")
-            store_png(self.output_file, self.output_file_prefix + ".png")
-            store_html(self.output_file, self.output_file_prefix + ".html")
+            store_png(result_file, self.output_file_prefix + ".png")
+            store_html(result_file, self.output_file_prefix + ".html")
 
         logger.info("Done")
