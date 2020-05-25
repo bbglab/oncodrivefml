@@ -214,7 +214,7 @@ class QQPlot(object):
             """
 
         callback = CustomJS(args={'source': self._source}, code=code)
-        self.figure.add_tools(HoverTool(tooltips=None, callback=callback, renderers=[self.glyph], mode='mouse'))
+        self.figure.add_tools(HoverTool(tooltips=None, js_event_callbacks=callback, renderers=[self.glyph], mode='mouse'))
 
     def add_search_widget(self, fields):
         """
