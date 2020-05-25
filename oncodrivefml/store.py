@@ -46,7 +46,7 @@ class QQPlot(object):
     """
 
     def __init__(self, input_file, cutoff=True, rename_fields=None, extra_fields=None):
-        basic_tools = "pan,box_zoom,wheel_zoom,reset,save,crosshair"
+        basic_tools = "pan,box_zoom,wheel_zoom,reset,previewsave,crosshair"
         self.figure = figure(width=600, plot_height=600, tools=basic_tools, toolbar_location="above")
         # labels
         self.figure.xaxis.axis_label = 'Expected p-values'
@@ -214,7 +214,7 @@ class QQPlot(object):
             """
 
         callback = CustomJS(args={'source': self._source}, code=code)
-        self.figure.add_tools(HoverTool(tooltips=None, js_event_callbacks=callback, renderers=[self.glyph], mode='mouse'))
+        self.figure.add_tools(HoverTool(tooltips=None, callback=callback, renderers=[self.glyph], mode='mouse'))
 
     def add_search_widget(self, fields):
         """

@@ -7,7 +7,7 @@ bglogs==0.6
 bgparsers==0.10
 bgreference==0.6
 bgsignature==0.2
-bokeh>=1.4.0
+bokeh>=1.4.0,<2
 click>=7.0
 cython==0.29.15
 intervaltree>=3.0.2
