@@ -1,7 +1,7 @@
 # Python 3.6
 ago==0.0.93
 bgcache==0.1
-bgconfig==0.9
+bgconfig
 bgdata>=2.0.3
 bglogs==0.6
 bgparsers==0.10
