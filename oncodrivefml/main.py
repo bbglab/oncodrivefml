@@ -19,7 +19,7 @@ CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
 
 def main(mutations_file, elements_file, output_folder, config_file, samples_blacklist,
-         config_override_dict=None):
+         config_override_dict=None, force=False):
     """
     Run OncodriveFML analysis
 
@@ -39,7 +39,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
     output_folder = file_name(elements_file) if output_folder is None else output_folder
     output_file = path.join(output_folder, file_name(mutations_file) + '-oncodrivefml.tsv.gz')
     # Skip if done
-    if path.exists(output_file):
+    if path.exists(output_file) and not force:
         logging.warning("Already calculated at '{}'".format(output_file))
         return
     else:
@@ -72,10 +72,11 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.option('--cores', help="Cores to use. Default: all", default=None, type=int)
 @click.option('--seed', help="Set up an initial random seed to have reproducible results", type=click.IntRange(0, 2**32-1), default=None)
 @click.option('--generate-pickle', help="Deprecated flag. Do not use.", is_flag=True)
+@click.option('--force', help="Overwrite results if exists", is_flag=True)
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
 def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist,
-            signature_file, signature_correction, no_indels, cores, seed, generate_pickle, debug):
+            signature_file, signature_correction, no_indels, cores, seed, generate_pickle, force, debug):
     """
     Run OncodriveFML on the genomic regions in ELEMENTS FILE
     using the mutations in MUTATIONS FILE.
@@ -123,7 +124,7 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
     if cores is not None:
         override_config['settings']['cores'] = cores
 
-    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, override_config)
+    main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, override_config, force)
 
 
 if __name__ == "__main__":
