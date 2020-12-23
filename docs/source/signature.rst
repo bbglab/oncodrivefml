@@ -15,7 +15,7 @@ or computing the signature from the mutations file.
 Additionally, signatures can be grouped into different categories
 (such as the sample).
 
-The signature is computed count all the Single Nucleotide Polymorphisms
+The signature is computed count all the Single Nucleotide Variants
 in the input file, taking into account their context.
 The counts are used to compute a frequency
 :math:`f_i = \frac{m_i}{M}` where :math:`M = \sum_j m_j`, and
