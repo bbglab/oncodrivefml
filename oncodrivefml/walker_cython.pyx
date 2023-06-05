@@ -7,6 +7,7 @@ cdef extern from "stdlib.h":
 def walker_sampling(long samples, long muts, double obs_val, double [:] scores, double [:] probs, long [:] inx, long seed):
     cdef long obs=0, neg_obs=0, i=0, j, size=len(scores)
     cdef double mean, u
+    cdef list mean_values = []
 
     srand48(seed)
 
@@ -23,11 +24,14 @@ def walker_sampling(long samples, long muts, double obs_val, double [:] scores, 
                 mean += scores[inx[j]]
 
         mean = mean / muts
+        mean_values.append(mean)
+
         if mean >= obs_val:
             obs += 1
         if mean <= obs_val:
             neg_obs += 1
 
         i = i + 1
-
-    return obs, neg_obs
+    
+    mean_of_means = sum(mean_values) / len(mean_values)  # Calculate the mean of mean_values
+    return obs, neg_obs, mean_of_means

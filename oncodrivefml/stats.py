@@ -43,7 +43,7 @@ class ArithmeticMean(object):
         values = np.mean(values, axis=1)
         obs = len(values[values >= observed_value])
         neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs
+        return obs, neg_obs, np.mean(values)
 
 
 class Maximum(object):

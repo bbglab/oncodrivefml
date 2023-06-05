@@ -236,6 +236,14 @@ class OncodriveFML(object):
 
             # Flatten partitions
             partitions = list(flatten_partitions(results))
+            
+            # # Open the file in write mode
+            # with open(self.output_file_prefix +'.test.results', 'w') as fileparts:
+            #     # Iterate over the dictionary items
+            #     for x, y in results.items():
+            #         print(x, y, file=fileparts)
+                    
+            
 
             i = 0
             while len(partitions) > 0 or i == 0:
@@ -244,10 +252,15 @@ class OncodriveFML(object):
                 logger.info("Parallel sampling. Iteration %d, genes %d, partitions %d", i, len(set([n for n, p, r, s in partitions])), len(partitions))
 
                 # Pending sampling execution
-                for name, obs, neg_obs in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
+                for name, obs, neg_obs, back_mean in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
                     result = results[name]
                     result['obs'] += obs
                     result['neg_obs'] += neg_obs
+                    print(obs, neg_obs, back_mean)
+                    if 'back_mean' in result.keys():
+                        result['back_mean'].append(back_mean)
+                    else:
+                        result['back_mean'] = [back_mean]
 
                 # Increase sampling_size
                 partitions = []
@@ -285,6 +298,13 @@ class OncodriveFML(object):
             os.makedirs(self.output_folder, exist_ok=True)
         result_file = self.output_file_prefix + '.tsv.gz'
         store_tsv(results_mtc, result_file)
+
+        # # Open the file in write mode
+        # with open(result_file+'.test', 'w') as filetest:
+        #     # Iterate over the dictionary items
+        #     for key, value in results.items():
+        #         # Write the key-value pair to the file
+        #         print(key, value, file=filetest)
 
         lines = 0
         gene_ids = {None, ''}

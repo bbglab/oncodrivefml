@@ -40,11 +40,11 @@ def compute_sampling(value):
     np.random.seed(seed)
 
     if statistic_name == "amean":
-        obs, neg_obs = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
+        obs, neg_obs, mean_vals = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
     else:
-        obs, neg_obs = compute_sampling_python(samples, muts_count, observed, scores, probs, statistic_name)
+        obs, neg_obs, mean_vals = compute_sampling_python(samples, muts_count, observed, scores, probs, statistic_name)
 
-    return name, obs, neg_obs
+    return name, obs, neg_obs, mean_vals
 
 
 def compute_sampling_python(samples, muts, observed, scores, probs, statistic_name):
@@ -77,13 +77,15 @@ def compute_sampling_cython(samples, muts, obs_val, scores, probs):
         return walker_sampling(samples, muts, obs_val, scores, probs, inx, seed)
     else:
         obs, neg_obs = 0, 0
+        means_list = list()
         for p in partitions_list(samples, 2000000000):
             seed = np.random.randint(0, 2**31-1)
-            o, no = walker_sampling(p, muts, obs_val, scores, probs, inx, seed)
+            o, no, mn = walker_sampling(p, muts, obs_val, scores, probs, inx, seed)
             obs += o
             neg_obs += no
+            means_list.append(mn)
 
-    return obs, neg_obs
+    return obs, neg_obs, np.mean(means_list)
 
 
 if __name__ == "__main__":
@@ -101,9 +103,9 @@ if __name__ == "__main__":
     obs_val = np.mean(np.random.rand(muts))
 
     s = time.time()
-    obs, neg_obs = compute_sampling_python(samples, muts, obs_val, scores, probs, 'amean')
+    obs, neg_obs, mean = compute_sampling_python(samples, muts, obs_val, scores, probs, 'amean')
     print("Python time: {} Obs:{} Neg_obs:{}".format(time.time() - s, obs, neg_obs))
 
     s = time.time()
-    obs, neg_obs = compute_sampling_cython(samples, muts, obs_val, scores, probs)
+    obs, neg_obs, mean = compute_sampling_cython(samples, muts, obs_val, scores, probs)
     print("Cython time: {} Obs:{} Neg_obs:{}".format(time.time() - s, obs, neg_obs))

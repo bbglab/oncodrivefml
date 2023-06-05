@@ -30,7 +30,7 @@ build
 *.c
 
 *.pickle.gz
-example/cds
+example/cds*
 example/cdsOriginal
 
 docs/build

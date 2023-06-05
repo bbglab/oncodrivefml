@@ -548,13 +548,16 @@ def store_tsv(results, result_file):
     """
     results.index.names = ['GENE_ID']
     results.sort_values(by='pvalue', inplace=True)
-    fields = ['muts', 'muts_recurrence', 'samples_mut', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'snps', 'mnps', 'indels', 'symbol']
+    fields = ['muts', 'muts_recurrence', 'samples_mut', 'scores', 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg', 'snps', 'mnps', 'indels', 'symbol', 'back_mean']
     df = results[fields].copy()
+    df['scores'] = df['scores'].apply(np.mean)
     df.reset_index(inplace=True)
-    df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE', 'samples_mut': 'SAMPLES',
+    df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
+                       'scores' : 'AVG_SCORE',
+                       'samples_mut': 'SAMPLES',
                        'pvalue': 'P_VALUE', 'qvalue': 'Q_VALUE','pvalue_neg': 'P_VALUE_NEG',
                        'qvalue_neg': 'Q_VALUE_NEG', 'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
-                       'symbol': 'SYMBOL'}, inplace=True)
+                       'symbol': 'SYMBOL', 'back_mean' : 'BACK_MUT_MEAN'}, inplace=True)
     df = add_symbol(df)
 
     df.to_csv(result_file, sep="\t", header=True, index=False, compression="gzip")
