@@ -256,11 +256,13 @@ class OncodriveFML(object):
                     result = results[name]
                     result['obs'] += obs
                     result['neg_obs'] += neg_obs
-                    print(obs, neg_obs, back_mean)
-                    if 'back_mean' in result.keys():
-                        result['back_mean'].append(back_mean)
+                    mean_repeated = list(np.repeat(back_mean, obs + neg_obs))
+
+                    # print(obs, neg_obs, back_mean)
+                    if type(result['back_mean']) == list:
+                        result['back_mean'] = result['back_mean'] + mean_repeated
                     else:
-                        result['back_mean'] = [back_mean]
+                        result['back_mean'] = mean_repeated
 
                 # Increase sampling_size
                 partitions = []
@@ -287,6 +289,13 @@ class OncodriveFML(object):
         if results == {}:
             logger.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")
             sys.exit(0)
+
+
+        # Compute the background mutations mean for each gene
+        for gene in results.keys():
+            result = results[gene] 
+            result['back_mean'] = round(np.mean(result['back_mean']), 5)
+
 
         # Run multiple test correction
         logger.info("Computing multiple test correction")
