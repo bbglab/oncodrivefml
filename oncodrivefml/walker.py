@@ -40,11 +40,11 @@ def compute_sampling(value):
     np.random.seed(seed)
 
     if statistic_name == "amean":
-        obs, neg_obs, mean_vals = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
+        obs, neg_obs, means = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
     else:
-        obs, neg_obs, mean_vals = compute_sampling_python(samples, muts_count, observed, scores, probs, statistic_name)
+        obs, neg_obs, means = compute_sampling_python(samples, muts_count, observed, scores, probs, statistic_name)
 
-    return name, obs, neg_obs, mean_vals
+    return name, obs, neg_obs, means
 
 
 def compute_sampling_python(samples, muts, observed, scores, probs, statistic_name):
@@ -83,9 +83,12 @@ def compute_sampling_cython(samples, muts, obs_val, scores, probs):
             o, no, mn = walker_sampling(p, muts, obs_val, scores, probs, inx, seed)
             obs += o
             neg_obs += no
-            means_list.append(mn)
+            if type(mn) == list:
+                means_list = means_list + mn
+            else:
+                means_list.append(mn)
 
-    return obs, neg_obs, np.mean(means_list)
+    return obs, neg_obs, means_list
 
 
 if __name__ == "__main__":
@@ -103,9 +106,9 @@ if __name__ == "__main__":
     obs_val = np.mean(np.random.rand(muts))
 
     s = time.time()
-    obs, neg_obs, mean = compute_sampling_python(samples, muts, obs_val, scores, probs, 'amean')
+    obs, neg_obs, means = compute_sampling_python(samples, muts, obs_val, scores, probs, 'amean')
     print("Python time: {} Obs:{} Neg_obs:{}".format(time.time() - s, obs, neg_obs))
 
     s = time.time()
-    obs, neg_obs, mean = compute_sampling_cython(samples, muts, obs_val, scores, probs)
+    obs, neg_obs, means = compute_sampling_cython(samples, muts, obs_val, scores, probs)
     print("Cython time: {} Obs:{} Neg_obs:{}".format(time.time() - s, obs, neg_obs))

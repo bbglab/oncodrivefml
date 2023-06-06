@@ -33,5 +33,4 @@ def walker_sampling(long samples, long muts, double obs_val, double [:] scores, 
 
         i = i + 1
     
-    mean_of_means = sum(mean_values) / len(mean_values)  # Calculate the mean of mean_values
-    return obs, neg_obs, mean_of_means
+    return obs, neg_obs, mean_values

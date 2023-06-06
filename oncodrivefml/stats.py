@@ -43,7 +43,7 @@ class ArithmeticMean(object):
         values = np.mean(values, axis=1)
         obs = len(values[values >= observed_value])
         neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs, np.mean(values)
+        return obs, neg_obs, values
 
 
 class Maximum(object):
@@ -58,7 +58,7 @@ class Maximum(object):
         values = np.max(values, axis=1)
         obs = len(values[values >= observed_value])
         neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs
+        return obs, neg_obs, values
 
 
 class GeometricMean(object):
@@ -104,7 +104,7 @@ class GeometricMean(object):
         values = stats.gmean(values +1.0, axis=1) -1.0
         obs = len(values[values >= observed_value])
         neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs
+        return obs, neg_obs, values
 
 
 class ArithmeticMeanHeteroscedasticScores(object):
@@ -125,7 +125,7 @@ class ArithmeticMeanHeteroscedasticScores(object):
         values = np.mean(values, axis=1)
         obs = len(values[values >= observed_value])
         neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs
+        return obs, neg_obs, values
 
 
 STATISTIC_TESTS = {

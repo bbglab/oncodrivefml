@@ -236,14 +236,7 @@ class OncodriveFML(object):
 
             # Flatten partitions
             partitions = list(flatten_partitions(results))
-            
-            # # Open the file in write mode
-            # with open(self.output_file_prefix +'.test.results', 'w') as fileparts:
-            #     # Iterate over the dictionary items
-            #     for x, y in results.items():
-            #         print(x, y, file=fileparts)
-                    
-            
+
 
             i = 0
             while len(partitions) > 0 or i == 0:
@@ -252,17 +245,16 @@ class OncodriveFML(object):
                 logger.info("Parallel sampling. Iteration %d, genes %d, partitions %d", i, len(set([n for n, p, r, s in partitions])), len(partitions))
 
                 # Pending sampling execution
-                for name, obs, neg_obs, back_mean in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
+                for name, obs, neg_obs, back_means in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
                     result = results[name]
                     result['obs'] += obs
                     result['neg_obs'] += neg_obs
-                    mean_repeated = list(np.repeat(back_mean, obs + neg_obs))
-
+                    
                     # print(obs, neg_obs, back_mean)
-                    if type(result['back_mean']) == list:
-                        result['back_mean'] = result['back_mean'] + mean_repeated
+                    if type(result['back_means']) == list:
+                        result['back_means'] = result['back_means'] + back_means
                     else:
-                        result['back_mean'] = mean_repeated
+                        result['back_means'] = back_means
 
                 # Increase sampling_size
                 partitions = []
@@ -287,14 +279,19 @@ class OncodriveFML(object):
                 result['pvalue_neg'] = max(1, result['neg_obs']) / sampling_size if result['neg_obs'] is not None else None
 
         if results == {}:
-            logger.warning("Empty resutls, possible reason: no mutation from the dataset can be mapped to the provided regions.")
+            logger.warning("Empty results, possible reason: no mutation from the dataset can be mapped to the provided regions.")
             sys.exit(0)
 
 
         # Compute the background mutations mean for each gene
         for gene in results.keys():
-            result = results[gene] 
-            result['back_mean'] = round(np.mean(result['back_mean']), 5)
+            result = results[gene]
+            mean_of_means = np.mean(result['back_means'])
+            std_of_means = np.std(result['back_means'])
+            mean_of_observed = np.mean(result['scores'])
+            result['z-score'] = (mean_of_observed - mean_of_means) / std_of_means
+            result['mean_of_means'] = round(mean_of_means, 5)
+            result['std_of_means'] = round(std_of_means, 5)
 
 
         # Run multiple test correction
@@ -307,13 +304,6 @@ class OncodriveFML(object):
             os.makedirs(self.output_folder, exist_ok=True)
         result_file = self.output_file_prefix + '.tsv.gz'
         store_tsv(results_mtc, result_file)
-
-        # # Open the file in write mode
-        # with open(result_file+'.test', 'w') as filetest:
-        #     # Iterate over the dictionary items
-        #     for key, value in results.items():
-        #         # Write the key-value pair to the file
-        #         print(key, value, file=filetest)
 
         lines = 0
         gene_ids = {None, ''}
