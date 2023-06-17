@@ -68,3 +68,28 @@ def loop_logging(iterable, size=None, step=1):
 
 def exists_path(path):
     return False if path is None else exists(path)
+
+
+
+
+def load_depths(depths_filename):
+    """
+    Function to load the depths file into a Python dictionary
+    {
+        1 : {POS1: DEPTH1, POS2: DEPTH2},
+        2 : {POS1: DEPTH1, POS2: DEPTH2},
+        3 : {POS1: DEPTH1, POS2: DEPTH2},
+        ...
+    }
+    """
+    depths_dict = {}
+    with open(depths_filename, 'r') as f:
+        for line in f:
+            # print(line)
+            chromosome, position, value = line.strip().split("\t")
+            # print(chromosome, position, value)
+            if chromosome not in depths_dict.keys():
+                depths_dict[chromosome] = {}
+            
+            depths_dict[chromosome][position] = int(value)
+    return depths_dict

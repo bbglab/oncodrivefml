@@ -20,7 +20,7 @@ from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.scores import init_scores_module
 from oncodrivefml.store import store_tsv, store_png, store_html
-from oncodrivefml.utils import executor_run, loop_logging
+from oncodrivefml.utils import executor_run, loop_logging, load_depths
 from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
 
@@ -75,6 +75,13 @@ class OncodriveFML(object):
 
         self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
+        # depths
+        if 'depth' in self.configuration.keys():
+            self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'])
+            logger.info("Depths file loaded")
+        else:
+            self.configuration['depths_loaded'] = None
+
         # Optional parameters
         self.output_folder = output_folder
         self.output_file_prefix = join(self.output_folder, file_name(self.mutations_file) + '-oncodrivefml')
@@ -111,10 +118,10 @@ class OncodriveFML(object):
         seed = np.random.randint(0, 2**32-1)
         if self.samples_statistic_method is None:
             return GroupByMutationExecutor(element_id, element_mutations, self.elements[element_id], self.signatures,
-                                           self.configuration, seed)
+                                            self.configuration, seed)
         else:
             return GroupBySampleExecutor(element_id, element_mutations, self.elements[element_id], self.signatures,
-                                         self.configuration, seed)
+                                            self.configuration, seed)
 
     def __compute_signature(self):
         conf = self.configuration['signature']

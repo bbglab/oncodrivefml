@@ -51,6 +51,8 @@ class ElementExecutor(object):
         self.signature = signature
         self.segments = segments
         self.symbol = self.segments[0].get('SYMBOL', None)
+        self.chromosome = self.segments[0].get('CHROMOSOME', None)
+        # print(type(self.chromosome))
 
         # Configuration parameters
         self.score_config = config['score']
@@ -69,6 +71,13 @@ class ElementExecutor(object):
 
         self.p_subs = config['p_subs']
         self.p_indels = config['p_indels']
+
+        if self.chromosome and config['depths_loaded']:
+            self.depths = config['depths_loaded'][self.chromosome]
+            # print("self.depths set")
+            # print(len(self.depths))
+        else:
+            self.depths = None
 
     def compute_muts_statistics(self):
         """
@@ -141,10 +150,15 @@ class ElementExecutor(object):
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
 
             positions = self.scores.get_all_positions()
-
+            # print(self.scores.conf_chr)
+            # print(self.scores.conf_chr_prefix)
+            # print(self.segments[0]["CHROMOSOME"])
+            # print(self.segments)
+            # print(positions)
             observed = []
             subs_scores = []
             subs_probs = []
+            subs_depths = []
 
             indels_scores = []
             indels_probs = []
@@ -181,10 +195,17 @@ class ElementExecutor(object):
 
             # Compute the values for the substitutions
             if self.p_subs > 0:
-                for pos in positions:
-                    for s in self.scores.get_score_by_position(pos):
-                        subs_scores.append(s.value)
-                        probs_of_subs.add_background(s.change)
+                if self.depths:
+                    for pos in positions:
+                        for s in self.scores.get_score_by_position(pos):
+                            subs_scores.append(s.value)
+                            probs_of_subs.add_background(s.change)
+                            subs_depths.append(self.depths.get(pos, 1))
+                else:
+                    for pos in positions:
+                        for s in self.scores.get_score_by_position(pos):
+                            subs_scores.append(s.value)
+                            probs_of_subs.add_background(s.change)
 
                 if probs_of_subs.size > 0:
                     subs_probs = probs_of_subs.probs
@@ -208,6 +229,18 @@ class ElementExecutor(object):
 
             simulation_scores = subs_scores + indels_scores
             simulation_probs = subs_probs + indels_probs
+            
+            # if depths are provided use them for
+            # adjusting the probabilities of sampling positions
+            if self.depths:
+                if len(simulation_probs) == 2 * len(subs_depths):
+                    depths_pos = subs_depths + subs_depths
+                    simulation_probs = np.array(simulation_probs) * np.array(depths_pos)
+                    simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
+                elif len(simulation_probs) == len(subs_depths):
+                    simulation_probs = np.array(simulation_probs) * np.array(subs_depths)
+                    simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
+
 
             muts_count = len(self.result['mutations'])
             chunk_count = (self.sampling_size * muts_count) // self.sampling_chunk
