@@ -200,7 +200,10 @@ class ElementExecutor(object):
                         for s in self.scores.get_score_by_position(pos):
                             subs_scores.append(s.value)
                             probs_of_subs.add_background(s.change)
-                            subs_depths.append(self.depths.get(pos, 1))
+                            # if that position is not in the list of depths, use value 1
+                            # since the other depths are much bigger this would be the same as adding a 0
+                            # but without nulling the probability of that position
+                            subs_depths.append(self.depths.get(pos, 1)) 
                 else:
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
