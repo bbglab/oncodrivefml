@@ -72,7 +72,7 @@ def exists_path(path):
 
 
 
-def load_depths(depths_filename):
+def load_depths(depths_filename, chr_prefix):
     """
     Function to load the depths file into a Python dictionary
     {
@@ -81,12 +81,14 @@ def load_depths(depths_filename):
         3 : {POS1: DEPTH1, POS2: DEPTH2},
         ...
     }
+    the chr_prefix is removed from the beginning of the chromosome string
     """
     depths_dict = {}
     with open(depths_filename, 'r') as f:
         for line in f:
             # print(line)
             chromosome, position, value = line.strip().split("\t")
+            chromosome = chromosome.lstrip(chr_prefix)
             # print(chromosome, position, value)
             if chromosome not in depths_dict.keys():
                 depths_dict[chromosome] = {}

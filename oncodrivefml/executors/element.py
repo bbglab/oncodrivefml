@@ -237,9 +237,11 @@ class ElementExecutor(object):
                     depths_pos = subs_depths + subs_depths
                     simulation_probs = np.array(simulation_probs) * np.array(depths_pos)
                     simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
+                    logger.info("SNVs and indels probabilities corrected by depth")
                 elif len(simulation_probs) == len(subs_depths):
                     simulation_probs = np.array(simulation_probs) * np.array(subs_depths)
                     simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
+                    logger.info("SNVs probabilities corrected by depth")
 
 
             muts_count = len(self.result['mutations'])

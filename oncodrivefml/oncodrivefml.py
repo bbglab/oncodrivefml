@@ -77,7 +77,8 @@ class OncodriveFML(object):
 
         # depths
         if 'depth' in self.configuration.keys():
-            self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'])
+            self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'],
+                                                                self.configuration['depth']['chr_prefix'])
             logger.info("Depths file loaded")
         else:
             self.configuration['depths_loaded'] = None
