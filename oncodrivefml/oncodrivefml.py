@@ -20,7 +20,7 @@ from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.scores import init_scores_module
 from oncodrivefml.store import store_tsv, store_png, store_html
-from oncodrivefml.utils import executor_run, loop_logging, load_depths
+from oncodrivefml.utils import executor_run, loop_logging, load_depths, load_mutability
 from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
 
@@ -75,12 +75,23 @@ class OncodriveFML(object):
 
         self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
+        # mutability
+        if 'mutability' in self.configuration.keys():
+            self.configuration['mutability_loaded'] = load_mutability(self.configuration['mutability']['mutability_file'],
+                                                                    self.configuration['mutability']['chr_prefix'])
+            logger.info("Mutability file loaded, ignore signature information.")
+            self.configuration['signature']['method'] == 'none'
+
         # depths
-        if 'depth' in self.configuration.keys():
+        elif 'depth' in self.configuration.keys():
+            self.configuration['mutability_loaded'] = None
             self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'],
                                                                 self.configuration['depth']['chr_prefix'])
             logger.info("Depths file loaded")
+        
+        # none of them available
         else:
+            self.configuration['mutability_loaded'] = None
             self.configuration['depths_loaded'] = None
 
         # Optional parameters

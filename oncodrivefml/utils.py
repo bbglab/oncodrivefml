@@ -71,7 +71,10 @@ def exists_path(path):
 
 
 
-
+###
+# Revise if the input should be given as integer or string or float, check how it is handled by OncodriveFML
+# I am using them as strings because of the constraint of having them in the configuration dictionary
+###
 def load_depths(depths_filename, chr_prefix):
     """
     Function to load the depths file into a Python dictionary
@@ -95,3 +98,42 @@ def load_depths(depths_filename, chr_prefix):
             
             depths_dict[chromosome][position] = int(value)
     return depths_dict
+
+
+
+###
+# Revise if the input should be given as integer or string or float, check how it is handled by OncodriveFML
+# I am using them as strings because of the constraint of having them in the configuration dictionary
+###
+def load_mutability(mutability_filename, chr_prefix):
+    """
+    Function to load the mutability file into a Python dictionary
+    {
+        1 : {POS1: [MUT11, MUT12, MUT13], POS2: [MUT21, MUT22, MUT23]},
+        2 : {POS1: [MUT11, MUT12, MUT13], POS2: [MUT21, MUT22, MUT23]},
+        3 : {POS1: [MUT11, MUT12, MUT13], POS2: [MUT21, MUT22, MUT23]},
+        ...
+    }
+    the chr_prefix is removed from the beginning of the chromosome string
+
+    The file provided as input needs to be sorted by chromosome position, ref and alt in such a way
+    that the nucleotide changes always go in alphabetical order
+    """
+    mutability_dict = {}
+    with open(mutability_filename, 'r') as f:
+        for line in f:
+            # print(line)
+            chromosome, position, ref, alt, value = line.strip().split("\t")
+            chromosome = chromosome.lstrip(chr_prefix)
+            # print(chromosome, position, value)
+            if chromosome not in mutability_dict.keys():
+                mutability_dict[chromosome] = {}
+            
+            # add the position as a list in the chromosome dictionary
+            if position not in mutability_dict[chromosome].keys():
+                mutability_dict[chromosome][position] = []
+
+            # add the mutability score to the 
+            mutability_dict[chromosome][position].append(float(value))
+
+    return mutability_dict
