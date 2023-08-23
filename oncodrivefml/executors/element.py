@@ -6,6 +6,7 @@ from oncodrivefml import __logger_name__
 from oncodrivefml.executors import sig2probs
 from oncodrivefml.indels import Indel
 from oncodrivefml.scores import Scores
+from oncodrivefml.mutability import Mutabilities
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.walker import partitions_list
 
@@ -62,6 +63,10 @@ class ElementExecutor(object):
         self.statistic_name = config['statistic']['method']
         self.signature_column = config['signature']['classifier']
         self.samples_method = config['statistic']['per_sample_analysis']
+        
+        self.mutability_info = config['mutability_info']
+        self.depths_info = config['depths_info']
+
 
         # Output attributes
         self.obs = 0
@@ -72,15 +77,10 @@ class ElementExecutor(object):
         self.p_subs = config['p_subs']
         self.p_indels = config['p_indels']
 
-        if self.chromosome and config['mutability_loaded']:
-            self.mutability = config['mutability_loaded'][self.chromosome]
-            self.depths = None
-        elif self.chromosome and config['depths_loaded']:
-            self.mutability = None
+        if self.mutability_info:
+            self.mutability_config = config['mutability']
+        elif self.depths_info:
             self.depths = config['depths_loaded'][self.chromosome]
-        else:
-            self.mutability = None
-            self.depths = None
 
     def compute_muts_statistics(self):
         """
@@ -143,6 +143,10 @@ class ElementExecutor(object):
         # Load element scores
         self.scores = Scores(self.name, self.segments, self.score_config)
 
+        if self.mutability_info:
+            self.mutability = Mutabilities(self.name, self.segments, self.mutability_config)
+
+
         if self.use_indels:
             self.indels = Indel(self.scores)
 
@@ -153,11 +157,16 @@ class ElementExecutor(object):
             statistic_test = STATISTIC_TESTS.get(self.statistic_name)
 
             positions = self.scores.get_all_positions()
-            # print(self.scores.conf_chr)
-            # print(self.scores.conf_chr_prefix)
-            # print(self.segments[0]["CHROMOSOME"])
-            # print(self.segments)
-            # print(positions)
+
+            # if the mutability is provided,
+            # load it and check that the positions are the same ones as in the scores
+            if self.mutability_info:
+                mutability_positions = self.mutability.get_all_positions()
+                if set(mutability_positions) != set(positions):
+                    logger.warning("Mutability positions differ from the reference positions.")
+                    logger.warning("Mutability information will not be used in this element {}.".format(self.name))
+                    self.mutability_info = False
+
             observed = []
             subs_scores = []
             subs_probs = []
@@ -199,16 +208,20 @@ class ElementExecutor(object):
 
             # Compute the values for the substitutions
             if self.p_subs > 0:
-                if self.mutability:
+                if self.mutability_info:
                     for pos in positions:
-                        for num, s in enumerate(self.scores.get_score_by_position(pos)):
+                        for s, m in zip(self.scores.get_score_by_position(pos),
+                                            self.mutability.get_mutability_by_position(pos)):
                             subs_scores.append(s.value)
                             probs_of_subs.add_background(s.change)
-                            # if that position is not in the list of mutability, use value 0
-                            mutab = self.mutability.get(str(pos), 0)
-                            subs_mutability.append( mutab[num] if type(mutab) == list else 0 )
 
-                elif self.depths:
+                            subs_mutability.append(m.value)
+
+                            # if that position is not in the list of mutability, use value 0
+                            # mutab = self.mutability.get(str(pos), 0)
+                            # subs_mutability.append( mutab[num] if type(mutab) == list else 0 )
+
+                elif self.depths_info:
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
                             subs_scores.append(s.value)
@@ -246,11 +259,20 @@ class ElementExecutor(object):
 
             # if mutability is provided use it for
             # adjusting the probabilities of sampling positions
-            if self.mutability:
+            if self.mutability_info:
+                
+                # only SNVs provided as input
                 if len(simulation_probs) == len(subs_mutability):
+                    # if np.sum(subs_mutability) > 0:
                     simulation_probs = np.nan_to_num(np.array(simulation_probs, dtype = np.float64) * np.array(subs_mutability, dtype = np.float64))
                     simulation_probs = list(np.nan_to_num(simulation_probs / simulation_probs.sum()))
                     logger.info("SNVs probabilities corrected by mutability")
+                    # else:
+                    #     logger.info("ERROR")
+                        # print(subs_mutability)
+                        # print(self.segments)
+
+                # SNVs and indels provided as input
                 elif len(simulation_probs) == 2 * len(subs_mutability):
                     simulation_probs_1st_half = simulation_probs[:len(simulation_probs)//2]
                     simulation_probs_2nd_half = simulation_probs[:len(simulation_probs)//2]
@@ -268,7 +290,7 @@ class ElementExecutor(object):
 
             # if depths are provided use them for
             # adjusting the probabilities of sampling positions
-            elif self.depths:
+            elif self.depths_info:
                 if len(subs_probs) == len(subs_depths):
                     subs_probs = np.nan_to_num(np.array(subs_probs) * np.array(subs_depths))
                     subs_probs = list(np.nan_to_num(subs_probs / np.sum(subs_probs)))

@@ -19,6 +19,7 @@ from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.scores import init_scores_module
+from oncodrivefml.mutability import init_mutabilities_module
 from oncodrivefml.store import store_tsv, store_png, store_html
 from oncodrivefml.utils import executor_run, loop_logging, load_depths, load_mutability
 from oncodrivefml.indels import init_indels_module
@@ -76,23 +77,31 @@ class OncodriveFML(object):
         self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
 
         # mutability
-        if 'mutability' in self.configuration.keys():
-            self.configuration['mutability_loaded'] = load_mutability(self.configuration['mutability']['mutability_file'],
-                                                                    self.configuration['mutability']['chr_prefix'])
-            logger.info("Mutability file loaded, ignore signature information.")
-            self.configuration['signature']['method'] == 'none'
+        if self.configuration['mutability']['adjusting']:
+            file_exists_or_die(self.configuration['mutability']['file'])
+            logger.info("Mutability per site will be used for adjusting the background probabilities.")
+            logger.info("Signature and depth values will be ignored.")
+            self.configuration['signature']['method'] = 'none'
+
+            self.configuration['mutability_info'] = True
+            self.configuration['depths_info'] = False
 
         # depths
         elif 'depth' in self.configuration.keys():
-            self.configuration['mutability_loaded'] = None
+            file_exists_or_die(self.configuration['depth']['depth_file'])
+            
+            
             self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'],
                                                                 self.configuration['depth']['chr_prefix'])
             logger.info("Depths file loaded")
-        
+
+            self.configuration['mutability_info'] = False
+            self.configuration['depths_info'] = True
+
         # none of them available
         else:
-            self.configuration['mutability_loaded'] = None
-            self.configuration['depths_loaded'] = None
+            self.configuration['mutability_info'] = None
+            self.configuration['depths_info'] = None
 
         # Optional parameters
         self.output_folder = output_folder
@@ -230,6 +239,8 @@ class OncodriveFML(object):
             self.configuration['score']['minimum_number_of_stops'] = self.configuration['statistic']['indels']['minimum_number_of_stops']
 
         init_scores_module(self.configuration['score'], stops_required=stops_file_required)
+        if self.configuration['mutability_info']:
+            init_mutabilities_module(self.configuration['mutability'])
 
         # initialize the indels module
         init_indels_module(self.configuration['statistic']['indels'])

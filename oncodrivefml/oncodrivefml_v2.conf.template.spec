@@ -7,6 +7,21 @@ classifier = option('CANCER_TYPE', 'SAMPLE', 'SIGNATURE', default=None)
 normalize_by_sites = option('whole_genome', 'wgs', 'whole_exome', 'wxs', 'wes', default=None)
 path = string(default=None)
 
+[mutability]
+adjusting = boolean(default=False)
+file = string(default=None)
+format = option('tabix', 'tabix')(default='tabix')
+chr = integer(default=0)
+chr_prefix = string(default='')
+pos = integer(default=1)
+ref = integer(default=None)
+alt = integer(default=None)
+mutab = integer(default=None)
+element = integer(default=None)
+extra = integer(default=None)
+
+
+
 [score]
 file = string
 format = option('tabix', 'pack')

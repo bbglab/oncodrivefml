@@ -271,13 +271,13 @@ class Scores(object):
 
     def get_score_by_position(self, position: int) -> List[ScoreValue]:
         """
-        Get all ScoreValue objects that are asocated with that position
+        Get all ScoreValue objects that are associated with that position
 
         Args:
             position (int): position
 
         Returns:
-            :obj:`list` of :obj:`ScoreValue`: list of all ScoreValue related to that positon
+            :obj:`list` of :obj:`ScoreValue`: list of all ScoreValue related to that position
 
         """
         return self.scores_by_pos.get(position, [])
@@ -295,7 +295,7 @@ class Scores(object):
     def _load_scores(self):
         """
         For each position get all possible substitutions and for each
-        obtatins the assigned score
+        obtains the assigned score
 
         Returns:
             dict: for each positions get a list of ScoreValue

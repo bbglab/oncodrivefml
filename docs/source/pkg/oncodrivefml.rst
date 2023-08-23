@@ -51,6 +51,14 @@ oncodrivefml.main module
    :undoc-members:
    :show-inheritance:
 
+oncodrivefml.mutabilities module
+--------------------------
+
+.. automodule:: oncodrivefml.mutabilities
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 oncodrivefml.mtc module
 -----------------------
 
