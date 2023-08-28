@@ -3,8 +3,9 @@ This module contains the methods associated with the
 mutabilities that are assigned to the mutations.
 
 The mutabilities are read from a file.
-$ bgzip /workspace/datasets/prominent/data/kidney/mutability/all_samples.mutability_per_site.tsv^C
-$ tabix -b 2 -e 2 /workspace/datasets/prominent/data/kidney/mutability/all_samples.mutability_per_site.tsv.gz
+The file must be compressed using bgzip, and then indexed using tabix.
+$ bgzip ..../all_samples.mutability_per_site.tsv
+$ tabix -b 2 -e 2 ..../all_samples.mutability_per_site.tsv.gz
 
 """
 import logging

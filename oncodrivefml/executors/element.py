@@ -117,9 +117,24 @@ class ElementExecutor(object):
                         mnp_scores.append(v.value)
                         break
                 else:
-                    logger.warning('Reference mismatch or missing score in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
+                    # you should not worry about this warning,
+                    # it is not a problem that some internal positions in the MNV do not have a score
+                    # the nucleotide of the reference and the alternative might coincide in a given position
+                    # and then there is no score
+                    
+                    # logger.warning('Reference mismatch or missing score in MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
+                    pass
+
+                    # logger.warning('Reference mismatch MNP at {}:{} {} {}'.format(mutation['CHROMOSOME'], pos,
+                    #                                                                 [mutation['REF'], mutation['ALT']] , nucleotides))
+                    # for v in values:
+                    #     logger.warning('Inner issue report: {}:{} {} {} {}'.format(mutation['CHROMOSOME'], pos,
+                    #                                                                 [mutation['REF'], mutation['ALT']], nucleotides, [v.ref, v.alt] ))
+
             if not mnp_scores:
+                logger.warning('Missing scores for MNP at position {} of chr {}'.format(pos, mutation['CHROMOSOME']))
                 return
+            
             mutation['SCORE'] = max(mnp_scores)
             mutation['POSITION'] = pos + mnp_scores.index(mutation['SCORE'])
 
@@ -266,7 +281,7 @@ class ElementExecutor(object):
                     # if np.sum(subs_mutability) > 0:
                     simulation_probs = np.nan_to_num(np.array(simulation_probs, dtype = np.float64) * np.array(subs_mutability, dtype = np.float64))
                     simulation_probs = list(np.nan_to_num(simulation_probs / simulation_probs.sum()))
-                    logger.info("SNVs probabilities corrected by mutability")
+                    # logger.info("SNVs probabilities corrected by mutability")
                     # else:
                     #     logger.info("ERROR")
                         # print(subs_mutability)
@@ -285,7 +300,7 @@ class ElementExecutor(object):
                     simulation_probs = list(simulation_probs_1st_half_norm) + list(simulation_probs_2nd_half)
                     
                     simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
-                    logger.info("SNVs probabilities corrected by mutability")
+                    # logger.info("SNVs probabilities corrected by mutability")
 
 
             # if depths are provided use them for
