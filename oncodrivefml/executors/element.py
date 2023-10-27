@@ -194,6 +194,7 @@ class ElementExecutor(object):
             probs_of_subs = sig2probs.build(self.signature, self.signature_column)
 
             indels_simulated_as_subs = 0
+            only_snvs = True
 
             for mut in self.result['mutations']:
                 observed.append(mut['SCORE'])  # Observed mutations
@@ -264,6 +265,7 @@ class ElementExecutor(object):
                     subs_probs = [self.p_subs / len(subs_scores)] * len(subs_scores) if len(subs_scores) > 0 else []
 
             if self.use_indels and self.p_indels > 0:
+                only_snvs = False
                 indels_scores = self.indels.get_background_indel_scores()
 
                 # All indels have the same probability
@@ -289,6 +291,7 @@ class ElementExecutor(object):
 
                 # SNVs and indels provided as input
                 elif len(simulation_probs) == 2 * len(subs_mutability):
+                    only_snvs = False
                     simulation_probs_1st_half = simulation_probs[:len(simulation_probs)//2]
                     simulation_probs_2nd_half = simulation_probs[:len(simulation_probs)//2]
                     simulation_probs_1st_half_total = sum(simulation_probs_1st_half)
@@ -312,6 +315,7 @@ class ElementExecutor(object):
                     logger.info("SNVs probabilities corrected by depth")
                 
                 elif len(simulation_probs) == 2 * len(subs_depths):
+                    only_snvs = False
                     simulation_probs_1st_half = simulation_probs[:len(simulation_probs)//2]
                     simulation_probs_2nd_half = simulation_probs[:len(simulation_probs)//2]
                     simulation_probs_1st_half_total = sum(simulation_probs_1st_half)
@@ -325,6 +329,21 @@ class ElementExecutor(object):
                     simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
 
                     logger.info("SNVs probabilities corrected by mutability")
+
+
+            if only_snvs:
+                # if no indels, straight forward
+                population_mean = sum(np.array(simulation_scores) * np.array(simulation_probs))
+            else:
+                population_mean = sum(np.array(simulation_scores) * np.array(simulation_probs))
+
+            if only_snvs:
+                # if no indels, straight forward
+                centered_scores = (np.array(simulation_scores) - population_mean)**2
+                population_std = np.sqrt(sum( centered_scores * np.array(simulation_probs) ))
+            else:
+                centered_scores = (np.array(simulation_scores) - population_mean)**2
+                population_std = np.sqrt(sum( centered_scores * np.array(simulation_probs) ))
 
 
 
@@ -343,6 +362,9 @@ class ElementExecutor(object):
             self.result['obs'] = obs
             self.result['neg_obs'] = neg_obs
             self.result['back_means'] = list(back_means)
+
+            self.result['population_mean'] =  population_mean
+            self.result['population_std'] =  population_std
 
             # Sampling parallelization (if more than one partition)
             if len(self.result['partitions']) > 0 or obs < self.min_obs:

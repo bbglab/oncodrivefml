@@ -552,17 +552,21 @@ def store_tsv(results, result_file):
                 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg',
                 'snps', 'mnps', 'indels',
                 'z-score', 'mean_of_means', 'std_of_means',
+                'population_mean', 'population_std', 'std_distribution_of_means',
+                'proper_z-score',
                 'symbol']
     df = results[fields].copy()
     df['scores'] = df['scores'].apply(np.mean)
     df.reset_index(inplace=True)
     df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
-                       'scores' : 'AVG_SCORE_OBS',
-                       'samples_mut': 'SAMPLES',
-                       'pvalue': 'P_VALUE', 'qvalue': 'Q_VALUE','pvalue_neg': 'P_VALUE_NEG',
-                       'qvalue_neg': 'Q_VALUE_NEG', 'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
-                       'z-score' : 'Z-SCORE', 'mean_of_means' : 'MEAN_BCKG', 'std_of_means' : 'STD_BCKG', 
-                       'symbol': 'SYMBOL'}, inplace=True)
+                        'scores' : 'AVG_SCORE_OBS',
+                        'samples_mut': 'SAMPLES',
+                        'pvalue': 'P_VALUE', 'qvalue': 'Q_VALUE','pvalue_neg': 'P_VALUE_NEG',
+                        'qvalue_neg': 'Q_VALUE_NEG', 'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
+                        'z-score' : 'Z-SCORE', 'mean_of_means' : 'MEAN_BCKG', 'std_of_means' : 'STD_BCKG',
+                        'population_mean' : 'POPULATION_MEAN', 'population_std' : 'POPULATION_STD', 'std_distribution_of_means': 'POPULATION_STD_OF_MEANS',
+                        'proper_z-score' : 'PROPER_Z-SCORE',
+                        'symbol': 'SYMBOL'}, inplace=True)
     df = add_symbol(df)
 
     df.to_csv(result_file, sep="\t", header=True, index=False, compression="gzip")

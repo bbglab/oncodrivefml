@@ -323,6 +323,10 @@ class OncodriveFML(object):
             result['mean_of_means'] = round(mean_of_means, 5)
             result['std_of_means'] = round(std_of_means, 5)
 
+            std_distribution_of_means = result['population_std'] / np.sqrt( len(result['scores']) )
+            result['std_distribution_of_means'] = std_distribution_of_means
+            result['proper_z-score'] = round( ( mean_of_observed - result['population_mean'] ) / std_distribution_of_means, 5)
+
 
         # Run multiple test correction
         logger.info("Computing multiple test correction")
