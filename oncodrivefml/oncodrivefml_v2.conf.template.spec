@@ -20,7 +20,9 @@ mutab = integer(default=None)
 element = integer(default=None)
 extra = integer(default=None)
 
-
+[grouping]
+group_genes = boolean(default=False)
+json_file = string(default=None)
 
 [score]
 file = string
@@ -62,3 +64,5 @@ per_sample_analysis = option('amean', 'gmean', 'max', default=None)
 [settings]
 cores = integer(default=None)
 seed = integer(min=0, default=None)
+# TODO decide if we use this or not
+# store_bckg = boolean(default=False)

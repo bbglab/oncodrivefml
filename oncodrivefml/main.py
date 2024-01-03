@@ -69,6 +69,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.option('--signature', 'signature_file', default=None, type=click.Path(exists=True), metavar='SIGNATURE', help="File with the signatures to use")
 @click.option('--signature-correction', type=click.Choice(['wg', 'wx']), help='Correct the computed signutares by genomic or exomic signtures. Only valid for human genomes', default=None)
 @click.option('--no-indels', help="Discard indels in your analysis", is_flag=True)
+@click.option('--store-bckg', help="Store the background means with the output.", is_flag=True)
 @click.option('--cores', help="Cores to use. Default: all", default=None, type=int)
 @click.option('--seed', help="Set up an initial random seed to have reproducible results", type=click.IntRange(0, 2**32-1), default=None)
 @click.option('--generate-pickle', help="Deprecated flag. Do not use.", is_flag=True)
@@ -76,7 +77,7 @@ def main(mutations_file, elements_file, output_folder, config_file, samples_blac
 @click.option('--debug', help="Show more progress details", is_flag=True)
 @click.version_option(version=__version__)
 def cmdline(mutations_file, elements_file, type, sequencing, output_folder, config_file, samples_blacklist,
-            signature_file, signature_correction, no_indels, cores, seed, generate_pickle, force, debug):
+            signature_file, signature_correction, no_indels, store_bckg, cores, seed, generate_pickle, force, debug):
     """
     Run OncodriveFML on the genomic regions in ELEMENTS FILE
     using the mutations in MUTATIONS FILE.
@@ -123,6 +124,9 @@ def cmdline(mutations_file, elements_file, type, sequencing, output_folder, conf
 
     if cores is not None:
         override_config['settings']['cores'] = cores
+    
+    if store_bckg is not None:
+        override_config['settings']['store_bckg'] = store_bckg 
 
     main(mutations_file, elements_file, output_folder, config_file, samples_blacklist, override_config, force)
 

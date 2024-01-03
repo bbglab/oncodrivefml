@@ -337,9 +337,10 @@ def eliminate_duplicates(df):
 
 
 def add_symbol(df):
-    ensemble_file = os.path.join(__location__, "ensembl_genes_75.txt.gz")
+    # TODO update the list of ensembl genes to a more recent version
+    ensembl_file = os.path.join(__location__, "ensembl_genes_75.txt.gz")
     gene_conversion = {line.split("\t")[0]: line.strip().split("\t")[-1]
-                       for line in gzip.open(ensemble_file, 'rt').readlines()}
+                       for line in gzip.open(ensembl_file, 'rt').readlines()}
     gene_symbols = df.GENE_ID.apply(lambda e: gene_conversion.get(e, e))
     df.SYMBOL.fillna(gene_symbols, inplace=True)
     return df
@@ -551,9 +552,8 @@ def store_tsv(results, result_file):
     fields = ['muts', 'muts_recurrence', 'samples_mut', 'scores',
                 'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg',
                 'snps', 'mnps', 'indels',
-                'z-score', 'mean_of_means', 'std_of_means',
                 'population_mean', 'population_std', 'std_distribution_of_means',
-                'proper_z-score',
+                'z-score',                
                 'symbol']
     df = results[fields].copy()
     df['scores'] = df['scores'].apply(np.mean)
@@ -563,9 +563,78 @@ def store_tsv(results, result_file):
                         'samples_mut': 'SAMPLES',
                         'pvalue': 'P_VALUE', 'qvalue': 'Q_VALUE','pvalue_neg': 'P_VALUE_NEG',
                         'qvalue_neg': 'Q_VALUE_NEG', 'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
-                        'z-score' : 'Z-SCORE', 'mean_of_means' : 'MEAN_BCKG', 'std_of_means' : 'STD_BCKG',
-                        'population_mean' : 'POPULATION_MEAN', 'population_std' : 'POPULATION_STD', 'std_distribution_of_means': 'POPULATION_STD_OF_MEANS',
-                        'proper_z-score' : 'PROPER_Z-SCORE',
+                        'population_mean' : 'POPULATION_MEAN', 'population_std' : 'POPULATION_STD', 'std_distribution_of_means': 'STD_OF_MEANS',
+                        'z-score' : 'Z-SCORE',
+                        'symbol': 'SYMBOL'}, inplace=True)
+    df = add_symbol(df)
+
+    df.to_csv(result_file, sep="\t", header=True, index=False, compression="gzip")
+
+def store_groups_tsv(results, result_file, include_indv = True):
+    """
+    Saves the results in a tsv file sorted by pvalue
+
+    Args:
+        results (:obj:`~pandas.DataFrame`): results of the analysis
+        result_file: file where to store the results
+        include_indv: boolean defining whether individual genes results should also be stored with the groups
+
+    """
+    results.index.names = ['GENE_ID']
+    results.sort_values(by='pvalue', inplace=True)
+    fields = ['muts', 'muts_recurrence', 'samples_mut', 'scores',
+                'pvalue', 'qvalue', 'pvalue_neg', 'qvalue_neg',
+                'snps', 'mnps', 'indels',
+                'population_mean', 'population_std', 'std_distribution_of_means',
+                'z-score',
+                'symbol',
+                'genes_in_group']
+    df = results[fields].copy()
+    if not include_indv:
+        df = df[~df['genes_in_group'].isna()].copy()
+
+    df['scores'] = df['scores'].apply(np.mean)
+    df.reset_index(inplace=True)
+    df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
+                        'scores' : 'AVG_SCORE_OBS',
+                        'samples_mut': 'SAMPLES',
+                        'pvalue': 'P_VALUE', 'qvalue': 'Q_VALUE','pvalue_neg': 'P_VALUE_NEG',
+                        'qvalue_neg': 'Q_VALUE_NEG', 'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
+                        'population_mean' : 'POPULATION_MEAN', 'population_std' : 'POPULATION_STD', 'std_distribution_of_means': 'STD_OF_MEANS',
+                        'z-score' : 'Z-SCORE',
+                        'symbol': 'SYMBOL',
+                        'genes_in_group': 'GENES_IN_GROUP'}, inplace=True)
+    df = add_symbol(df)
+
+    df.to_csv(result_file, sep="\t", header=True, index=False, compression="gzip")
+
+
+
+def store_scores_tsv(results, result_file):
+    """
+    Saves the raw scores results of a gene in a tsv file sorted by gene ID
+
+    Args:
+        results (:obj:`~pandas.DataFrame`): results of the analysis
+        result_file: file where to store the results
+
+    """
+    results.index.names = ['GENE_ID']
+    results.sort_values(by='GENE_ID', inplace=True)
+    fields = ['muts', 'muts_recurrence', 'samples_mut',
+                'snps', 'mnps', 'indels',
+                'population_mean', 'population_std', 'std_distribution_of_means',
+                'scores', 'back_means',
+                'symbol']
+    df = results[fields].copy()
+    df.reset_index(inplace=True)
+    df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
+                        'samples_mut': 'SAMPLES',
+                        'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
+                        'population_mean' : 'POPULATION_MEAN', 'population_std' : 'POPULATION_STD',
+                        'std_distribution_of_means': 'STD_OF_MEANS',
+                        'scores' : 'SCORE_OBS',
+                        'back_means' : 'BACK_MEANS',
                         'symbol': 'SYMBOL'}, inplace=True)
     df = add_symbol(df)
 

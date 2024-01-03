@@ -8,6 +8,7 @@ import sys
 import csv
 import logging
 import warnings
+import json
 from os.path import join, exists
 from multiprocessing.pool import Pool
 
@@ -18,9 +19,10 @@ from oncodrivefml.config import file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.mtc import multiple_test_correction
+from oncodrivefml.groups import add_groups
 from oncodrivefml.scores import init_scores_module
 from oncodrivefml.mutability import init_mutabilities_module
-from oncodrivefml.store import store_tsv, store_png, store_html
+from oncodrivefml.store import store_tsv, store_png, store_html, store_scores_tsv, store_groups_tsv
 from oncodrivefml.utils import executor_run, loop_logging, load_depths, load_mutability
 from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
@@ -64,6 +66,12 @@ class OncodriveFML(object):
             self.cores = os.cpu_count()
         logger.debug('Using %s cores', self.cores)
 
+        # TODO decide whether this is provided in the config file or in the commmand line
+        # so far I am providing it in the command line
+        self.store_bckg = self.configuration['settings']['store_bckg']
+        if self.store_bckg:
+            logger.debug('The background means are going to be stored.')
+
         if self.configuration['signature']['method'] == 'bysample':
             self.configuration['signature']['method'] = 'complement'
             self.configuration['signature']['classifier'] = 'SAMPLE'
@@ -75,6 +83,11 @@ class OncodriveFML(object):
                           DeprecationWarning)
 
         self.samples_statistic_method = self.configuration['statistic']['per_sample_analysis']
+
+        # grouping
+        if self.configuration['grouping']['group_genes']:
+            file_exists_or_die(self.configuration['grouping']['json_file'])
+            logger.info("After processing the genes individually, OncodriveFML will compute the results per groups of genes.")
 
         # mutability
         if self.configuration['mutability']['adjusting']:
@@ -316,21 +329,34 @@ class OncodriveFML(object):
         # Compute the background mutations mean for each gene
         for gene in results.keys():
             result = results[gene]
-            mean_of_means = np.mean(result['back_means'])
-            std_of_means = np.std(result['back_means'])
             mean_of_observed = np.mean(result['scores'])
-            result['z-score'] = (mean_of_observed - mean_of_means) / std_of_means
-            result['mean_of_means'] = round(mean_of_means, 5)
-            result['std_of_means'] = round(std_of_means, 5)
-
             std_distribution_of_means = result['population_std'] / np.sqrt( len(result['scores']) )
+
             result['std_distribution_of_means'] = std_distribution_of_means
-            result['proper_z-score'] = round( ( mean_of_observed - result['population_mean'] ) / std_distribution_of_means, 5)
+
+            result['z-score'] = round( ( mean_of_observed - result['population_mean'] ) / std_distribution_of_means, 5)
+
+
+        if self.configuration['grouping']['group_genes']:
+            with open(self.configuration['grouping']['json_file'], 'rt') as f:
+                groups_dict = json.load(f)
+            results_groups, results_groups_n_indv = add_groups(results, groups_dict)
+            # TODO decide if the mtc has to be done for the groups alone
+            # or with all the genes
+            results_all_mtc = multiple_test_correction(results_groups_n_indv, num_significant_samples=2)
 
 
         # Run multiple test correction
         logger.info("Computing multiple test correction")
+        
+        # TODO revise the concept of num_significant_samples for normal tissues where we assume a same sample can have multiple clones
+        # revise it also above
         results_mtc = multiple_test_correction(results, num_significant_samples=2)
+
+        
+        # TODO see if it would be worth doing a .store() method 
+        # that runs this block of code that has nothing to do with the computations
+        # and we could include the part that generates the plots
 
         # Sort and store results
         logger.info("Storing results")
@@ -338,6 +364,16 @@ class OncodriveFML(object):
             os.makedirs(self.output_folder, exist_ok=True)
         result_file = self.output_file_prefix + '.tsv.gz'
         store_tsv(results_mtc, result_file)
+
+        if self.configuration['grouping']['group_genes']:
+            result_groups_file = self.output_file_prefix + '.groups.tsv.gz'
+            store_groups_tsv(results_all_mtc, result_groups_file, include_indv = False)
+            
+
+        if self.store_bckg:
+            logger.info("Storing background means")
+            scoresresult_file = self.output_file_prefix + '.bckg.tsv.gz'
+            store_scores_tsv(results_mtc, scoresresult_file)
 
         lines = 0
         gene_ids = {None, ''}
