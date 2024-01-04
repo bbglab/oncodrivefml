@@ -326,7 +326,8 @@ class OncodriveFML(object):
             sys.exit(0)
 
 
-        # Compute the background mutations mean for each gene
+        # Compute z-score
+        logger.info("Compute z-score")
         for gene in results.keys():
             result = results[gene]
             mean_of_observed = np.mean(result['scores'])
@@ -338,13 +339,16 @@ class OncodriveFML(object):
 
 
         if self.configuration['grouping']['group_genes']:
+            # Compute groups scores
+            logger.info("Compute groups")
+
             with open(self.configuration['grouping']['json_file'], 'rt') as f:
                 groups_dict = json.load(f)
             results_groups, results_groups_n_indv = add_groups(results, groups_dict)
+
             # TODO decide if the mtc has to be done for the groups alone
             # or with all the genes
             results_all_mtc = multiple_test_correction(results_groups_n_indv, num_significant_samples=2)
-
 
         # Run multiple test correction
         logger.info("Computing multiple test correction")

@@ -12,6 +12,7 @@ def add_groups(results, groups_dict):
     - OncodriveFML results for each of the groups, when putting together the results of the genes belonging to each of the groups.
     """
     results_groups = dict()
+    results_copy = results.copy()
     results_all = pd.DataFrame.from_dict(results, orient='index')
     results_all["scores"] = results_all["scores"].apply(lambda x: np.array(x))
     results_all["back_means"] = results_all["back_means"].apply(lambda x: np.array(x))
@@ -19,7 +20,10 @@ def add_groups(results, groups_dict):
     for group in groups_dict:
         gene_list = groups_dict[group]
         results_group = results_all[results_all.index.isin(gene_list)]
-        
+
+        if results_group.shape[0] == 0:
+            continue
+
         group_item = dict(results_group[['muts', 'muts_recurrence', 'snps', 'mnps', 'indels']].sum().items())
         group_item['samples_mut'] = results_group[['samples_mut']].max()[0]
         group_item['scores'] = np.concatenate(results_group["scores"])
@@ -46,6 +50,6 @@ def add_groups(results, groups_dict):
 
     
     # update the results dict to contain both results from individual genes and entire groups
-    results.update(results_groups)
+    results_copy.update(results_groups)
 
-    return results_groups, results
+    return results_groups, results_copy

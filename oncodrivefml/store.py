@@ -570,6 +570,7 @@ def store_tsv(results, result_file):
 
     df.to_csv(result_file, sep="\t", header=True, index=False, compression="gzip")
 
+
 def store_groups_tsv(results, result_file, include_indv = True):
     """
     Saves the results in a tsv file sorted by pvalue
@@ -628,6 +629,8 @@ def store_scores_tsv(results, result_file):
                 'symbol']
     df = results[fields].copy()
     df.reset_index(inplace=True)
+    df['scores'] = df['scores'].apply(list)
+    df['back_means'] = df['back_means'].apply(list)
     df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
                         'samples_mut': 'SAMPLES',
                         'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
