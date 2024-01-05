@@ -52,7 +52,7 @@ def multiple_test_correction(results_all, num_significant_samples=2):
                         'z-score' : 'Z-SCORE',
                         'symbol': 'SYMBOL',
                         'genes_in_group': 'GENES_IN_GROUP'}, inplace=True)
-    results_concat = results_concat[['GENE_ID', 'MUTS', 'MUTS_RECURRENCE', 'AVG_SCORE_OBS', 'SAMPLES',
+    results_concat = results_concat[['GENE_ID', 'MUTS', 'MUTS_RECURRENCE', 'SAMPLES', 'AVG_SCORE_OBS', 
                                         'P_VALUE', 'Q_VALUE', 'P_VALUE_NEG', 'Q_VALUE_NEG',
                                         'SNP', 'MNP', 'INDELS',
                                         'POPULATION_MEAN', 'POPULATION_STD', 'STD_OF_MEANS',
@@ -145,6 +145,7 @@ if __name__ == '__main__':
     bckg_file = sys.argv[1]
     groups_json_file = sys.argv[2]
     store_results = sys.argv[3]
+    number_of_decimals = 6
 
     with open(groups_json_file, 'r') as file_groups:
         groups_json = json.load(file_groups)
@@ -153,4 +154,8 @@ if __name__ == '__main__':
     if group_results_df.shape[0] > 0:
         group_results_corrected_df = multiple_test_correction(group_results_df)
         group_results_corrected_df.sort_values(by='P_VALUE', inplace=True)
+        
+        float_columns = group_results_corrected_df.select_dtypes(include=['float64']).columns
+        group_results_corrected_df[float_columns] = group_results_corrected_df[float_columns].round(number_of_decimals)
+
         group_results_corrected_df.to_csv(store_results, sep="\t", header=True, index=False, compression="gzip")

@@ -538,7 +538,7 @@ def store_html(input_file, output_path):
     qqp.show(output_path = output_path, notebook = False, showit=False)
 
 
-def store_tsv(results, result_file):
+def store_tsv(results, result_file, number_of_decimals = 6):
     """
     Saves the results in a tsv file sorted by pvalue
 
@@ -557,6 +557,10 @@ def store_tsv(results, result_file):
                 'symbol']
     df = results[fields].copy()
     df['scores'] = df['scores'].apply(np.mean)
+        
+    float_columns = df.select_dtypes(include=['float64']).columns
+    df[float_columns] = df[float_columns].round(number_of_decimals)
+
     df.reset_index(inplace=True)
     df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
                         'scores' : 'AVG_SCORE_OBS',
@@ -571,7 +575,7 @@ def store_tsv(results, result_file):
     df.to_csv(result_file, sep="\t", header=True, index=False, compression="gzip")
 
 
-def store_groups_tsv(results, result_file, include_indv = True):
+def store_groups_tsv(results, result_file, include_indv = True, number_of_decimals = 6):
     """
     Saves the results in a tsv file sorted by pvalue
 
@@ -595,6 +599,10 @@ def store_groups_tsv(results, result_file, include_indv = True):
         df = df[~df['genes_in_group'].isna()].copy()
 
     df['scores'] = df['scores'].apply(np.mean)
+    
+    float_columns = df.select_dtypes(include=['float64']).columns
+    df[float_columns] = df[float_columns].round(number_of_decimals)
+
     df.reset_index(inplace=True)
     df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
                         'scores' : 'AVG_SCORE_OBS',
@@ -611,7 +619,7 @@ def store_groups_tsv(results, result_file, include_indv = True):
 
 
 
-def store_scores_tsv(results, result_file):
+def store_scores_tsv(results, result_file, number_of_decimals = 6):
     """
     Saves the raw scores results of a gene in a tsv file sorted by gene ID
 
@@ -631,6 +639,10 @@ def store_scores_tsv(results, result_file):
     df.reset_index(inplace=True)
     df['scores'] = df['scores'].apply(list)
     df['back_means'] = df['back_means'].apply(list)
+    
+    float_columns = df.select_dtypes(include=['float64']).columns
+    df[float_columns] = df[float_columns].round(number_of_decimals)
+
     df.rename(columns={'muts': 'MUTS', 'muts_recurrence': 'MUTS_RECURRENCE',
                         'samples_mut': 'SAMPLES',
                         'snps': 'SNP', 'mnps':'MNP', 'indels': 'INDELS',
