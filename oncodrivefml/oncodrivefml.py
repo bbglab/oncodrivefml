@@ -19,7 +19,7 @@ from oncodrivefml.config import file_exists_or_die, file_name
 from oncodrivefml.executors.bymutation import GroupByMutationExecutor
 from oncodrivefml.executors.bysample import GroupBySampleExecutor
 from oncodrivefml.mtc import multiple_test_correction
-from oncodrivefml.groups import add_groups
+from oncodrivefml.groups import add_groups, add_groups_from_values
 from oncodrivefml.scores import init_scores_module
 from oncodrivefml.mutability import init_mutabilities_module
 from oncodrivefml.store import store_tsv, store_png, store_html, store_scores_tsv, store_groups_tsv
@@ -288,7 +288,7 @@ class OncodriveFML(object):
                 logger.info("Parallel sampling. Iteration %d, genes %d, partitions %d", i, len(set([n for n, p, r, s in partitions])), len(partitions))
 
                 # Pending sampling execution
-                for name, obs, neg_obs, back_means in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
+                for name, obs, neg_obs, back_means, internal_values in loop_logging(map_func(compute_sampling, partitions), size=len(partitions), step=1):
                     result = results[name]
                     result['obs'] += obs
                     result['neg_obs'] += neg_obs
@@ -298,6 +298,11 @@ class OncodriveFML(object):
                         result['back_means'] = result['back_means'] + back_means
                     else:
                         result['back_means'] = back_means
+
+                    if type(result['internal_values']) == list:
+                        result['internal_values'] = result['internal_values'] + internal_values
+                    else:
+                        result['internal_values'] = internal_values
 
                 # Increase sampling_size
                 partitions = []
@@ -344,7 +349,8 @@ class OncodriveFML(object):
 
             with open(self.configuration['grouping']['json_file'], 'rt') as f:
                 groups_dict = json.load(f)
-            results_groups, results_groups_n_indv = add_groups(results, groups_dict)
+            results_groups, results_groups_n_indv = add_groups_from_values(results, groups_dict)
+
 
             # TODO decide if the mtc has to be done for the groups alone
             # or with all the genes

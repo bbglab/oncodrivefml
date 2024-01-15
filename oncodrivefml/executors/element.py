@@ -358,10 +358,11 @@ class ElementExecutor(object):
             # Run first partition
             first_partition = self.result['partitions'].pop(0)
             background = np.random.choice(simulation_scores, size=(first_partition, muts_count), p=simulation_probs, replace=True)
-            obs, neg_obs, back_means = statistic_test.calc_observed(background, np.array(observed))
+            obs, neg_obs, back_means, internal_values = statistic_test.calc_observed(background, np.array(observed))
             self.result['obs'] = obs
             self.result['neg_obs'] = neg_obs
             self.result['back_means'] = list(back_means)
+            self.result['internal_values'] = list(internal_values)
 
             self.result['population_mean'] =  population_mean
             self.result['population_std'] =  population_std

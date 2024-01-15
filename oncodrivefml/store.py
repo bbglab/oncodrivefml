@@ -633,12 +633,13 @@ def store_scores_tsv(results, result_file, number_of_decimals = 6):
     fields = ['muts', 'muts_recurrence', 'samples_mut',
                 'snps', 'mnps', 'indels',
                 'population_mean', 'population_std', 'std_distribution_of_means',
-                'scores', 'back_means',
+                'scores', 'back_means', 'internal_values',
                 'symbol']
     df = results[fields].copy()
     df.reset_index(inplace=True)
-    df['scores'] = df['scores'].apply(list)
-    df['back_means'] = df['back_means'].apply(list)
+    df['scores'] = df['scores'].tolist()
+    df['back_means'] = df['back_means'].tolist()
+    df['internal_values'] = df['internal_values'].apply(lambda x : np.array(x).tolist())
     
     float_columns = df.select_dtypes(include=['float64']).columns
     df[float_columns] = df[float_columns].round(number_of_decimals)
@@ -650,6 +651,7 @@ def store_scores_tsv(results, result_file, number_of_decimals = 6):
                         'std_distribution_of_means': 'STD_OF_MEANS',
                         'scores' : 'SCORE_OBS',
                         'back_means' : 'BACK_MEANS',
+                        'internal_values' : 'INTERNAL_VALUES',
                         'symbol': 'SYMBOL'}, inplace=True)
     df = add_symbol(df)
 

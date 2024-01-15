@@ -8,11 +8,13 @@ def walker_sampling(long samples, long muts, double obs_val, double [:] scores, 
     cdef long obs=0, neg_obs=0, i=0, j, size=len(scores)
     cdef double mean, u
     cdef list mean_values = []
+    cdef list internal_values = []
 
     srand48(seed)
 
     while i < samples:
         mean = 0.0
+        values4mean = []
 
         for r in range(muts):
             u = drand48()
@@ -20,11 +22,14 @@ def walker_sampling(long samples, long muts, double obs_val, double [:] scores, 
 
             if u <= probs[j]:
                 mean += scores[j]
+                values4mean.append(scores[j])
             else:
                 mean += scores[inx[j]]
+                values4mean.append(scores[inx[j]])
 
         mean = mean / muts
         mean_values.append(mean)
+        internal_values.append(values4mean)
 
         if mean >= obs_val:
             obs += 1
@@ -33,4 +38,4 @@ def walker_sampling(long samples, long muts, double obs_val, double [:] scores, 
 
         i = i + 1
     
-    return obs, neg_obs, mean_values
+    return obs, neg_obs, mean_values, internal_values

@@ -40,10 +40,10 @@ class ArithmeticMean(object):
 
         """
         observed_value = np.mean(observed)
-        values = np.mean(values, axis=1)
-        obs = len(values[values >= observed_value])
-        neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs, values
+        values_mn = np.mean(values, axis=1)
+        obs = len(values_mn[values_mn >= observed_value])
+        neg_obs = len(values_mn[values_mn <= observed_value])
+        return obs, neg_obs, values_mn, values
 
 
 class Maximum(object):
@@ -55,10 +55,10 @@ class Maximum(object):
     @staticmethod
     def calc_observed(values, observed):
         observed_value = np.max(observed)
-        values = np.max(values, axis=1)
-        obs = len(values[values >= observed_value])
-        neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs, values
+        values_mn = np.max(values, axis=1)
+        obs = len(values_mn[values_mn >= observed_value])
+        neg_obs = len(values_mn[values_mn <= observed_value])
+        return obs, neg_obs, values_mn, values
 
 
 class GeometricMean(object):
@@ -101,10 +101,10 @@ class GeometricMean(object):
 
         """
         observed_value = stats.gmean(observed + 1.0) -1.0
-        values = stats.gmean(values +1.0, axis=1) -1.0
-        obs = len(values[values >= observed_value])
-        neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs, values
+        values_mn = stats.gmean(values +1.0, axis=1) -1.0
+        obs = len(values_mn[values_mn >= observed_value])
+        neg_obs = len(values_mn[values_mn <= observed_value])
+        return obs, neg_obs, values_mn, values
 
 
 class ArithmeticMeanHeteroscedasticScores(object):
@@ -122,11 +122,10 @@ class ArithmeticMeanHeteroscedasticScores(object):
         values = values / std_dev
 
         observed_value = np.mean(observed)
-        values = np.mean(values, axis=1)
-        obs = len(values[values >= observed_value])
-        neg_obs = len(values[values <= observed_value])
-        return obs, neg_obs, values
-
+        values_mn = np.max(values, axis=1)
+        obs = len(values_mn[values_mn >= observed_value])
+        neg_obs = len(values_mn[values_mn <= observed_value])
+        return obs, neg_obs, values_mn, values
 
 STATISTIC_TESTS = {
     'amean': ArithmeticMean(),

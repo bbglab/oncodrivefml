@@ -40,11 +40,11 @@ def compute_sampling(value):
     np.random.seed(seed)
 
     if statistic_name == "amean":
-        obs, neg_obs, means = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
+        obs, neg_obs, means, values = compute_sampling_cython(samples, muts_count, np.mean(observed), np.array(scores), np.array(probs))
     else:
-        obs, neg_obs, means = compute_sampling_python(samples, muts_count, observed, scores, probs, statistic_name)
+        obs, neg_obs, means, values = compute_sampling_python(samples, muts_count, observed, scores, probs, statistic_name)
 
-    return name, obs, neg_obs, means
+    return name, obs, neg_obs, means, values
 
 
 def compute_sampling_python(samples, muts, observed, scores, probs, statistic_name):
@@ -78,17 +78,23 @@ def compute_sampling_cython(samples, muts, obs_val, scores, probs):
     else:
         obs, neg_obs = 0, 0
         means_list = list()
+        internal_vals_list = list()
         for p in partitions_list(samples, 2000000000):
             seed = np.random.randint(0, 2**31-1)
-            o, no, mn = walker_sampling(p, muts, obs_val, scores, probs, inx, seed)
+            o, no, mn, internal_vals = walker_sampling(p, muts, obs_val, scores, probs, inx, seed)
             obs += o
             neg_obs += no
+            if type(internal_vals) == list:
+                internal_vals_list = internal_vals_list + mn
+            else:
+                internal_vals_list.append(internal_vals)
+            
             if type(mn) == list:
                 means_list = means_list + mn
             else:
                 means_list.append(mn)
 
-    return obs, neg_obs, means_list
+    return obs, neg_obs, means_list, internal_vals_list
 
 
 if __name__ == "__main__":
