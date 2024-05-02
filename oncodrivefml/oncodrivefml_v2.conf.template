@@ -78,6 +78,32 @@ alt = 3
 # Column that has the mutability value
 mutab = 4
 
+[depth]
+# set to True or False accordingly if you provide or not the mutabilities
+adjusting = False
+
+# Path to depth file
+# it must be bgzipped and indexed with tabix
+file = 'XXXX.depth.tsv.gz'
+
+# Format of the file
+# 'tabix': http://www.htslib.org/doc/tabix.html
+format = 'tabix'
+
+# Column that has the chromosome
+chr = 0
+
+# If the chromosome has a prefix like 'chr'. Example: chrX chr1 ...
+chr_prefix = ''
+
+# Column that has the position
+pos = 1
+
+# Column that has the depth value
+depth = 2
+
+
+
 
 [score]
 # Path to score file

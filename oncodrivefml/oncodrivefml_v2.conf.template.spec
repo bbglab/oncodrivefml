@@ -20,6 +20,18 @@ mutab = integer(default=None)
 element = integer(default=None)
 extra = integer(default=None)
 
+[depth]
+adjusting = boolean(default=False)
+file = string(default=None)
+format = option('tabix', 'tabix')(default='tabix')
+chr = integer(default=0)
+chr_prefix = string(default='')
+pos = integer(default=1)
+depth = integer(default=None)
+element = integer(default=None)
+extra = integer(default=None)
+
+
 [grouping]
 group_genes = boolean(default=False)
 json_file = string(default=None)

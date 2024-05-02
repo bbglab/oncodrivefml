@@ -22,8 +22,9 @@ from oncodrivefml.mtc import multiple_test_correction
 from oncodrivefml.groups import add_groups, add_groups_from_values
 from oncodrivefml.scores import init_scores_module
 from oncodrivefml.mutability import init_mutabilities_module
+from oncodrivefml.depths import init_depths_module
 from oncodrivefml.store import store_tsv, store_png, store_html, store_scores_tsv, store_groups_tsv
-from oncodrivefml.utils import executor_run, loop_logging, load_depths, load_mutability
+from oncodrivefml.utils import executor_run, loop_logging # , load_depths, load_mutability
 from oncodrivefml.indels import init_indels_module
 from oncodrivefml.walker import flatten_partitions, compute_sampling, partitions_list
 
@@ -92,29 +93,48 @@ class OncodriveFML(object):
         # mutability
         if self.configuration['mutability']['adjusting']:
             file_exists_or_die(self.configuration['mutability']['file'])
-            logger.info("Mutability per site will be used for adjusting the background probabilities.")
-            logger.info("Signature and depth values will be ignored.")
+            logger.info("Mutability per site will be used for adjusting the background probabilities of SNVs.")
+            logger.info("Signature and depth values will be ignored for SNVs.")
             self.configuration['signature']['method'] = 'none'
 
             self.configuration['mutability_info'] = True
-            self.configuration['depths_info'] = False
+        else:
+            self.configuration['mutability_info'] = False
 
         # depths
-        elif 'depth' in self.configuration.keys():
+        if self.configuration['depth']['adjusting']:
             file_exists_or_die(self.configuration['depth']['depth_file'])
-            
-            
-            self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'],
-                                                                self.configuration['depth']['chr_prefix'])
-            logger.info("Depths file loaded")
+            logger.info("Depth per site will be used for adjusting the background probabilities.")
+            # self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'],
+            #                                                     self.configuration['depth']['chr_prefix'])
+            # logger.info("Depths file loaded")
 
-            self.configuration['mutability_info'] = False
-            self.configuration['depths_info'] = True
+            self.configuration['depth_info'] = True
+        else:
+            self.configuration['depth_info'] = False
+
+
+        ## Report additional information usage status
+        # both depths and mutabilities
+        if self.configuration['depth_info'] and not self.configuration['mutability_info'] :
+            logger.info("Indels background probability will be adjusted by the sequencing depth.")
+            logger.info("SNVs background probability will be adjusted by the mutabilities.")
+
+        # mutabilities only
+        elif not self.configuration['depth_info'] and self.configuration['mutability_info'] :
+            logger.info("Indels background probability will be uniform.")
+            logger.info("SNVs background probability will be adjusted by the mutabilities.")
+
+        # depths only
+        elif self.configuration['depth_info'] and not self.configuration['mutability_info'] :
+            logger.info("Indels background probability will be adjusted by the sequencing depth.")
+            logger.info("SNVs background probability will be adjusted by the sequencing depth and the mutational profile.")
 
         # none of them available
         else:
+            logger.info("Neither depth nor mutabilities provided.")
             self.configuration['mutability_info'] = None
-            self.configuration['depths_info'] = None
+            self.configuration['depth_info'] = None
 
         # Optional parameters
         self.output_folder = output_folder
@@ -254,6 +274,9 @@ class OncodriveFML(object):
         init_scores_module(self.configuration['score'], stops_required=stops_file_required)
         if self.configuration['mutability_info']:
             init_mutabilities_module(self.configuration['mutability'])
+        
+        if self.configuration['depth_info']:
+            init_depths_module(self.configuration['depth'])
 
         # initialize the indels module
         init_indels_module(self.configuration['statistic']['indels'])

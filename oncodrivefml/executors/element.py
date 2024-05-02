@@ -7,6 +7,7 @@ from oncodrivefml.executors import sig2probs
 from oncodrivefml.indels import Indel
 from oncodrivefml.scores import Scores
 from oncodrivefml.mutability import Mutabilities
+from oncodrivefml.depths import Depths
 from oncodrivefml.stats import STATISTIC_TESTS
 from oncodrivefml.walker import partitions_list
 
@@ -65,7 +66,7 @@ class ElementExecutor(object):
         self.samples_method = config['statistic']['per_sample_analysis']
         
         self.mutability_info = config['mutability_info']
-        self.depths_info = config['depths_info']
+        self.depth_info = config['depth_info']
 
 
         # Output attributes
@@ -79,8 +80,9 @@ class ElementExecutor(object):
 
         if self.mutability_info:
             self.mutability_config = config['mutability']
-        elif self.depths_info:
-            self.depths = config['depths_loaded'][self.chromosome]
+        if self.depth_info:
+            self.depth_config = config['depth']
+            # self.depths = config['depths_loaded'][self.chromosome]
 
     def compute_muts_statistics(self):
         """
@@ -161,6 +163,8 @@ class ElementExecutor(object):
         if self.mutability_info:
             self.mutability = Mutabilities(self.name, self.segments, self.mutability_config)
 
+        if self.depth_info:
+            self.depth = Depths(self.name, self.segments, self.depth_config)
 
         if self.use_indels:
             self.indels = Indel(self.scores)
@@ -181,6 +185,16 @@ class ElementExecutor(object):
                     logger.warning("Mutability positions differ from the reference positions.")
                     logger.warning("Mutability information will not be used in this element {}.".format(self.name))
                     self.mutability_info = False
+
+            # if the depths are provided,
+            # load it and check that the positions are the same ones as in the scores
+            if self.depth_info:
+                depth_positions = self.depth.get_all_positions()
+                if set(depth_positions) != set(positions):
+                    logger.warning("Depth positions differ from the reference positions.")
+                    logger.warning("Depth information will not be used in this element {}.".format(self.name))
+                    self.depth_info = False
+
 
             observed = []
             subs_scores = []
@@ -237,13 +251,16 @@ class ElementExecutor(object):
                             # mutab = self.mutability.get(str(pos), 0)
                             # subs_mutability.append( mutab[num] if type(mutab) == list else 0 )
 
-                elif self.depths_info:
+                elif self.depth_info:
                     for pos in positions:
+                        depth_val = self.depth.get_depth_by_position(pos)
+                        depth_val = depth_val.value if depth_val != [] else 0
                         for s in self.scores.get_score_by_position(pos):
                             subs_scores.append(s.value)
                             probs_of_subs.add_background(s.change)
                             # if that position is not in the list of depths, use value 0
-                            subs_depths.append(self.depths.get(pos, 0)) 
+                            subs_depths.append(depth_val)
+
                 else:
                     for pos in positions:
                         for s in self.scores.get_score_by_position(pos):
@@ -274,9 +291,48 @@ class ElementExecutor(object):
             simulation_scores = subs_scores + indels_scores
             simulation_probs = subs_probs + indels_probs
 
+
+            # if only depths are provided use them for
+            # adjusting the probabilities of sampling SNVs and indels
+            if self.depth_info and self.mutability_info :
+                # only SNVs provided as input
+                if len(simulation_probs) == len(subs_mutability):
+                    # if np.sum(subs_mutability) > 0:
+                    simulation_probs = np.nan_to_num(np.array(simulation_probs, dtype = np.float64) * np.array(subs_mutability, dtype = np.float64))
+                    simulation_probs = list(np.nan_to_num(simulation_probs / simulation_probs.sum()))
+                    # logger.info("SNVs probabilities corrected by mutability")
+                    # else:
+                    #     logger.info("ERROR")
+                        # print(subs_mutability)
+                        # print(self.segments)
+
+                # SNVs and indels provided as input
+                elif len(simulation_probs) == 2 * len(subs_mutability):
+                    only_snvs = False
+                    simulation_probs_1st_half = simulation_probs[:len(simulation_probs)//2]
+                    simulation_probs_2nd_half = simulation_probs[:len(simulation_probs)//2]
+                    
+                    simulation_probs_1st_half_total = sum(simulation_probs_1st_half)
+                    simulation_probs_1st_half = np.nan_to_num(np.array(simulation_probs_1st_half, dtype = np.float64) * np.array(subs_mutability, dtype = np.float64))
+                    simulation_probs_1st_half = np.nan_to_num(simulation_probs_1st_half / simulation_probs_1st_half.sum())
+                    simulation_probs_1st_half_norm = simulation_probs_1st_half * simulation_probs_1st_half_total
+                    
+                    simulation_probs_2nd_half_total = sum(simulation_probs_2nd_half)
+                    simulation_probs_2nd_half = np.nan_to_num(np.array(simulation_probs_2nd_half, dtype = np.float64) * np.array(subs_depths, dtype = np.float64))
+                    simulation_probs_2nd_half = np.nan_to_num(simulation_probs_2nd_half / simulation_probs_2nd_half.sum())
+                    simulation_probs_2nd_half_norm = simulation_probs_2nd_half * simulation_probs_2nd_half_total
+
+                    simulation_probs = list(simulation_probs_1st_half_norm) + list(simulation_probs_2nd_half_norm)
+                    
+                    simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
+                    # logger.info("SNVs probabilities corrected by mutability")
+
+
+
             # if mutability is provided use it for
-            # adjusting the probabilities of sampling positions
-            if self.mutability_info:
+            # adjusting the probabilities of sampling SNVs
+            # indels are uniformly modelled
+            elif not self.depth_info and self.mutability_info:
                 
                 # only SNVs provided as input
                 if len(simulation_probs) == len(subs_mutability):
@@ -306,29 +362,34 @@ class ElementExecutor(object):
                     # logger.info("SNVs probabilities corrected by mutability")
 
 
-            # if depths are provided use them for
-            # adjusting the probabilities of sampling positions
-            elif self.depths_info:
+            # if only depths are provided use them for
+            # adjusting the probabilities of sampling SNVs and indels
+            elif self.depth_info and not self.mutability_info :
                 if len(subs_probs) == len(subs_depths):
                     subs_probs = np.nan_to_num(np.array(subs_probs) * np.array(subs_depths))
                     subs_probs = list(np.nan_to_num(subs_probs / np.sum(subs_probs)))
-                    logger.info("SNVs probabilities corrected by depth")
+                    # logger.info("SNVs probabilities corrected by depth")
                 
                 elif len(simulation_probs) == 2 * len(subs_depths):
                     only_snvs = False
                     simulation_probs_1st_half = simulation_probs[:len(simulation_probs)//2]
                     simulation_probs_2nd_half = simulation_probs[:len(simulation_probs)//2]
-                    simulation_probs_1st_half_total = sum(simulation_probs_1st_half)
                     
+                    simulation_probs_1st_half_total = sum(simulation_probs_1st_half)
                     simulation_probs_1st_half = np.nan_to_num(np.array(simulation_probs_1st_half, dtype = np.float64) * np.array(subs_depths, dtype = np.float64))
                     simulation_probs_1st_half = np.nan_to_num(simulation_probs_1st_half / simulation_probs_1st_half.sum())
                     simulation_probs_1st_half_norm = simulation_probs_1st_half * simulation_probs_1st_half_total
                     
-                    simulation_probs = list(simulation_probs_1st_half_norm) + list(simulation_probs_2nd_half)
+                    simulation_probs_2nd_half_total = sum(simulation_probs_2nd_half)
+                    simulation_probs_2nd_half = np.nan_to_num(np.array(simulation_probs_2nd_half, dtype = np.float64) * np.array(subs_depths, dtype = np.float64))
+                    simulation_probs_2nd_half = np.nan_to_num(simulation_probs_2nd_half / simulation_probs_2nd_half.sum())
+                    simulation_probs_2nd_half_norm = simulation_probs_2nd_half * simulation_probs_2nd_half_total
+
+                    simulation_probs = list(simulation_probs_1st_half_norm) + list(simulation_probs_2nd_half_norm)
                     
                     simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
 
-                    logger.info("SNVs probabilities corrected by mutability")
+                    # logger.info("SNVs and Indels probabilities corrected by the sequencing depth")
 
 
             if only_snvs:
