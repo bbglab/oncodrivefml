@@ -111,11 +111,7 @@ class Depths(object):
             .. code-block:: python
 
                     { position:
-                        [
-                            DepthValue(
-                                value
-                            )
-                        ]
+                        value
                     }
     """
 
@@ -139,7 +135,7 @@ class Depths(object):
         # Initialize background depths
         self._load_depths()
 
-    def get_depth_by_position(self, position: int) -> List[DepthValue]:
+    def get_depth_by_position(self, position: int) -> float:
         """
         Get all DepthValue objects that are associated with that position
 
@@ -150,7 +146,7 @@ class Depths(object):
             :obj:`list` of :obj:`DepthValue`: list of all DepthValue related to that position
 
         """
-        return self.depths_by_pos.get(position, [])
+        return self.depths_by_pos.get(position, 0.)
 
     def get_all_positions(self) -> List[int]:
         """
@@ -168,7 +164,7 @@ class Depths(object):
         obtains the assigned depth
 
         Returns:
-            dict: for each positions get a list of DepthValue
+            dict: for each position define the value of depth as a float
             (see :attr:`depths_by_pos`)
         """
 
@@ -178,7 +174,7 @@ class Depths(object):
                     try:
                         for row in reader.get(region['CHROMOSOME'], region['START'], region['END'], self.element):
                             depth, pos = row
-                            self.depths_by_pos[pos].append(DepthValue(depth))
+                            self.depths_by_pos[pos] = float(depth)
 
                     except ReaderError as e:
                         logger.warning(e.message)

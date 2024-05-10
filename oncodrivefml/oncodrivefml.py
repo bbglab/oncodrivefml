@@ -103,7 +103,7 @@ class OncodriveFML(object):
 
         # depths
         if self.configuration['depth']['adjusting']:
-            file_exists_or_die(self.configuration['depth']['depth_file'])
+            file_exists_or_die(self.configuration['depth']['file'])
             logger.info("Depth per site will be used for adjusting the background probabilities.")
             # self.configuration['depths_loaded'] = load_depths(self.configuration['depth']['depth_file'],
             #                                                     self.configuration['depth']['chr_prefix'])
@@ -116,17 +116,17 @@ class OncodriveFML(object):
 
         ## Report additional information usage status
         # both depths and mutabilities
-        if self.configuration['depth_info'] and not self.configuration['mutability_info'] :
+        if self.configuration['depth_info'] and self.configuration['mutability_info'] :
             logger.info("Indels background probability will be adjusted by the sequencing depth.")
             logger.info("SNVs background probability will be adjusted by the mutabilities.")
 
         # mutabilities only
-        elif not self.configuration['depth_info'] and self.configuration['mutability_info'] :
+        elif self.configuration['mutability_info'] :
             logger.info("Indels background probability will be uniform.")
             logger.info("SNVs background probability will be adjusted by the mutabilities.")
 
         # depths only
-        elif self.configuration['depth_info'] and not self.configuration['mutability_info'] :
+        elif self.configuration['depth_info']:
             logger.info("Indels background probability will be adjusted by the sequencing depth.")
             logger.info("SNVs background probability will be adjusted by the sequencing depth and the mutational profile.")
 
@@ -253,6 +253,7 @@ class OncodriveFML(object):
                                                                     indels_max_size=self.configuration['statistic']['indels'].get('max_size', None))
 
         self.mutations = mutations_data['data']
+        logger.debug(mutations_data['metadata'])
 
         self.__compute_simulation_probs(mutations_data['metadata'])
 
