@@ -270,9 +270,7 @@ class ElementExecutor(object):
                             subs_scores.append(s.value)
                             probs_of_subs.add_background(s.change)
                             subs_mutability.append(m.value)
-                            # if that position is not in the list of mutability, use value 0
-                            # mutab = self.mutability.get(str(pos), 0)
-                            # subs_mutability.append( mutab[num] if type(mutab) == list else 0 )
+
 
                 elif self.depth_info:
                     logger.debug('Depth information loaded for {}'.format(self.name))
@@ -314,7 +312,7 @@ class ElementExecutor(object):
             simulation_scores = subs_scores + indels_scores
             simulation_probs = subs_probs + indels_probs
             snvs_vector_size = len(subs_scores)
-            # indels_vector_size = len(indels_scores)
+
 
 
             # if only depths are provided use them for
@@ -340,7 +338,6 @@ class ElementExecutor(object):
                     
                     simulation_probs = list(simulation_probs_1st_half_norm) + list(simulation_probs_2nd_half)
                     simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
-                    # logger.info("SNVs probabilities corrected by mutability")
 
 
 
@@ -370,7 +367,7 @@ class ElementExecutor(object):
                     simulation_probs = list(simulation_probs_1st_half_norm) + list(simulation_probs_2nd_half)
                     
                     simulation_probs = list(np.nan_to_num(simulation_probs / np.sum(simulation_probs)))
-                    # logger.info("SNVs probabilities corrected by mutability")
+
 
             # if only depths are provided use them for
             # adjusting the probabilities of sampling SNVs and indels

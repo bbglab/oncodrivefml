@@ -117,7 +117,7 @@ class OncodriveFML(object):
         ## Report additional information usage status
         # both depths and mutabilities
         if self.configuration['depth_info'] and self.configuration['mutability_info'] :
-            logger.info("Indels background probability will be adjusted by the sequencing depth.")
+            logger.info("Indels background probability will be adjusted by the sequencing depth if run in 'max' mode.")
             logger.info("SNVs background probability will be adjusted by the mutabilities.")
 
         # mutabilities only
@@ -127,8 +127,8 @@ class OncodriveFML(object):
 
         # depths only
         elif self.configuration['depth_info']:
-            logger.info("Indels background probability will be adjusted by the sequencing depth.")
-            logger.info("SNVs background probability will be adjusted by the sequencing depth and the mutational profile.")
+            logger.info("Indels background probability will be adjusted by the sequencing depth if run in 'max' mode.")
+            logger.info("SNVs background probability will be adjusted by the sequencing depth and the mutational profile configuration provided.")
 
         # none of them available
         else:
