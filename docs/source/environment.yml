@@ -7,4 +7,4 @@ channels:
 - r
 dependencies:
 - pycurl=7.43.0.5
-- python=3.6.*
+- python=3.8.*
