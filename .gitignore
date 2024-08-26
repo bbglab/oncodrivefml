@@ -37,3 +37,7 @@ docs/build
 
 # External users tests
 external_checks
+
+.ruff_cache/
+.venv
+data/

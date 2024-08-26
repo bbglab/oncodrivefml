@@ -1,0 +1,8 @@
+.github
+.ruff_cache/
+.venv/
+data/
+dist/
+docs/
+example/
+oncodrivefml.egg-info/

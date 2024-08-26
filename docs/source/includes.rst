@@ -1,10 +1,3 @@
-Readme
-======
-
-.. include:: ../../README.rst
-
-----
-
 .. _license f:
 
 License

@@ -1,0 +1,35 @@
+line-length = 120
+
+include = [
+  "extra/**/*.py",
+  "oncodrivefml/**/*.py"
+]
+
+[format]
+docstring-code-format = true
+docstring-code-line-length = 80
+
+[lint]
+
+[lint.per-file-ignores]
+"**/scripts/*" = [
+  "INP001",
+  "T201",
+]
+"**/tests/**/*" = [
+  "PLC1901",
+  "PLR2004",
+  "PLR6301",
+  "S",
+  "TID252",
+]
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.isort]
+known-first-party = ["oncodrivefml"]
+
+[lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
