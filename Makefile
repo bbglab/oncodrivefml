@@ -5,12 +5,15 @@ SHELL := /bin/bash
 DOCS_DIR := $(ROOT_DIR)/docs
 VENV_DIR := $(ROOT_DIR)/.venv
 
-VERSION ?= $(shell $(VENV_DIR)/bin/python -c 'from oncodrivefml import __version__; print(f"{__version__}")')
+define version
+$(shell $(VENV_DIR)/bin/python -c 'from oncodrivefml import __version__; print(__version__)')
+endef
+
+define image
+bbglab/oncodrivefml:$(version)
+endef
 
 GIT_TAG_OR_SHA = $(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
-
-IMAGE_TAG ?= $(VERSION)
-IMAGE := bbglab/oncodrivefml:$(IMAGE_TAG)
 
 BOLDRED := $(shell tput bold && tput setaf 1)
 BOLDGREEN := $(shell tput bold && tput setaf 2)
@@ -33,6 +36,7 @@ help:
 	@echo "$(BOLDGREEN)  create-env   $(WHITE)-> Create a virtual environment"
 	@echo "$(BOLDGREEN)  remove-env   $(WHITE)-> Remove the virtual environment"
 	@echo "$(BOLDGREEN)  build-image  $(WHITE)-> Build the Docker image"
+	@echo "$(BOLDGREEN)  docker-login $(WHITE)-> Log in to DockerHub"
 	@echo "$(BOLDGREEN)  push-image   $(WHITE)-> Push the Docker image into DockerHub"
 	@echo "$(BOLDGREEN)  docs         $(WHITE)-> Generate the documentation"
 	@echo "$(BOLDGREEN)  run-example  $(WHITE)-> Run the included example using the Docker image"
@@ -73,8 +77,8 @@ check-docker:
 .PHONY: check-version
 check-version: $(VENV_DIR)
 	@echo "$(BOLDGREEN)Checking that the version matches the tag ...$(RESET)"
-	@if [ "$(VERSION)" != "$(GIT_TAG_OR_SHA)" ]; then \
-	    echo "$(BOLDRED)==> Version $(BOLDYELLOW)$(VERSION)$(BOLDRED) doesn't match the git tag $(BOLDYELLOW)$(GIT_TAG_OR_SHA)$(BOLDRED) !!!$(RESET)"; \
+	@if [ "$(version)" != "$(GIT_TAG_OR_SHA)" ]; then \
+	    echo "$(BOLDRED)==> Version $(BOLDYELLOW)$(version)$(BOLDRED) doesn't match the git tag $(BOLDYELLOW)$(GIT_TAG_OR_SHA)$(BOLDRED) !!!$(RESET)"; \
 		echo "$(BOLDRED)==> Please update the $(BOLDYELLOW)__version__$(BOLDRED) in $(BOLDYELLOW)oncodrivefml/__init__.py$(BOLDRED) and re-create the tag.$(RESET)"; \
 	    exit 1; \
 	fi
@@ -92,9 +96,12 @@ build-dist: $(VENV_DIR)
 
 .PHONY: publish-dist
 publish-dist: $(VENV_DIR)
-	@echo "$(BOLDGREEN)Publishing OncodriveFML $(BOLDYELLOW)$(VERSION)$(BOLDGREEN) to PyPI ...$(RESET)"
-	@[[ -z "$(PYPI_USERNAME)" || -z "$(PYPI_PASSWORD)" ]] && (echo "$(BOLDRED)==> Missing PyPI credentials !!!$(RESET)"; exit 1)
-	$(VENV_DIR)/bin/twine upload --username __token__ --password $(PYPI_TOKEN) dist/*
+	@echo "$(BOLDGREEN)Publishing OncodriveFML $(BOLDYELLOW)$(version)$(BOLDGREEN) to PyPI ...$(RESET)"
+	@if [[ -z "$(PYPI_TOKEN)" ]]; then \
+		echo "$(BOLDRED)==> Missing PYPI_TOKEN !!!$(RESET)"; \
+		exit 1; \
+	fi
+	@$(VENV_DIR)/bin/twine upload --username __token__ --password $(PYPI_TOKEN) dist/*
 
 .PHONY: install
 install-dev: $(VENV_DIR)
@@ -109,15 +116,24 @@ remove-env:
 	rm -rf $(VENV_DIR)
 
 .PHONY: build-image
-build-image:
-	@echo "$(BOLDGREEN)Building Docker image $(BOLDYELLOW)$(IMAGE)$(BOLDGREEN) ...$(RESET)"
-	docker build --progress=plain -t $(IMAGE) .
+build-image: $(VENV_DIR)
+	@echo "$(BOLDGREEN)Building Docker image $(BOLDYELLOW)$(image)$(BOLDGREEN) ...$(RESET)"
+	docker build --progress=plain -t $(image) .
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
+.PHONY: docker-login
+docker-login:
+	@echo "$(BOLDGREEN)Log in to DockerHub ...$(RESET)"
+	@if [[ -z "$(DOCKER_USERNAME)" || -z "$(DOCKER_PASSWORD)" ]]; then \
+		echo "$(BOLDRED)==> Missing DockerHub credentials !!!$(RESET)"; \
+		exit 1; \
+	fi
+	@(echo "$(DOCKER_PASSWORD)" | docker login -u $(DOCKER_USERNAME) --password-stdin) || (echo "$(BOLDRED)==> Failed to log in !!!$(RESET)"; exit 1)
+
 .PHONY: build-image
-push-image:
+push-image: $(VENV_DIR)
 	@echo "$(BOLDGREEN)Pushing the Docker image into the DockerHub ...$(RESET)"
-	docker push $(IMAGE)
+	docker push $(image)
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
 .PHONY: docs
@@ -134,7 +150,7 @@ run-example:
 		-v $${BGDATA_LOCAL:-$${HOME}/.bgdata}:/root/.bgdata \
 		-v $$(pwd)/example:/data \
 		--workdir /data \
-		$(IMAGE) -i paad.txt.gz -e cds.tsv.gz --signature-correction wx --seed 123 --force
+		$(image) -i paad.txt.gz -e cds.tsv.gz --signature-correction wx --seed 123 --force
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
 .PHONY: clean
