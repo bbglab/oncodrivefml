@@ -101,7 +101,10 @@ publish-dist: $(VENV_DIR)
 		echo "$(BOLDRED)==> Missing PYPI_TOKEN !!!$(RESET)"; \
 		exit 1; \
 	fi
-	@$(VENV_DIR)/bin/twine upload --username __token__ --password $(PYPI_TOKEN) dist/*
+	@for package in $$(ls dist); do \
+		echo "- $$package"; \
+	done
+	@$(VENV_DIR)/bin/twine upload $(TWINE_UPLOAD_ARGS) --username __token__ --password $(PYPI_TOKEN) dist/*
 
 .PHONY: install
 install-dev: $(VENV_DIR)

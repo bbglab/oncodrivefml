@@ -1,2 +1,2 @@
 __logger_name__ = 'oncodrivefml'
-__version__ = "2.5.0"
+__version__ = "2.5.0rc1"
