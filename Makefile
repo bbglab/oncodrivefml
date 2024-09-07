@@ -6,18 +6,24 @@ DOCS_DIR := $(ROOT_DIR)/docs
 VENV_DIR := $(ROOT_DIR)/.venv
 
 define version
-$(shell $(VENV_DIR)/bin/python -c 'from oncodrivefml import __version__; print(__version__)')
+$(shell uv run python -c "from oncodrivefml import __version__; print(__version__)")
+endef
+
+define git_tag_or_sha
+$(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
 endef
 
 define image
-bbglab/oncodrivefml:$(version)
+bbglab/oncodrivefml:$(call version)
 endef
 
-GIT_TAG_OR_SHA = $(shell git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD)
+IMAGE_FILE := oncodrivefml.tar
 
 BOLDRED := $(shell tput bold && tput setaf 1)
 BOLDGREEN := $(shell tput bold && tput setaf 2)
 BOLDYELLOW := $(shell tput bold && tput setaf 3)
+BOLDBLUE := $(shell tput bold && tput setaf 4)
+LIGHTBLUE := $(shell tput setaf 6)
 WHITE := $(shell tput sgr0 && tput setaf 7)
 RESET := $(shell tput sgr0)
 
@@ -31,10 +37,8 @@ help:
 	@echo "$(BOLDGREEN)  check-lint   $(WHITE)-> Check for lint errors"
 	@echo "$(BOLDGREEN)  check-docker $(WHITE)-> Check the Dockerfile"
 	@echo "$(BOLDGREEN)  format       $(WHITE)-> Format source code"
+	@echo "$(BOLDGREEN)  build-dev    $(WHITE)-> Build a development environment in .venv"
 	@echo "$(BOLDGREEN)  build-dist   $(WHITE)-> Build source and wheel distribution files"
-	@echo "$(BOLDGREEN)  install-dev  $(WHITE)-> Install the packages in editable mode"
-	@echo "$(BOLDGREEN)  create-env   $(WHITE)-> Create a virtual environment"
-	@echo "$(BOLDGREEN)  remove-env   $(WHITE)-> Remove the virtual environment"
 	@echo "$(BOLDGREEN)  build-image  $(WHITE)-> Build the Docker image"
 	@echo "$(BOLDGREEN)  docker-login $(WHITE)-> Log in to DockerHub"
 	@echo "$(BOLDGREEN)  push-image   $(WHITE)-> Push the Docker image into DockerHub"
@@ -43,25 +47,47 @@ help:
 	@echo "$(BOLDGREEN)  clean        $(WHITE)-> Clean the working directory (build files, virtual environments, caches)"
 	@echo "$(RESET)"
 
-$(VENV_DIR):
-	@echo "$(BOLDYELLOW)Preparing virtual environment ...$(RESET)"
-	python -m venv $(VENV_DIR)
-	$(VENV_DIR)/bin/pip install -U pip ruff setuptools wheel build twine
-	@echo "$(BOLDGREEN)==> Success!$(RESET)"
+.PHONY: uv-installed
+uv-installed:
+	@if ! which uv > /dev/null; then \
+		echo "$(BOLDRED)This project build is managed by $(BOLDYELLOW)uv$(BOLDRED), which is not installed.$(RESET)"; \
+		echo "$(LIGHTBLUE)Please follow these instructions to install it:$(RESET)"; \
+		echo "$(LIGHTBLUE)--> $(BOLDBLUE)https://docs.astral.sh/uv/#getting-started$(RESET)"; \
+		exit 1; \
+	fi
+
+.PHONY: ruff-installed
+ruff-installed: uv-installed
+	@if ! which ruff > /dev/null; then \
+		echo "$(BOLDRED)This project requires $(BOLDYELLOW)ruff$(BOLDRED), which is not installed.$(RESET)"; \
+		echo "$(LIGHTBLUE)Installing it with $(BOLDYELLOW)uv tool install ruff$(RESET)"; \
+		uv tool install ruff; \
+		ruff --version; \
+	fi
+
+.PHONY: sphinx-installed
+sphinx-installed: uv-installed
+	@if ! uv pip show sphinx > /dev/null; then \
+		echo "$(BOLDRED)This project requires $(BOLDYELLOW)sphinx$(BOLDRED), which is not installed.$(RESET)"; \
+		echo "$(LIGHTBLUE)Installing it with $(BOLDYELLOW)uv pip install --requirements optional-requirements.txt$(RESET)"; \
+		uv venv; \
+		uv pip install --requirements optional-requirements.txt; \
+		uv run sphinx-build --version; \
+	fi
 
 .PHONY: checks
 checks: check-format check-lint check-docker
 
 .PHONY: check-format
-check-format: $(VENV_DIR)
+check-format: ruff-installed
 	@echo "$(BOLDGREEN)Checking code format ...$(RESET)"
-	$(VENV_DIR)/bin/ruff format --check
+	ruff format --check
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
 .PHONY: check-lint
-check-lint: $(VENV_DIR)
+check-lint: ruff-installed
 	@echo "$(BOLDGREEN)Checking lint ...$(RESET)"
-	$(VENV_DIR)/bin/ruff check
+	ruff check
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
 .PHONY: check-docker
@@ -75,51 +101,51 @@ check-docker:
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
 .PHONY: check-version
-check-version: $(VENV_DIR)
+check-version: uv-installed
 	@echo "$(BOLDGREEN)Checking that the version matches the tag ...$(RESET)"
-	@if [ "$(version)" != "$(GIT_TAG_OR_SHA)" ]; then \
-	    echo "$(BOLDRED)==> Version $(BOLDYELLOW)$(version)$(BOLDRED) doesn't match the git tag $(BOLDYELLOW)$(GIT_TAG_OR_SHA)$(BOLDRED) !!!$(RESET)"; \
+	@if [ "$(call version)" != "$(call git_tag_or_sha)" ]; then \
+	    echo "$(BOLDRED)==> Version $(BOLDYELLOW)$(call version)$(BOLDRED) doesn't match the git tag $(BOLDYELLOW)$(call git_tag_or_sha)$(BOLDRED) !!!$(RESET)"; \
 		echo "$(BOLDRED)==> Please update the $(BOLDYELLOW)__version__$(BOLDRED) in $(BOLDYELLOW)oncodrivefml/__init__.py$(BOLDRED) and re-create the tag.$(RESET)"; \
 	    exit 1; \
 	fi
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
 .PHONY: format
-format: $(VENV_DIR)
+format: ruff-installed
 	@echo "$(BOLDGREEN)Formatting code ...$(RESET)"
-	$(VENV_DIR)/bin/ruff format
+	ruff format
+
+.PHONY: build-dev
+build-dev: uv-installed
+	@echo "$(BOLDGREEN)Building for development ...$(RESET)"
+	python -m venv .venv
+	.venv/bin/pip install -e .
 
 .PHONY: build-dist
-build-dist: $(VENV_DIR)
+build-dist: uv-installed
 	@echo "$(BOLDGREEN)Building packages ...$(RESET)"
-	$(VENV_DIR)/bin/python -m build
+	uv build
+
+.PHONY: build-sdist
+build-sdist:
+	@echo "$(BOLDGREEN)Building sdist package ...$(RESET)"
+	uv build --sdist
+
+.PHONY: build-wheels
+build-wheels: uv-installed
+	@echo "$(BOLDGREEN)Building wheels ...$(RESET)"
+	uv venv
+	uv pip install cibuildwheel
+	uv run cibuildwheel --output-dir dist
 
 .PHONY: publish-dist
-publish-dist: $(VENV_DIR)
-	@echo "$(BOLDGREEN)Publishing OncodriveFML $(BOLDYELLOW)$(version)$(BOLDGREEN) to PyPI ...$(RESET)"
-	@if [[ -z "$(PYPI_TOKEN)" ]]; then \
-		echo "$(BOLDRED)==> Missing PYPI_TOKEN !!!$(RESET)"; \
+publish-dist: uv-installed
+	@echo "$(BOLDGREEN)Publishing OncodriveFML $(BOLDYELLOW)$(call version)$(BOLDGREEN) to PyPI ...$(RESET)"
+	@if [ -z "$(PYPI_TOKEN)" ]; then \
+		echo "$(BOLDRED)==> Missing PyPI token !!!$(RESET)"; \
 		exit 1; \
 	fi
-	@$(VENV_DIR)/bin/twine upload --username __token__ --password $(PYPI_TOKEN) dist/*
-
-.PHONY: install
-install-dev: $(VENV_DIR)
-	$(VENV_DIR)/bin/pip install -e .
-
-.PHONY: create-env
-create-env: $(VENV_DIR)
-
-.PHONY: remove-env
-remove-env:
-	@echo "$(BOLDGREEN)Removing virtual environment ...$(RESET)"
-	rm -rf $(VENV_DIR)
-
-.PHONY: build-image
-build-image: $(VENV_DIR)
-	@echo "$(BOLDGREEN)Building Docker image $(BOLDYELLOW)$(image)$(BOLDGREEN) ...$(RESET)"
-	docker build --progress=plain -t $(image) .
-	@echo "$(BOLDGREEN)==> Success!$(RESET)"
+	uv publish --token $(PYPI_TOKEN)
 
 .PHONY: docker-login
 docker-login:
@@ -131,20 +157,35 @@ docker-login:
 	@(echo "$(DOCKER_PASSWORD)" | docker login -u $(DOCKER_USERNAME) --password-stdin) || (echo "$(BOLDRED)==> Failed to log in !!!$(RESET)"; exit 1)
 
 .PHONY: build-image
-push-image: $(VENV_DIR)
+build-image: uv-installed
+	@echo "$(BOLDGREEN)Building Docker image $(BOLDYELLOW)$(call image)$(BOLDGREEN) ...$(RESET)"
+	docker build --progress=plain -t $(call image) .
+	@echo "$(BOLDGREEN)==> Success!$(RESET)"
+
+.PHONY: save-image
+save-image: build-image
+	@echo "$(BOLDGREEN)Saving Docker image $(BOLDYELLOW)$(call image)$(BOLDGREEN) ...$(RESET)"
+	docker save -o $(IMAGE_FILE) $(call image)
+	@echo "$(BOLDGREEN)==> Success!$(RESET)"
+
+.PHONY: load-image
+load-image: uv-installed
+	@echo "$(BOLDGREEN)Loading Docker image $(BOLDYELLOW)$(call image)$(BOLDGREEN) ...$(RESET)"
+	docker load -i $(IMAGE_FILE)
+	@echo "$(BOLDGREEN)==> Success!$(RESET)"
+
+.PHONY: build-image
+push-image: uv-installed
 	@echo "$(BOLDGREEN)Pushing the Docker image into the DockerHub ...$(RESET)"
-	docker push $(image)
+	docker push $(call image)
 	@echo "$(BOLDGREEN)==> Success!$(RESET)"
 
 .PHONY: docs
-docs: $(VENV_DIR)
-	@if ! which $(VENV_DIR)/bin/sphinx-build > /dev/null; then \
-		$(VENV_DIR)/bin/pip install -r optional-requirements.txt; \
-	fi
-	(source $(VENV_DIR)/bin/activate; make -C $(DOCS_DIR) html)
+docs: sphinx-installed
+	(source .venv/bin/activate; make -C $(DOCS_DIR) html)
 
 .PHONY: run-example
-run-example:
+run-example: build-image
 	@echo "$(BOLDGREEN)Running example ...$(RESET)"
 	docker run --rm -i \
 		-v $${BGDATA_LOCAL:-$${HOME}/.bgdata}:/root/.bgdata \
@@ -156,6 +197,6 @@ run-example:
 .PHONY: clean
 clean:
 	@echo "$(BOLDGREEN)Cleaning the repository ...$(RESET)"
-	rm -rf ./oncodrivefml.egg-info ./dist $(VENV_DIR) ./.ruff_cache ./.eggs $(DOCS_DIR)/build
+	rm -rf ./oncodrivefml.egg-info ./dist ./.ruff_cache ./.eggs $(DOCS_DIR)/build ./.venv
 	find oncodrivefml \( -name '*.c' -o -name '*.so' \) -type f -exec rm {} +
 	find . -name "__pycache__" -type d -exec rm -r {} +

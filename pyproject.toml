@@ -1,0 +1,88 @@
+[project]
+name = "oncodrivefml"
+dynamic = ["version"]
+description = "Identify signals of positive selection in somatic mutations"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    { name = "BBGLab (Barcelona Biomedical Genomics Lab)", email = "bbglab@irbbarcelona.org" },
+]
+requires-python = ">=3.8.0,<3.12.0"
+dependencies = [
+    "ago==0.0.93",
+    "bgcache==0.1",
+    "bgconfig==0.10",
+    "bgdata>=2.0.4",
+    "bglogs==0.6",
+    "bgparsers==0.10",
+    "bgreference==0.6",
+    "bgsignature==0.2",
+    "bokeh==1.4.0",
+    "click==8.0.4",
+    "intervaltree==3.1.0",
+    "Jinja2==3.0.3",
+    "numpy==1.24.4",
+    "matplotlib==3.6.3",
+    "pandas==1.5.3",
+    "pytabix==0.1",
+    "scipy==1.10.1",
+    "statsmodels==0.14.0",
+]
+
+[project.scripts]
+oncodrivefml = "oncodrivefml.main:cmdline"
+
+[project.urls]
+Download = "https://pypi.org/project/oncodrivefml/#history"
+Homepage = "https://github.com/bbglab/oncodrivefml"
+
+[build-system]
+requires = ["hatchling", "Cython==0.29.37"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "oncodrivefml/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = ["/oncodrivefml"]
+exclude = ["*.c", "*.so"]
+
+[tool.hatch.build.targets.wheel]
+macos-max-compat = false
+packages = ["extra", "oncodrivefml"]
+exclude = ["*.c", "*.so"]
+include = [
+    "oncodrivefml/*.txt.gz",
+    "oncodrivefml/*.conf.template",
+    "oncodrivefml/*.conf.template.spec",
+    "oncodrivefml/*.pyx",
+    "oncodrivefml/*.json.gz"
+]
+
+[tool.hatch.build.targets.wheel.hooks.cython]
+dependencies = ["hatch-cython"]
+
+[tool.hatch.build.targets.wheel.hooks.cython.options]
+compile_py = false
+
+[tool.setuptools]
+packages = ["extra", "oncodrivefml"]
+
+[tool.cibuildwheel]
+build-frontend = "build[uv]"
+skip = "pp* *-manylinux_i686 *musllinux*"
+
+# [build-system]
+# requires = ["setuptools>=74.1", "Cython==0.29.37"]
+# build-backend = "setuptools.build_meta"
+
+# [tool.setuptools]
+# ext-modules = [
+#     { name = "oncodrivefml.walker_cython", sources = ["oncodrivefml/walker_cython.pyx"] }
+# ]
+
+# [tool.setuptools.packages]
+# find = {}
+
+# [tool.setuptools.package-data]
+# oncodrivefml = ["*.txt.gz", "*.conf.template", "*.conf.template.spec", "*.pyx", "*.json.gz"]
