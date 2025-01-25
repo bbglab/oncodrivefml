@@ -79,12 +79,12 @@ OncodriveFML can also be installed using `pip`:
 pip install oncodrivefml
 ```
 
-Finally, you can get the latest code from the repository and install it in development mode with `pip`:
+Finally, you can get the latest code from the repository and install it in development mode:
 
 ```bash
-git clone git@bitbucket.org:bbglab/oncodrivefml.git
+git clone https://github.com/bbglab/oncodrivefml.git
 cd oncodrivefml
-make install-dev
+make build-dev
 source .venv/bin/activate
 oncodrivefml --help
 ```
@@ -100,8 +100,8 @@ oncodrivefml --help
 Download and extract the example files (if you cloned the repository skip this step):
 
 ```bash
-wget https://bitbucket.org/bbglab/oncodrivefml/downloads/oncodrivefml-examples_v2.2.tar.gz
-tar xvzf oncodrivefml-examples_v2.2.tar.gz
+wget https://github.com/bbglab/oncodrivefml/archive/refs/tags/2.5.0.tar.gz
+tar xvzf 2.5.0.tar.gz
 ```
 
 To run this example OncodriveFML needs all the precomputed *CADD* scores, that
@@ -119,10 +119,15 @@ that will execute OncodriveFML. The script should be executed in
 the folder where the files have been extracted:
 
 ```bash
+cd oncodrivefml-2.5.0/example
 ./run.sh
 ```
 
 The results will be saved in a folder named `cds`.
+
+> [!NOTE]
+> It might fail to run in macOS. We recommend you to run it using the Docker image instead.
+> See the section `Running OncodriveFML without installation (using Docker)` for details.
 
 ### Configuring OncodriveFML
 

@@ -38,6 +38,9 @@ docs/build
 # External users tests
 external_checks
 
+# VSCode
+.vscode/
+
 .ruff_cache/
 .venv
 data/
